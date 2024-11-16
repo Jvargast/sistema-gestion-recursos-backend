@@ -26,28 +26,6 @@ class RolRepository extends IRolRepository {
    */
   async create(data) {
     return await Roles.create(data);
-    /* const { nombre, descripcion, permisos = [] } = data;
-
-        // Verificar si todos los permisos existen
-        const permisosExistentes = await Permisos.findAll({
-          where: { id: permisos },
-        });
-    
-        if (permisosExistentes.length !== permisos.length) {
-          throw new Error('Uno o más permisos no existen');
-        }
-    
-        // Crear el rol
-        const rol = await Roles.create({ nombre, descripcion });
-    
-        // Asociar los permisos al rol
-        const relaciones = permisos.map((permisoId) => ({
-          rolId: rol.id,
-          permisoId,
-        }));
-        await RolesPermisos.bulkCreate(relaciones);
-    
-        return rol; */
   }
 
   /**

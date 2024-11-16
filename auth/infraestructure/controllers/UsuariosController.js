@@ -77,7 +77,7 @@ class UsuarioController {
     const { rut } = req.params;
 
     try {
-      const result = await UsuarioService.deactivateUsuario(rut);
+      const result = await UsuariosService.deactivateUsuario(rut);
       res.status(200).json({ message: 'Usuario desactivado exitosamente', result });
     } catch (error) {
       res.status(400).json({ error: error.message });

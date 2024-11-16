@@ -1,4 +1,4 @@
-import IPermisoRepository from '../../domain/repositories/IPermisoRepository.js';
+import IPermisoRepository from '../../domain/repositories/IPermisosRepository.js';
 import Permisos from '../../domain/models/Permisos.js';
 
 class PermisosRepository extends IPermisoRepository {
@@ -26,15 +26,6 @@ class PermisosRepository extends IPermisoRepository {
      */
     async create(data) {
         return await Permisos.create(data);
-      /* const { nombre, descripcion } = data;
-  
-      // Verificar que no exista un permiso con el mismo nombre
-      const permisoExistente = await Permisos.findOne({ where: { nombre } });
-      if (permisoExistente) {
-        throw new Error('El permiso ya existe');
-      }
-  
-      return await Permisos.create({ nombre, descripcion }); */
     }
   
     /**

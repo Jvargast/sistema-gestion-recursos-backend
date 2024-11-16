@@ -1,4 +1,4 @@
-import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository";
+import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 
 const checkPermissions = (requiredPermission) => {
     return async (req, res, next) => {

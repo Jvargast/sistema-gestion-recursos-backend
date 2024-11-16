@@ -1,6 +1,5 @@
 import RolRepository from "../infraestructure/repositories/RolRepository.js";
-import PermisosRepository from "../infraestructure/repositories/PermisosRepository.js";
-import validatePermissionsExist from "../helpers/validatePermissions.js";
+import validatePermissionsExist from "./helpers/ValidatePermissions.js";
 
 class RolesService {
   /**

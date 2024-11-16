@@ -17,6 +17,8 @@ import salesRoutes from "./routes/sales.js"; */
 
 // Rutas para arquitectura hexagonal
 import AuthRoutes from './auth/infraestructure/routes/AuthRoutes.js';
+import UsuariosRoutes from './auth/infraestructure/routes/UsuariosRoutes.js';
+import RolRoutes from './auth/infraestructure/routes/RolRoutes.js';
 /* import analisisRoutes from "./analisis/infraestructure/routes/";
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
 import inventarioRoutes from "./inventario/infrastructure/routes/InventariosRoutes.js";
@@ -37,10 +39,12 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(cookieParser());
 app.use(cors());
-/* app.use(cors({ origin: 'http://tudominio.com', credentials: true }));  */
+/* app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));  */
 
 /* Rutas*/
-app.use("/api/auth", AuthRoutes);
+app.use('/api/usuarios', UsuariosRoutes);
+app.use('/api/auth', AuthRoutes);
+app.use('/api/roles', RolRoutes);
 /* app.use("/api/client", clientRoutes);
 app.use("/api/general", generalRoutes);
 app.use("/api/management", managementRoutes);

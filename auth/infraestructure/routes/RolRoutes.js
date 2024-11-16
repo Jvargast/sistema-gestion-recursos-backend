@@ -8,18 +8,18 @@ const router = Router();
 router.use(verifyToken);
 
 // Crear un rol
-router.post('/roles', RolController.create);
+router.post('/', RolController.create);
 
 // Obtener todos los roles
-router.get('/roles', RolController.findAll);
+router.get('/', RolController.findAll);
 
 // Obtener un rol por ID
-router.get('/roles/:id', RolController.findById);
+router.get('/:id', RolController.findById);
 
 // Actualizar un rol
-router.put('/roles/:id', RolController.update);
+router.put('/:id', RolController.update);
 
 // Eliminar un rol
-router.delete('/roles/:id', RolController.delete);
+router.delete('/:id', RolController.delete);
 
 export default router;
