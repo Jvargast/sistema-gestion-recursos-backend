@@ -1,5 +1,5 @@
 import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js'; 
+import sequelize from '../../../database/database';
 
 const Usuarios = sequelize.define('Usuarios', {
   rut: {
@@ -39,6 +39,14 @@ const Usuarios = sequelize.define('Usuarios', {
   activo: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
+  },
+  rolId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: Roles,
+      key: 'id',
+    },
+    allowNull: false, // Cada usuario debe tener un rol asignado
   },
 }, {
   tableName: 'Usuarios', 

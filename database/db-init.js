@@ -1,27 +1,38 @@
-import sequelize from './database.js'; // Importa la configuración de la base de datos
-import app from './app.js'; // Importa la instancia de Express desde otro archivo (veremos `app.js` abajo)
+import sequelize from './database.js';
 
-/**
- * Función para iniciar la conexión a la base de datos y el servidor.
- * @param {number} port - Puerto en el que se iniciará el servidor.
- */
-async function startServer(port) {
+//Carga de asociaciones por módulo
+//import loadAnalisisAssociations from '../geografia/domain/associate-models.js';
+import loadAuthAssociations from '../auth/domain/associate-models.js';
+//import loadGeografiaAssociations from '../geografia/domain/associate-models.js';
+import loadInventarioAssociations from '../inventario/domain/associate-models.js';
+//import loadManagementAssociations from '../management/domain/associate-models.js';
+import loadProveedoresAssociations from '../proveedores/domain/associate-models.js';
+import loadVentasAssociations from '../ventas/domain/associate-models.js';
+
+
+//Se inicializa la base datos
+async function initializeDatabase() {
   try {
     // Intentar autenticar la conexión a la base de datos
     await sequelize.authenticate();
     console.log('Conexión a PostgreSQL establecida con éxito.');
 
+    //Cargas las asociaciones
+    //loadAnalisisAssociations();
+    loadAuthAssociations();
+    //loadGeografiaAssociations();
+    loadInventarioAssociations();
+    //loadManagementAssociations();
+    loadProveedoresAssociations();
+    loadVentasAssociations();
+
     // Sincronizar modelos con la base de datos
     await sequelize.sync({ alter: true }); // `alter: true` ajusta los modelos según cambios (solo en desarrollo)
-
-    // Iniciar el servidor
-    app.listen(port, () => {
-      console.log(`Servidor escuchando en el puerto ${port}`);
-    });
+    console.log('Modelos sincronizados con la base de datos.');
   } catch (error) {
     console.error('Error al conectar con la base de datos:', error);
-    process.exit(1); 
+    throw error; // Lanza el error para manejarlo en index.js
   }
 }
 
-export default startServer;
+export default initializeDatabase;
