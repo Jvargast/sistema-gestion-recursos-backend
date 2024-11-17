@@ -13,6 +13,10 @@ class UsuarioService {
   async createUsuario(data) {
     const { rut, nombre, apellido, email, rolId } = data;
 
+    const usuario_existente = await UsuariosRepository.findByRut(rut);
+    if(usuario_existente) {
+      throw new Error("El usuario ya existe en el sistema");
+    }
     // Verificar que el rol exista
     const rol = await RolesRepository.findById(rolId);
     if (!rol) {

@@ -1,17 +1,23 @@
+import PermisosRepository from "../../auth/infraestructure/repositories/PermisosRepository.js";
+import RolRepository from "../../auth/infraestructure/repositories/RolRepository.js";
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 
-const checkPermissions = (requiredPermission) => {
+export default function checkPermissions(requiredPermission) {
     return async (req, res, next) => {
         try {
-            const {rut} = req; // esto debe venir de la cookie
+            console.log(req.user.rut);
+            const rut = req.user.rut; // esto debe venir de la cookie
             const usuario = await UsuariosRepository.findByRut(rut);
+            const rol = await RolRepository.findById(usuario.rolId);
+            
             
             if(!usuario || !usuario.activo) {
                 return res.status(403).json({error: "Usuario no autorizado o inactivo"});
             }
             
             // Verificar si el rol del usuario tiene el permiso requerido
-            const permisos = usuario.rol.rolesPermisos.map((rolePermiso) => rolePermiso.permiso.nombre);
+            const permisos = rol.rolesPermisos.map((rolePermiso) => rolePermiso.permiso.nombre);
+            //const permisos = usuario.rol.rolesPermisos.map((rolePermiso) => rolePermiso.permiso.nombre);
 
             // Verificar si el permiso requerido está en la lista de permisos del rol
             if (!permisos.includes(requiredPermission)) {
@@ -27,4 +33,4 @@ const checkPermissions = (requiredPermission) => {
     }
 }
 
-export default checkPermissions;
+/* export default checkPermissions; */

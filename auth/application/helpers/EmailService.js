@@ -1,4 +1,4 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 
 //Ver archivo .env
 
@@ -13,18 +13,20 @@ class EmailService {
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_SECURE === 'true', // true para 465, false para otros puertos
+      secure: process.env.SMTP_SECURE === "true", // true para 465, false para otros puertos
       auth: {
         user: process.env.SMTP_USER, // Usuario del SMTP
         pass: process.env.SMTP_PASS, // Contraseña del SMTP
       },
+      debug: true, // Activa logs de depuración
+      logger: true, // Activa logs detallados
     });
 
     // Configurar el contenido del correo
     const mailOptions = {
       from: process.env.EMAIL_FROM, // Dirección del remitente
       to: email,
-      subject: 'Tu contraseña temporal',
+      subject: "Tu contraseña temporal",
       text: `Hola,\n\nTu cuenta ha sido creada exitosamente. Tu contraseña temporal es: ${tempPassword}\n\nPor favor, inicia sesión y cambia tu contraseña.\n\nSaludos,\nEl Equipo`,
     };
 

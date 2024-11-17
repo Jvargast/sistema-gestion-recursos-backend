@@ -1,4 +1,4 @@
-import PermisosRepository from "../../infraestructure/repositories/PermisosRepository";
+import PermisosRepository from "../../infraestructure/repositories/PermisosRepository.js";
 
 /**
  * Valida que todos los permisos proporcionados existan en la base de datos.

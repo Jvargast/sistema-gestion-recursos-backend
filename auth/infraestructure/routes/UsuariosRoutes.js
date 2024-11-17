@@ -1,28 +1,29 @@
 import { Router } from 'express';
-import UsuarioController from '../controllers/UsuariosController.js';
+import UsuariosController from '../controllers/UsuariosController.js';
 import checkPermissions from '../../../shared/middlewares/CheckPermissionsMiddleware.js';
+import verifyToken from '../../../shared/middlewares/VerifyTokenMiddleware.js';
 
 const router = Router();
 
 // Rutas protegidas con VerifyToken
-router.use(VerifyToken);
+router.use(verifyToken);
 
 // Ruta para crear usuario, protegida con el middleware para verificar el permiso 'crear_usuario'
-router.post('/', checkPermissions('crear_usuario'), UsuarioController.create);
+router.post('/', checkPermissions('crear_usuarios'), UsuariosController.create);
 
 // Obtener todos los usuarios
-router.get('/', checkPermissions('ver_usuarios'), UsuarioController.findAll);
+router.get('/', checkPermissions('ver_usuarios'), UsuariosController.findAll);
 
 // Obtener un usuario por RUT
-router.get('/:rut', checkPermissions('ver_usuario'), UsuarioController.findByRut);
+router.get('/:rut', checkPermissions('ver_usuario'), UsuariosController.findByRut);
 
 // Actualizar un usuario
-router.put('/:rut', checkPermissions('actualizar_usuario'), UsuarioController.update);
+router.put('/:rut', checkPermissions('actualizar_usuario'), UsuariosController.update);
 
 // Desactivar un usuario
-router.delete('/:rut',checkPermissions('desactivar_usuario'), UsuarioController.deactivate);
+router.delete('/:rut',checkPermissions('desactivar_usuario'), UsuariosController.deactivate);
 
 // Cambiar la contraseña de un usuario
-router.post('/change-password', UsuarioController.changePassword);
+/* router.post('/change-password', UsuariosController.changePassword); */
 
 export default router;

@@ -15,7 +15,7 @@ class AuthController {
       // Configurar cookie con el token JWT
       res.cookie('authToken', token, {
         httpOnly: true, // Asegura que la cookie no sea accesible desde el frontend (prevención de XSS)
-        secure: process.env.NODE_ENV === 'production', // Solo enviar la cookie en HTTPS en producción
+        //secure: process.env.NODE_ENV === 'production', // Solo enviar la cookie en HTTPS en producción
         sameSite: 'strict', // Prevenir ataques CSRF
         //maxAge: 60 * 60 * 1000, // Expira en 1 hora
       });
