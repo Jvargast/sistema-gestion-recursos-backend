@@ -1,2 +1,6 @@
 .env
 /node_modules
+/controllers
+/data
+/node_modules
+/routes

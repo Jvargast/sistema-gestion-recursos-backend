@@ -18,12 +18,12 @@ router.get('/', checkPermissions('ver_usuarios'), UsuariosController.findAll);
 router.get('/:rut', checkPermissions('ver_usuario'), UsuariosController.findByRut);
 
 // Actualizar un usuario
-router.put('/:rut', checkPermissions('actualizar_usuario'), UsuariosController.update);
+router.put('/:rut', checkPermissions('editar_usuarios'), UsuariosController.update);
 
 // Desactivar un usuario
-router.delete('/:rut',checkPermissions('desactivar_usuario'), UsuariosController.deactivate);
+router.delete('/:rut',checkPermissions('eliminar_usuarios'), UsuariosController.deactivate);
 
 // Cambiar la contraseña de un usuario
-/* router.post('/change-password', UsuariosController.changePassword); */
+router.post('/change-password', UsuariosController.changePassword); 
 
 export default router;

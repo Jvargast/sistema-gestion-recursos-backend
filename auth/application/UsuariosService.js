@@ -14,7 +14,7 @@ class UsuarioService {
     const { rut, nombre, apellido, email, rolId } = data;
 
     const usuario_existente = await UsuariosRepository.findByRut(rut);
-    if(usuario_existente) {
+    if (usuario_existente) {
       throw new Error("El usuario ya existe en el sistema");
     }
     // Verificar que el rol exista
@@ -98,25 +98,34 @@ class UsuarioService {
    * @param {string} newPassword - Nueva contraseña.
    * @returns {Promise<void>}
    */
-  async changePassword(rut, oldPassword, newPassword) {
-    const usuario = await UsuariosRepository.findByRut(rut);
+  async changePassword(rut, currentPassword, newPassword) {
+    const usuario = await this.getUsuarioByRut(rut);
 
     if (!usuario) {
       throw new Error("Usuario no encontrado");
     }
 
-    // Verificar la contraseña actual
-    const isPasswordValid = await bcrypt.compare(oldPassword, usuario.password);
+    const isPasswordValid = await this.verifyPassword(
+      currentPassword,
+      usuario.password
+    );
     if (!isPasswordValid) {
       throw new Error("La contraseña actual es incorrecta");
     }
 
-    // Encriptar la nueva contraseña
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-    // Actualizar la contraseña en la base de datos
-    await UsuariosRepository.update(rut, { password: hashedPassword });
+    return await this.updateUsuario(rut, { password: hashedNewPassword });
+  }
+
+  /**
+   * Verificar si una contraseña es válida.
+   * @param {string} plainPassword - Contraseña sin encriptar.
+   * @param {string} hashedPassword - Contraseña encriptada.
+   * @returns {Promise<boolean>} - True si las contraseñas coinciden.
+   */
+  async verifyPassword(plainPassword, hashedPassword) {
+    return await bcrypt.compare(plainPassword, hashedPassword);
   }
 }
 
