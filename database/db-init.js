@@ -3,8 +3,8 @@ import sequelize from './database.js';
 //Carga de asociaciones por módulo
 //import loadAnalisisAssociations from '../geografia/domain/associate-models.js';
 import loadAuthAssociations from '../auth/domain/associate-models.js';
+import loadInventarioAssociations from '../inventario/domain/associate-models.js';
 //import loadGeografiaAssociations from '../geografia/domain/associate-models.js';
-//import loadInventarioAssociations from '../inventario/domain/associate-models.js';
 //import loadManagementAssociations from '../management/domain/associate-models.js';
 //import loadProveedoresAssociations from '../proveedores/domain/associate-models.js';
 //import loadVentasAssociations from '../ventas/domain/associate-models.js';
@@ -20,8 +20,8 @@ async function initializeDatabase() {
     //Cargas las asociaciones
     //loadAnalisisAssociations();
     loadAuthAssociations();
+    loadInventarioAssociations();
     //loadGeografiaAssociations();
-    //loadInventarioAssociations();
     //loadManagementAssociations();
     //loadProveedoresAssociations();
     //loadVentasAssociations();
