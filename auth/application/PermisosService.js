@@ -1,4 +1,4 @@
-import PermisosRepository from '../../infrastructure/repositories/PermisosRepository.js';
+import PermisosRepository from '../../auth/infraestructure/repositories/PermisosRepository.js';
 
 class PermisosService {
   async createPermiso(data) {

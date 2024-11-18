@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import PermisosController from '../controllers/PermisosController';
+import PermisosController from '../controllers/PermisosController.js';
 import verifyToken from '../../../shared/middlewares/VerifyTokenMiddleware.js';
 
 const router = Router();

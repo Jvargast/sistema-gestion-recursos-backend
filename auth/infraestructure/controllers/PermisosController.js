@@ -1,4 +1,4 @@
-import PermisosService from "../../application/PermisosService";
+import PermisosService from "../../application/PermisosService.js";
 
 class PermisosController {
   async create(req, res) {
