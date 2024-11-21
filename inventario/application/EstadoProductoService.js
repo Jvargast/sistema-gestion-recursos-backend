@@ -7,6 +7,12 @@ class EstadoProductoService {
     return estado;
   }
 
+  async getEstadoByNombre(nombre_estado) {
+    const estado = await EstadoProductoRepository.findByNombre(nombre_estado);
+    if (!estado) throw new Error('Estado no encontrado.');
+    return estado;
+  }
+
   async getAllEstados() {
     return await EstadoProductoRepository.findAll();
   }

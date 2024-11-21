@@ -18,12 +18,19 @@ import CategoriaProductoRoutes from './inventario/infrastructure/routes/Categori
 import InventarioRoutes from './inventario/infrastructure/routes/InventarioRoutes.js';
 import ProductoRoutes from './inventario/infrastructure/routes/ProductoRoutes.js';
 import TipoProductoRoutes from './inventario/infrastructure/routes/TipoProductoRoutes.js';
+
+/* MÓDULO VENTAS */
+import ClienteRoutes from './ventas/infrastructure/routes/ClienteRoutes.js';
+import EstadoTransaccionRoutes from './ventas/infrastructure/routes/EstadoTransaccionRoutes.js';
+import DetalleTransaccionRoutes from './ventas/infrastructure/routes/DetalleTransaccionroutes.js';
+import LogTransaccionRoutes from './ventas/infrastructure/routes/LogTransaccionesRoutes.js';
+import TransaccionRoutes from './ventas/infrastructure/routes/TransaccionRoutes.js';
+
 /* import analisisRoutes from "./analisis/infraestructure/routes/";
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
-import inventarioRoutes from "./inventario/infrastructure/routes/InventariosRoutes.js";
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
 import proveedoresRoutes from "./proveedores/infrastructure/routes/proveedoesrRoutes.js";
-import ventasRoutes from "./ventas/infrastructure/routes/ventasRoutes.js"; */
+ */
 
 
 /* Configuración */
@@ -53,6 +60,13 @@ app.use('/api/categorias-productos', CategoriaProductoRoutes);
 app.use('/api/inventarios', InventarioRoutes);
 app.use('/api/productos', ProductoRoutes);
 app.use('/api/tipo-productos', TipoProductoRoutes);
+
+/* MÓDULO VENTAS */
+app.use("/api/clientes", ClienteRoutes);
+app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
+app.use("/api/logs-transaccion", LogTransaccionRoutes);
+app.use("/api/transacciones", TransaccionRoutes);
+app.use("/api/detalle-transacciones", DetalleTransaccionRoutes);
 
 /* app.use("/api/client", clientRoutes);
 app.use("/api/general", generalRoutes);

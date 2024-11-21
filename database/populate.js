@@ -8,6 +8,13 @@ import Producto from "../inventario/domain/models/Producto.js";
 import TipoProducto from "../inventario/domain/models/TipoProducto.js";
 import Inventario from "../inventario/domain/models/Inventario.js";
 import CategoriaProducto from "../inventario/domain/models/CategoriaProducto.js";
+import EstadoPago from "../ventas/domain/models/EstadoPago.js";
+import MetodoPago from "../ventas/domain/models/MetodoPago.js";
+import Pago from "../ventas/domain/models/Pago.js";
+import DetalleTransaccion from "../ventas/domain/models/DetalleTransaccion.js";
+import Transaccion from "../ventas/domain/models/Transaccion.js";
+import Cliente from "../ventas/domain/models/Cliente.js";
+import EstadoTransaccion from "../ventas/domain/models/EstadoTransaccion.js";
 
 async function populateDatabase() {
   try {
@@ -17,9 +24,11 @@ async function populateDatabase() {
 
     // Sincronizar modelos (solo en desarrollo)
     await sequelize.sync({ alter: true });
-
+    /*****************************************************/
     console.log("Poblando la base de datos...");
-    //Módulo AUTH
+    /******************************/
+    //         Módulo AUTH        *
+    /******************************/
     // Crear permisos
     const permisosAuth = [
       { nombre: "iniciar_sesion", descripcion: "Permiso para iniciar sesión" },
@@ -124,8 +133,9 @@ async function populateDatabase() {
 
     await Usuarios.bulkCreate(usuariosData);
     console.log("Usuarios creados");
-
-    //Módulo INVENTARIO
+    /******************************/
+    //     Módulo INVENTARIO      *
+    /******************************/
     // Crear Estados productos
     const estados = [
       {
@@ -156,10 +166,16 @@ async function populateDatabase() {
 
     // Crear Categorias de productos
     const categorias = [
-      { nombre_categoria: 'Botellones', descripcion: 'Contenedores grandes de agua' },
-      { nombre_categoria: 'Hielo', descripcion: 'Hielo en diferentes formatos' },
+      {
+        nombre_categoria: "Botellones",
+        descripcion: "Contenedores grandes de agua",
+      },
+      {
+        nombre_categoria: "Hielo",
+        descripcion: "Hielo en diferentes formatos",
+      },
     ];
-    
+
     await CategoriaProducto.bulkCreate(categorias);
     console.log("Categoria productos creadas");
     // Crear Productos
@@ -206,6 +222,143 @@ async function populateDatabase() {
     await Inventario.bulkCreate(inventariosFinales);
     console.log("Inventario inicial creado exitosamente.");
 
+    /******************************/
+    //       Módulo VENTAS        *
+    /******************************/
+
+    // Estados de Transacción
+    const estadosTransaccion = [
+      {
+        nombre_estado: "Facturación Incompleta",
+        descripcion: "Faltan datos de la factura.",
+      },
+      {
+        nombre_estado: "En Proceso",
+        descripcion: "La transacción está en curso.",
+      },
+      {
+        nombre_estado: "Pago Pendiente",
+        descripcion: "La transacción espera el pago.",
+      },
+      {
+        nombre_estado: "Completada",
+        descripcion: "La transacción fue completada.",
+      },
+      {
+        nombre_estado: "Cancelada",
+        descripcion: "La transacción fue cancelada.",
+      },
+    ];
+    await EstadoTransaccion.bulkCreate(estadosTransaccion);
+    console.log("Estados de Transacción creados exitosamente.");
+
+    // Estado Pago
+    const estadosPago = [
+      { nombre: "pendiente", descripcion: "El pago aún no se ha completado." },
+      {
+        nombre: "pagado",
+        descripcion: "El pago ha sido completado exitosamente.",
+      },
+      {
+        nombre: "rechazado",
+        descripcion: "El pago fue rechazado por el método.",
+      },
+    ];
+    await EstadoPago.bulkCreate(estadosPago);
+    console.log("Estado Pago creado exitosamente.");
+    // Método Pago
+    const metodosPago = [
+      { nombre: "efectivo", descripcion: "Pago en efectivo." },
+      {
+        nombre: "tarjeta_credito",
+        descripcion: "Pago con tarjeta de crédito.",
+      },
+      { nombre: "tarjeta_debito", descripcion: "Pago con tarjeta de débito." },
+      { nombre: "transferencia", descripcion: "Transferencia bancaria." },
+    ];
+    await MetodoPago.bulkCreate(metodosPago);
+    console.log("Métodos Pago creado exitosamente.");
+    // Crear Pago ejemplo
+    const pagos = [
+      {
+        id_transaccion: 1,
+        id_estado_pago: 1, // Pendiente
+        id_metodo_pago: 2, // Tarjeta Crédito
+        monto: 5000,
+        referencia: "12345ABC",
+      },
+    ];
+    await Pago.bulkCreate(pagos);
+    console.log("Pago creado exitosamente.");
+
+    // Clientes de Ejemplo
+    const clientes = [
+      {
+        nombre: "Juan Pérez",
+        tipo_cliente: "persona",
+        email: "juan.perez@example.com",
+        telefono: "+56912345678",
+        activo: true,
+      },
+      {
+        nombre: "Empresa ABC S.A.",
+        tipo_cliente: "empresa",
+        razon_social: "ABC S.A.",
+        email: "contacto@abcsa.com",
+        telefono: "+56298765432",
+        activo: true,
+      },
+      {
+        nombre: "María López",
+        tipo_cliente: "persona",
+        email: "maria.lopez@example.com",
+        telefono: "+56987654321",
+        activo: true,
+      },
+    ];
+    await Cliente.bulkCreate(clientes);
+    console.log("Clientes creados exitosamente.");
+
+    // Transacción de Ejemplo
+    const transacciones = [
+      {
+        tipo_transaccion: "cotizacion",
+        id_cliente: 1, // Juan Pérez
+        id_usuario: 1, // Asume un usuario administrador
+        id_estado_transaccion: 2, // En Proceso
+        total: 0,
+        observaciones: "Cotización inicial para cliente.",
+      },
+      {
+        tipo_transaccion: "venta",
+        id_cliente: 2, // Empresa ABC S.A.
+        id_usuario: 2, // Asume un usuario vendedor
+        id_estado_transaccion: 3, // Pago Pendiente
+        total: 10000,
+        observaciones: "Venta inicial.",
+      },
+    ];
+    await Transaccion.bulkCreate(transacciones);
+    console.log("Transacciones creadas exitosamente.");
+
+    // Detalles de Transacciones
+    const detallesTransacciones = [
+      {
+        id_transaccion: 1, // Cotización
+        id_producto: 1, // Botellón de Agua 20L
+        cantidad: 5,
+        precio_unitario: 2000,
+      },
+      {
+        id_transaccion: 2, // Venta
+        id_producto: 2, // Hielo 2 Kilos
+        cantidad: 10,
+        precio_unitario: 1500,
+      },
+    ];
+    await DetalleTransaccion.bulkCreate(detallesTransacciones);
+    console.log("Detalles de Transacciones creados exitosamente.");
+    /*****************************************************/
     console.log("Base de datos poblada con éxito.");
   } catch (error) {
     console.error("Error al poblar la base de datos:", error);

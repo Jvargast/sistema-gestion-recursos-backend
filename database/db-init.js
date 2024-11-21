@@ -4,10 +4,10 @@ import sequelize from './database.js';
 //import loadAnalisisAssociations from '../geografia/domain/associate-models.js';
 import loadAuthAssociations from '../auth/domain/associate-models.js';
 import loadInventarioAssociations from '../inventario/domain/associate-models.js';
+import loadSalesAssociations from '../ventas/domain/associate-models.js';
 //import loadGeografiaAssociations from '../geografia/domain/associate-models.js';
 //import loadManagementAssociations from '../management/domain/associate-models.js';
 //import loadProveedoresAssociations from '../proveedores/domain/associate-models.js';
-//import loadVentasAssociations from '../ventas/domain/associate-models.js';
 
 
 //Se inicializa la base datos
@@ -21,10 +21,11 @@ async function initializeDatabase() {
     //loadAnalisisAssociations();
     loadAuthAssociations();
     loadInventarioAssociations();
+    loadSalesAssociations();
     //loadGeografiaAssociations();
     //loadManagementAssociations();
     //loadProveedoresAssociations();
-    //loadVentasAssociations();
+
 
     // Sincronizar modelos con la base de datos
     await sequelize.sync({ alter: true }); // `alter: true` ajusta los modelos según cambios (solo en desarrollo)
