@@ -44,13 +44,12 @@ const LogTransaccion = sequelize.define(
       allowNull: true,
     },
     fecha_modificacion: {
-      type: DataTypes.TIME,
+      type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
   },
   {
     tableName: "Log_Transaccion",
-    timestamps: false,
   }
 );
 

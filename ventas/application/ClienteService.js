@@ -17,7 +17,7 @@ class ClienteService {
   }
 
   async createCliente(data) {
-    const existingCliente = await ClienteRepository.findByEmail(data.email);
+    const existingCliente = await ClienteRepository.findById(data.rut);
     if (existingCliente) {
       throw new Error("El cliente ya existe con este email.");
     }

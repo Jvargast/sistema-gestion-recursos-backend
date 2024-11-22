@@ -8,14 +8,13 @@ class LogTransaccionService {
     if (!id_transaccion || !id_usuario || !accion) {
       throw new Error("Faltan campos obligatorios para crear el log.");
     }
-    const fechaActual = new Date();
+    
     return await LogTransaccionRepository.create({
       id_transaccion,
       id_usuario,
       accion,
+      estado: "Transacción Creada",
       detalles,
-      fecha_creacion: fechaActual,
-      fecha_modificacion: fechaActual,
     });
   }
 

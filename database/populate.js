@@ -117,7 +117,7 @@ async function populateDatabase() {
         apellido: "Test1",
         email: "test1.test@example.com",
         password:
-          "$2a$12$ZQOo2VA.6BlbgEmytQhwFufRd8bwkqD9DrV01mAdM/sELMuvfNfp.", // Asegúrate de encriptar las contraseñas en producción
+          "$2a$12$hpZ1Dq.mAvJLKJhZyQq6Ie2FSYsWzx46WJcJFpBXWG/Tvxx2HPibG", // Asegúrate de encriptar las contraseñas en producción
         rolId: rolesCreados.find((r) => r.nombre === "administrador").id,
       },
       {
@@ -126,7 +126,7 @@ async function populateDatabase() {
         apellido: "Test2",
         email: "Test2.test@example.com",
         password:
-          "$2a$12$ZQOo2VA.6BlbgEmytQhwFufRd8bwkqD9DrV01mAdM/sELMuvfNfp.", // Asegúrate de encriptar las contraseñas en producción
+          "$2a$12$hpZ1Dq.mAvJLKJhZyQq6Ie2FSYsWzx46WJcJFpBXWG/Tvxx2HPibG", // Asegúrate de encriptar las contraseñas en producción
         rolId: rolesCreados.find((r) => r.nombre === "vendedor").id,
       },
     ];
@@ -278,6 +278,64 @@ async function populateDatabase() {
     ];
     await MetodoPago.bulkCreate(metodosPago);
     console.log("Métodos Pago creado exitosamente.");
+
+    // Clientes de Ejemplo
+    const clientes = [
+      {
+        rut: "123456781-1",
+        nombre: "Juan Pérez",
+        tipo_cliente: "persona",
+        email: "juan.perez@example.com",
+        direccion: "avenida de prueba 1243",
+        telefono: "+56912345678",
+        activo: true,
+        
+      },
+      {
+        rut: "123456781-2",
+        nombre: "Empresa ABC S.A.",
+        tipo_cliente: "empresa",
+        razon_social: "ABC S.A.",
+        email: "contacto@abcsa.com",
+        direccion: "avenida de prueba 1245",
+        telefono: "+56298765432",
+        activo: true,
+      },
+      {
+        rut: "123456781-3",
+        nombre: "María López",
+        tipo_cliente: "persona",
+        email: "maria.lopez@example.com",
+        direccion: "avenida de prueba 1244",
+        telefono: "+56987654321",
+        activo: true,
+      },
+    ];
+    await Cliente.bulkCreate(clientes);
+    console.log("Clientes creados exitosamente.");
+
+    // Transacción de Ejemplo
+    const transacciones = [
+      {
+        tipo_transaccion: "cotizacion",
+        id_cliente: "123456781-1", // Juan Pérez
+        id_usuario: "12345678-9", // Asume un usuario administrador
+        id_estado_transaccion: 2, // En Proceso
+        total: 0,
+        observaciones: "Cotización inicial para cliente.",
+      },
+      {
+        tipo_transaccion: "venta",
+        id_cliente: "123456781-2", // Empresa ABC S.A.
+        id_usuario: "98765432-1", // Asume un usuario vendedor
+        id_estado_transaccion: 3, // Pago Pendiente
+        total: 10000,
+        observaciones: "Venta inicial.",
+      },
+    ];
+    await Transaccion.bulkCreate(transacciones);
+    console.log("Transacciones creadas exitosamente.");
+
     // Crear Pago ejemplo
     const pagos = [
       {
@@ -290,56 +348,6 @@ async function populateDatabase() {
     ];
     await Pago.bulkCreate(pagos);
     console.log("Pago creado exitosamente.");
-
-    // Clientes de Ejemplo
-    const clientes = [
-      {
-        nombre: "Juan Pérez",
-        tipo_cliente: "persona",
-        email: "juan.perez@example.com",
-        telefono: "+56912345678",
-        activo: true,
-      },
-      {
-        nombre: "Empresa ABC S.A.",
-        tipo_cliente: "empresa",
-        razon_social: "ABC S.A.",
-        email: "contacto@abcsa.com",
-        telefono: "+56298765432",
-        activo: true,
-      },
-      {
-        nombre: "María López",
-        tipo_cliente: "persona",
-        email: "maria.lopez@example.com",
-        telefono: "+56987654321",
-        activo: true,
-      },
-    ];
-    await Cliente.bulkCreate(clientes);
-    console.log("Clientes creados exitosamente.");
-
-    // Transacción de Ejemplo
-    const transacciones = [
-      {
-        tipo_transaccion: "cotizacion",
-        id_cliente: 1, // Juan Pérez
-        id_usuario: 1, // Asume un usuario administrador
-        id_estado_transaccion: 2, // En Proceso
-        total: 0,
-        observaciones: "Cotización inicial para cliente.",
-      },
-      {
-        tipo_transaccion: "venta",
-        id_cliente: 2, // Empresa ABC S.A.
-        id_usuario: 2, // Asume un usuario vendedor
-        id_estado_transaccion: 3, // Pago Pendiente
-        total: 10000,
-        observaciones: "Venta inicial.",
-      },
-    ];
-    await Transaccion.bulkCreate(transacciones);
-    console.log("Transacciones creadas exitosamente.");
 
     // Detalles de Transacciones
     const detallesTransacciones = [

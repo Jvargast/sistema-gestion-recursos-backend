@@ -55,7 +55,6 @@ class TransaccionService {
     const transaccion = await TransaccionRepository.create({
       ...data,
       id_estado_transaccion: estadoInicial.id_estado_transaccion,
-      fecha_creacion: new Date()
     });
 
     // Registrar log de creación de transacción
@@ -66,43 +65,62 @@ class TransaccionService {
       detalles: `Transacción creada con tipo: ${tipo_transaccion} y estado inicial: ${estadoInicialNombre}`,
     });
 
+    // Agregar detalles si existen
+    if (detalles.length > 0) {
+      await DetalleTransaccionService.createDetalles(
+        detalles,
+        transaccion.id_transaccion,
+        tipo_transaccion
+      );
+    }
+
     return transaccion;
   }
 
   async addDetallesToTransaccion(id_transaccion, detalles, id_usuario) {
     const transaccion = await this.getTransaccionById(id_transaccion);
 
-    const detallesData = detalles.map((detalle) => ({
-      ...detalle,
+    await DetalleTransaccionService.createDetalles(
+      detalles,
       id_transaccion,
-    }));
-    await DetalleTransaccionService.createDetalles(detalles, id_transaccion, transaccion.transaccion.tipo_transaccion);
+      transaccion.transaccion.tipo_transaccion
+    );
+
+    // Calcular y actualizar el total de la transacción
+    const total = await DetalleTransaccionService.calcularTotales(
+      id_transaccion
+    );
+    await TransaccionRepository.update(id_transaccion, { total });
 
     // Cambiar estado de la transacción si es necesario
     if (transaccion.transaccion.tipo_transaccion === "venta") {
-      //Verificar con otro servicio el estado
       const estadoCompletado = await EstadoTransaccionService.findByNombre(
         "Completada"
       );
-      if (!estadoCompletado) {
-        throw new Error('Estado "Completada" no encontrado.');
-      }
       await this.changeEstadoTransaccion(
         id_transaccion,
         estadoCompletado.id_estado_transaccion,
         id_usuario
       );
     }
+
+    // Registrar log
+    await LogTransaccionService.createLog({
+      id_transaccion,
+      id_usuario,
+      accion: "Actualización de detalles",
+      detalles: "Se agregaron o actualizaron detalles a la transacción.",
+    });
   }
 
   async changeEstadoTransaccion(id, id_estado_transaccion, id_usuario) {
-    await this.getTransaccionById(id);
+    const transaccion = await this.getTransaccionById(id);
     const updated = await TransaccionRepository.update(id, {
       id_estado_transaccion,
     });
 
     // Registrar log de cambio de estado
-    await LogTransaccionRepository.create({
+    await LogTransaccionService.createLog({
       id_transaccion: id,
       id_usuario,
       accion: "Cambio de estado",
@@ -132,7 +150,7 @@ class TransaccionService {
     });
 
     // Registrar log de cambio de tipo
-    await LogTransaccionRepository.create({
+    await LogTransaccionService.createLog({
       id_transaccion: id,
       id_usuario,
       accion: "Cambio de tipo",
@@ -157,7 +175,6 @@ class TransaccionService {
         "Debe proporcionar al menos un ID de transacción para eliminar."
       );
     }
-
     // Buscar las transacciones antes de eliminarlas
     const transacciones = await TransaccionRepository.findByIds(ids);
     if (transacciones.length !== ids.length) {
@@ -173,12 +190,40 @@ class TransaccionService {
         )}`
       );
     }
+    // Filtrar transacciones que son eliminables según tipo o estado
+    const transaccionesAEliminar = transacciones.filter(
+      async (transaccion) =>
+        transaccion.tipo_transaccion === "cotización" ||
+        transaccion.id_estado_transaccion ===
+          (await EstadoTransaccionService.findByNombre("Errónea"))
+            .id_estado_transaccion
+    );
 
-    // Eliminar todas las transacciones en una sola operación
-    await TransaccionRepository.bulkDelete(ids);
+    if (transaccionesAEliminar.length === 0) {
+      throw new Error(
+        "No hay transacciones eliminables según los criterios especificados."
+      );
+    }
+
+    // Obtener IDs de las transacciones a eliminar
+    const transaccionesAEliminarIds = transaccionesAEliminar.map(
+      (t) => t.id_transaccion
+    );
+
+    // Eliminar las transacciones y sus detalles asociados
+    for (const transaccion of transaccionesAEliminar) {
+      // Eliminar detalles asociados
+      await DetalleTransaccionService.deleteDetalles(
+        transaccion.id_transaccion,
+        transaccion.tipo_transaccion
+      );
+    }
+
+    // Eliminar las transacciones
+    await TransaccionRepository.bulkDelete(transaccionesAEliminarIds);
 
     // Registrar logs para cada transacción eliminada
-    const logs = transacciones.map((transaccion) => ({
+    const logs = transaccionesAEliminar.map((transaccion) => ({
       id_transaccion: transaccion.id_transaccion,
       id_usuario,
       accion: "Eliminación de transacción",
@@ -186,11 +231,11 @@ class TransaccionService {
       fecha_modificacion: new Date(),
     }));
 
-    await LogTransaccionRepository.bulkCreate(logs);
+    await LogTransaccionService.createBulkLogs(logs);
 
     return {
-      message: `Se eliminaron ${ids.length} transacciones.`,
-      transaccionesEliminadas: ids,
+      message: `Se eliminaron ${transaccionesAEliminar.length} transacciones.`,
+      transaccionesEliminadas: transaccionesAEliminarIds,
     };
   }
 }

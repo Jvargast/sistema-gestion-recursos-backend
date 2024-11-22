@@ -10,7 +10,7 @@ class TransaccionRepository extends ITransaccionRepository {
       include: [
         { model: EstadoTransaccion, as: "estado" },
         { model: Cliente, as: "cliente" },
-        { model: Usuarios, as: "usuarios"}
+        { model: Usuarios, as: "usuario"}
       ],
     });
   }
@@ -20,7 +20,7 @@ class TransaccionRepository extends ITransaccionRepository {
       include: [
         { model: EstadoTransaccion, as: "estado" },
         { model: Cliente, as: "cliente" },
-        { model: Usuarios, as: "usuarios"}
+        { model: Usuarios, as: "usuario"}
       ],
     });
   }

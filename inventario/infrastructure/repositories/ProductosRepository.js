@@ -42,6 +42,10 @@ class ProductoRepository extends IProductoRepository {
   async delete(id) {
     return await Producto.destroy({ where: { id_producto: id } });
   }
+
+  getModel() {
+    return Transaccion;
+  }
 }
 
 export default new ProductoRepository();

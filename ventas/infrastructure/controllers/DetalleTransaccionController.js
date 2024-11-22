@@ -4,19 +4,31 @@ class DetalleTransaccionController {
   async getDetallesByTransaccionId(req, res) {
     try {
       const { id_transaccion } = req.params;
-      const detalles = await DetalleTransaccionService.getDetallesByTransaccionId(id_transaccion);
+      const detalles =
+        await DetalleTransaccionService.getDetallesByTransaccionId(
+          id_transaccion
+        );
       res.status(200).json(detalles);
     } catch (error) {
       res.status(404).json({ error: error.message });
     }
   }
 
+
+
   async createDetalles(req, res) {
     try {
-      const { id_transaccion, tipo_transaccion } = req.body;
-      const { detalles } = req.body;
-      await DetalleTransaccionService.createDetalles(detalles, id_transaccion, tipo_transaccion);
-      res.status(201).json({ message: "Detalles creados exitosamente." });
+      const {id_transaccion} = req.params
+      const { tipo_transaccion } = req.body;
+      const { productos } = req.body;
+
+      const result = await DetalleTransaccionService.createDetalles(
+        productos,
+        id_transaccion,
+        tipo_transaccion
+      );
+
+      return res.status(201).json(result);
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -26,7 +38,10 @@ class DetalleTransaccionController {
     try {
       const { id_detalle } = req.params;
       const data = req.body;
-      const updated = await DetalleTransaccionService.updateDetalle(id_detalle, data);
+      const updated = await DetalleTransaccionService.updateDetalle(
+        id_detalle,
+        data
+      );
       res.status(200).json(updated);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -36,7 +51,10 @@ class DetalleTransaccionController {
   async deleteDetalles(req, res) {
     try {
       const { ids_detalles, tipo_transaccion } = req.body;
-      const result = await DetalleTransaccionService.deleteDetalles(ids_detalles, tipo_transaccion);
+      const result = await DetalleTransaccionService.deleteDetalles(
+        ids_detalles,
+        tipo_transaccion
+      );
       res.status(200).json(result);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -46,7 +64,9 @@ class DetalleTransaccionController {
   async calcularTotales(req, res) {
     try {
       const { id_transaccion } = req.params;
-      const total = await DetalleTransaccionService.calcularTotales(id_transaccion);
+      const total = await DetalleTransaccionService.calcularTotales(
+        id_transaccion
+      );
       res.status(200).json({ total });
     } catch (error) {
       res.status(400).json({ error: error.message });

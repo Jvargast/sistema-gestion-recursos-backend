@@ -18,6 +18,8 @@ class TransaccionController {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
       };
+      delete filters.limit;
+      delete filters.offset;
       const transacciones = await TransaccionService.getAllTransacciones(filters, options);
       res.status(200).json(transacciones);
     } catch (error) {
@@ -47,7 +49,7 @@ class TransaccionController {
     }
   }
 
-  async changeEstadoTransaccion(req, res) {
+  async changeEstado(req, res) {
     try {
       const { id } = req.params;
       const { id_estado_transaccion } = req.body;
