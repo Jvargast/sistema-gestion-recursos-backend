@@ -50,16 +50,40 @@ class DetalleTransaccionRepository extends IDetalleTransaccionRepository {
   }
 
   async update(id, data) {
-    return await DetalleTransaccion.update(data, { where: { id_detalle_transaccion: id } });
+    return await DetalleTransaccion.update(data, {
+      where: { id_detalle_transaccion: id },
+    });
   }
 
   async delete(id) {
-    return await DetalleTransaccion.destroy({ where: { id_detalle_transaccion: id } });
+    return await DetalleTransaccion.destroy({
+      where: { id_detalle_transaccion: id },
+    });
   }
 
   async deleteByTransaccionId(transaccionId) {
     return await DetalleTransaccion.destroy({
       where: { id_transaccion: transaccionId },
+    });
+  }
+
+  async findByIds(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new Error("El parámetro 'ids' debe ser un array no vacío.");
+    }
+
+    return await DetalleTransaccion.findAll({
+      where: {
+        id_detalle_transaccion: ids, // Campo correspondiente al ID
+      },
+    });
+  }
+
+  async bulkDelete(ids) {
+    return await DetalleTransaccion.destroy({
+      where: {
+        id_detalle_transaccion: ids,
+      },
     });
   }
 }

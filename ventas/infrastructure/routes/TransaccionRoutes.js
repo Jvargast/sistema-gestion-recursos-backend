@@ -8,6 +8,6 @@ router.get("/", TransaccionController.getAllTransacciones); // Obtener todas las
 router.post("/", TransaccionController.createTransaccion); // Crear una transacción
 router.put("/:id/changeEstado", TransaccionController.changeEstado); // Cambiar estado de transacción
 router.put("/:id/changeTipo", TransaccionController.changeTipoTransaccion); // Cambiar tipo de transacción
-router.delete("/", TransaccionController.deleteTransacciones); // Eliminar transacciones
+router.patch("/", TransaccionController.deleteTransacciones); // Eliminar transacciones
 
 export default router;

@@ -55,7 +55,7 @@ class TransaccionController {
       const { id_estado_transaccion } = req.body;
       const { id_usuario } = req.user;
       const updated = await TransaccionService.changeEstadoTransaccion(id, id_estado_transaccion, id_usuario);
-      res.status(200).json(updated);
+      res.status(200).json({ message: "Estado de la transacción cambiada con éxito." }, updated);
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -76,8 +76,8 @@ class TransaccionController {
   async deleteTransacciones(req, res) {
     try {
       const { ids } = req.body;
-      const { id_usuario } = req.user;
-      const result = await TransaccionService.deleteTransacciones(ids, id_usuario);
+      //const { id_usuario } = req.user;
+      const result = await TransaccionService.deleteTransacciones(ids, "12345678-9");
       res.status(200).json(result);
     } catch (error) {
       res.status(400).json({ error: error.message });

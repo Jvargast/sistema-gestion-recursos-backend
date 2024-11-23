@@ -248,6 +248,14 @@ async function populateDatabase() {
         nombre_estado: "Cancelada",
         descripcion: "La transacción fue cancelada.",
       },
+      {
+        nombre_estado: "Errónea",
+        descripcion: "La transacción está errónea.",
+      },
+      {
+        nombre_estado: "Eliminada",
+        descripcion: "La transacción ha sido eliminada del sistema de manera lógica.",
+      },
     ];
     await EstadoTransaccion.bulkCreate(estadosTransaccion);
     console.log("Estados de Transacción creados exitosamente.");

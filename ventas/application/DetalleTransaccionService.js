@@ -149,6 +149,20 @@ class DetalleTransaccionService {
     return total;
   }
 
+  async deleteDetallesByTransaccionId(id_transaccion) {
+    const detalles = await DetalleTransaccionRepository.findByTransaccionId(
+      id_transaccion
+    );
+  
+    if (!detalles || detalles.length === 0) {
+      return; // No hay detalles asociados, no hay nada que eliminar
+    }
+  
+    await DetalleTransaccionRepository.bulkDelete(
+      detalles.map((detalle) => detalle.id_detalle_transaccion)
+    );
+  }
+
   /*   async deleteDetallesByTransaccionId(id_transaccion) {
     const detalles = await this.getDetallesByTransaccionId(id_transaccion);
   

@@ -114,7 +114,7 @@ class TransaccionService {
   }
 
   async changeEstadoTransaccion(id, id_estado_transaccion, id_usuario) {
-    const transaccion = await this.getTransaccionById(id);
+    await this.getTransaccionById(id);
     const updated = await TransaccionRepository.update(id, {
       id_estado_transaccion,
     });
@@ -127,6 +127,7 @@ class TransaccionService {
       detalles: `Estado cambiado a ${id_estado_transaccion}`,
       fecha_modificacion: new Date(),
     });
+    console.log(updated)
 
     return updated;
   }
@@ -136,7 +137,7 @@ class TransaccionService {
 
     // Validar reglas de cambio de tipo
     if (
-      transaccion.tipo_transaccion === "factura" &&
+      transaccion.transaccion.tipo_transaccion === "factura" &&
       tipo_transaccion !== "venta"
     ) {
       throw new Error(
@@ -171,11 +172,10 @@ class TransaccionService {
 
   async deleteTransacciones(ids, id_usuario) {
     if (!Array.isArray(ids) || ids.length === 0) {
-      throw new Error(
-        "Debe proporcionar al menos un ID de transacción para eliminar."
-      );
+      throw new Error("Debe proporcionar al menos un ID de transacción para eliminar.");
     }
-    // Buscar las transacciones antes de eliminarlas
+  
+    // Buscar las transacciones antes de marcarlas como eliminadas
     const transacciones = await TransaccionRepository.findByIds(ids);
     if (transacciones.length !== ids.length) {
       const notFoundIds = ids.filter(
@@ -185,57 +185,33 @@ class TransaccionService {
           )
       );
       throw new Error(
-        `Las siguientes transacciones no fueron encontradas: ${notFoundIds.join(
-          ", "
-        )}`
+        `Las siguientes transacciones no fueron encontradas: ${notFoundIds.join(", ")}`
       );
     }
-    // Filtrar transacciones que son eliminables según tipo o estado
-    const transaccionesAEliminar = transacciones.filter(
-      async (transaccion) =>
-        transaccion.tipo_transaccion === "cotización" ||
-        transaccion.id_estado_transaccion ===
-          (await EstadoTransaccionService.findByNombre("Errónea"))
-            .id_estado_transaccion
-    );
-
-    if (transaccionesAEliminar.length === 0) {
-      throw new Error(
-        "No hay transacciones eliminables según los criterios especificados."
-      );
+  
+    // Obtener el estado "Eliminada"
+    const estadoEliminada = await EstadoTransaccionService.findByNombre("Eliminada");
+    if (!estadoEliminada) {
+      throw new Error('El estado "Eliminada" no fue encontrado.');
     }
-
-    // Obtener IDs de las transacciones a eliminar
-    const transaccionesAEliminarIds = transaccionesAEliminar.map(
-      (t) => t.id_transaccion
-    );
-
-    // Eliminar las transacciones y sus detalles asociados
-    for (const transaccion of transaccionesAEliminar) {
-      // Eliminar detalles asociados
-      await DetalleTransaccionService.deleteDetalles(
-        transaccion.id_transaccion,
-        transaccion.tipo_transaccion
-      );
+  
+    // Cambiar el estado de las transacciones a "Eliminada"
+    for (const transaccion of transacciones) {
+      await TransaccionRepository.update(transaccion.id_transaccion, {
+        id_estado_transaccion: estadoEliminada.id_estado_transaccion,
+      });
+  
+      // Registrar log
+      await LogTransaccionService.createLog({
+        id_transaccion: transaccion.id_transaccion,
+        id_usuario,
+        accion: "Cambio de estado",
+        detalles: `Estado cambiado a Eliminada`,
+      });
     }
-
-    // Eliminar las transacciones
-    await TransaccionRepository.bulkDelete(transaccionesAEliminarIds);
-
-    // Registrar logs para cada transacción eliminada
-    const logs = transaccionesAEliminar.map((transaccion) => ({
-      id_transaccion: transaccion.id_transaccion,
-      id_usuario,
-      accion: "Eliminación de transacción",
-      detalles: `Transacción eliminada con ID ${transaccion.id_transaccion}`,
-      fecha_modificacion: new Date(),
-    }));
-
-    await LogTransaccionService.createBulkLogs(logs);
-
+  
     return {
-      message: `Se eliminaron ${transaccionesAEliminar.length} transacciones.`,
-      transaccionesEliminadas: transaccionesAEliminarIds,
+      message: `Se marcaron como eliminadas ${ids.length} transacciones.`,
     };
   }
 }

@@ -26,6 +26,7 @@ class TransaccionRepository extends ITransaccionRepository {
   }
 
   async findByIds(ids) {
+    console.log(ids)
     return await Transaccion.findAll({
       where: { id_transaccion: ids },
     });
