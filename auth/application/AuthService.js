@@ -23,13 +23,16 @@ class AuthService {
       throw new Error("Credenciales inválidas");
     }
 
+    const now = new Date();
+    await UsuariosRepository.updateLastLogin(usuario.rut, now);
+
     // Generar el token JWT
     const token = jwt.sign(
       { rut: usuario.rut, rolId: usuario.rolId },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
-
+    /* return {token, user}; */
     return token;
   }
 
@@ -47,8 +50,14 @@ class AuthService {
     if (!user) {
       throw new Error("Usuario no encontrado");
     }
-
-    return user;
+    return {
+      id: user.id_usuario,
+      nombre: user.nombre,
+      email: user.email,
+      rut: user.rut,
+      activo: user.activo,
+      rol: user.rol, // Asegúrate de incluir la relación del rol
+    };
   }
 }
 

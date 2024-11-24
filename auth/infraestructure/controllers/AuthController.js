@@ -17,10 +17,10 @@ class AuthController {
         httpOnly: true, // Asegura que la cookie no sea accesible desde el frontend (prevención de XSS)
         //secure: process.env.NODE_ENV === 'production', // Solo enviar la cookie en HTTPS en producción
         sameSite: "strict", // Prevenir ataques CSRF
-        //maxAge: 60 * 60 * 1000, // Expira en 1 hora
+        maxAge: 60 * 60 * 1000, // Expira en 1 hora
       });
 
-      res.status(200).json({ message: "Inicio de sesión exitoso" });
+      res.status(200).json({ message: "Inicio de sesión exitoso", token/* , usuario */ });
     } catch (error) {
       res.status(401).json({ error: error.message });
     }

@@ -1,3 +1,4 @@
+import Roles from "../../domain/models/Roles.js";
 import Usuario from "../../domain/models/Usuarios.js";
 import IUsuariosRepository from "../../domain/repositories/IUsuariosRepository.js";
 
@@ -5,6 +6,7 @@ class UsuarioRepository extends IUsuariosRepository {
   async findByRut(rut) {
     return await Usuario.findOne({
       where: { rut, activo: true },
+      include: { model: Roles, as: "rol", attributes: ["id", "nombre"] },
     });
   }
 
@@ -25,6 +27,10 @@ class UsuarioRepository extends IUsuariosRepository {
 
   async findAll() {
     return await Usuario.findAll();
+  }
+
+  async updateLastLogin(rut, fecha) {
+    return await Usuario.update({ ultimo_login: fecha }, { where: { rut } });
   }
 }
 

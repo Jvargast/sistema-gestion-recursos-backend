@@ -44,7 +44,7 @@ class ProductoRepository extends IProductoRepository {
   }
 
   getModel() {
-    return Transaccion;
+    return Producto;
   }
 }
 

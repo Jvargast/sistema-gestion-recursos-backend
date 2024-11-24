@@ -30,13 +30,14 @@ class ProductoService {
       "id_estado_producto"
     ]
     const where = createFilter(filters, allowedFields);
-
+    /* const productos = ProductosRepository.findAll();  */
+/* 
     for (const producto of productos) {
       const inventario = await InventarioService.getInventarioByProductoId(
         producto.id_producto
       );
       producto.dataValues.inventario = inventario;
-    }
+    } */
 
     return await paginate(ProductosRepository.getModel(), options, {where})
   }
@@ -102,8 +103,10 @@ class ProductoService {
     return true;
   }
 
+  //Modificarla
   async getProductosByTipo(tipo) {
     const tipoProducto = await TipoProductoService.getAllTipos();
+
     const tipoId = tipoProducto.find((t) => t.nombre === tipo)?.id_tipo_producto;
 
     if (!tipoId) throw new Error('Tipo de producto no encontrado.');

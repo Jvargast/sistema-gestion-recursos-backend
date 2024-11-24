@@ -53,9 +53,10 @@ class TransaccionController {
     try {
       const { id } = req.params;
       const { id_estado_transaccion } = req.body;
-      const { id_usuario } = req.user;
-      const updated = await TransaccionService.changeEstadoTransaccion(id, id_estado_transaccion, id_usuario);
-      res.status(200).json({ message: "Estado de la transacción cambiada con éxito." }, updated);
+      const { rut } = req.user;
+      await TransaccionService.changeEstadoTransaccion(id, id_estado_transaccion, rut);
+
+      res.status(200).json({ message: "Estado de la transacción cambiada con éxito." });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -65,8 +66,8 @@ class TransaccionController {
     try {
       const { id } = req.params;
       const { tipo_transaccion } = req.body;
-      const { id_usuario } = req.user;
-      const updated = await TransaccionService.changeTipoTransaccion(id, tipo_transaccion, id_usuario);
+      //const { id_usuario } = req.user;
+      const updated = await TransaccionService.changeTipoTransaccion(id, tipo_transaccion, "12345678-9");
       res.status(200).json(updated);
     } catch (error) {
       res.status(400).json({ error: error.message });

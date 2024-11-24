@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import AuthService from "../../auth/application/AuthService.js"; // Servicio para manejar la lógica relacionada con autenticación
+import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 
 const authenticate = async (req, res, next) => {
   try {
@@ -19,6 +20,9 @@ const authenticate = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ error: "Usuario no encontrado" });
     }
+
+    const now = new Date();
+    await UsuariosRepository.updateLastLogin(user.rut, now);
 
     // Agregar el usuario al objeto de la solicitud para uso posterior
     req.user = user;

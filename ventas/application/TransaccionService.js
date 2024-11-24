@@ -5,6 +5,7 @@ import EstadoTransaccionService from "./EstadoTransaccionService.js";
 import ClienteService from "./ClienteService.js";
 import LogTransaccionService from "./LogTransaccionService.js";
 import DetalleTransaccionService from "./DetalleTransaccionService.js";
+import { Op } from "sequelize";
 
 class TransaccionService {
   async getTransaccionById(id) {
@@ -71,6 +72,7 @@ class TransaccionService {
     await LogTransaccionService.createLog({
       id_transaccion: transaccion.id_transaccion,
       id_usuario,
+      estado: `${estadoInicial}`,
       accion: "Creación de transacción",
       detalles: `Transacción creada con tipo: ${tipo_transaccion} y estado inicial: ${estadoInicialNombre}`,
     });
@@ -123,21 +125,23 @@ class TransaccionService {
     });
   }
 
-  async changeEstadoTransaccion(id, id_estado_transaccion, id_usuario) {
+  async changeEstadoTransaccion(id, id_estado_transaccion, rut) {
     await this.getTransaccionById(id);
     const updated = await TransaccionRepository.update(id, {
-      id_estado_transaccion,
+      id_estado_transaccion
     });
+
+    const estadoACambiar = await EstadoTransaccionService.findById(id_estado_transaccion);
 
     // Registrar log de cambio de estado
     await LogTransaccionService.createLog({
       id_transaccion: id,
-      id_usuario,
+      id_usuario: rut,
+      estado: `${estadoACambiar.dataValues.nombre_estado}`,
       accion: "Cambio de estado",
-      detalles: `Estado cambiado a ${id_estado_transaccion}`,
+      detalles: `Estado cambiado a ${estadoACambiar.dataValues.nombre_estado}`,
       fecha_modificacion: new Date(),
     });
-    console.log(updated);
 
     return updated;
   }
