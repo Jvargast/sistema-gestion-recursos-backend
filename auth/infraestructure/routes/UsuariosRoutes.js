@@ -6,7 +6,7 @@ import verifyToken from '../../../shared/middlewares/VerifyTokenMiddleware.js';
 const router = Router();
 
 // Rutas protegidas con VerifyToken
-router.use(verifyToken);
+//router.use(verifyToken);
 
 // Ruta para crear usuario, protegida con el middleware para verificar el permiso 'crear_usuario'
 router.post('/', checkPermissions('crear_usuarios'), UsuariosController.create);
@@ -15,7 +15,7 @@ router.post('/', checkPermissions('crear_usuarios'), UsuariosController.create);
 router.get('/', checkPermissions('ver_usuarios'), UsuariosController.findAll);
 
 // Obtener un usuario por RUT
-router.get('/:rut', checkPermissions('ver_usuario'), UsuariosController.findByRut);
+router.get('/:rut', /* checkPermissions('ver_usuario'), */ UsuariosController.findByRut);
 
 // Actualizar un usuario
 router.put('/:rut', checkPermissions('editar_usuarios'), UsuariosController.update);

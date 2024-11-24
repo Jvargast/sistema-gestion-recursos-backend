@@ -33,6 +33,16 @@ class TransaccionService {
     ];
     const where = createFilter(filters, allowedFields);
 
+    // Excluir transacciones con estado "Eliminada"
+    const estadoEliminada = await EstadoTransaccionService.findByNombre(
+      "Eliminada"
+    );
+    if (estadoEliminada) {
+      where.id_estado_transaccion = {
+        [Op.ne]: estadoEliminada.id_estado_transaccion,
+      };
+    }
+
     // Aplicar paginación
     return await paginate(TransaccionRepository.getModel(), options, { where });
   }
@@ -127,7 +137,7 @@ class TransaccionService {
       detalles: `Estado cambiado a ${id_estado_transaccion}`,
       fecha_modificacion: new Date(),
     });
-    console.log(updated)
+    console.log(updated);
 
     return updated;
   }
@@ -172,9 +182,11 @@ class TransaccionService {
 
   async deleteTransacciones(ids, id_usuario) {
     if (!Array.isArray(ids) || ids.length === 0) {
-      throw new Error("Debe proporcionar al menos un ID de transacción para eliminar.");
+      throw new Error(
+        "Debe proporcionar al menos un ID de transacción para eliminar."
+      );
     }
-  
+
     // Buscar las transacciones antes de marcarlas como eliminadas
     const transacciones = await TransaccionRepository.findByIds(ids);
     if (transacciones.length !== ids.length) {
@@ -185,22 +197,26 @@ class TransaccionService {
           )
       );
       throw new Error(
-        `Las siguientes transacciones no fueron encontradas: ${notFoundIds.join(", ")}`
+        `Las siguientes transacciones no fueron encontradas: ${notFoundIds.join(
+          ", "
+        )}`
       );
     }
-  
+
     // Obtener el estado "Eliminada"
-    const estadoEliminada = await EstadoTransaccionService.findByNombre("Eliminada");
+    const estadoEliminada = await EstadoTransaccionService.findByNombre(
+      "Eliminada"
+    );
     if (!estadoEliminada) {
       throw new Error('El estado "Eliminada" no fue encontrado.');
     }
-  
+
     // Cambiar el estado de las transacciones a "Eliminada"
     for (const transaccion of transacciones) {
       await TransaccionRepository.update(transaccion.id_transaccion, {
         id_estado_transaccion: estadoEliminada.id_estado_transaccion,
       });
-  
+
       // Registrar log
       await LogTransaccionService.createLog({
         id_transaccion: transaccion.id_transaccion,
@@ -209,7 +225,7 @@ class TransaccionService {
         detalles: `Estado cambiado a Eliminada`,
       });
     }
-  
+
     return {
       message: `Se marcaron como eliminadas ${ids.length} transacciones.`,
     };

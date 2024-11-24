@@ -44,7 +44,10 @@ app.use(morgan("common"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false}));
 app.use(cookieParser());
-app.use(cors());
+app.use(cors({
+  origin: process.env.CLIENT_URL, // Asegúrate de que esté configurado
+  credentials: true
+}));
 /* app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));  */
 
 /* Rutas*/
