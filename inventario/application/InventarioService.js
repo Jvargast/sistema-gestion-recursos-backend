@@ -1,4 +1,5 @@
 import InventarioRepository from "../infrastructure/repositories/InventarioRepository.js";
+import LogInventarioRepository from "../infrastructure/repositories/LogInventarioRepository.js";
 import ProductosService from "./ProductosService.js";
 import TransicionEstadoProductoService from "./TransicionEstadoProductoService.js";
 
@@ -13,17 +14,10 @@ class InventarioService {
     return await InventarioRepository.findAll();
   }
 
-  async createInventario(data) {
+  async addInventario(data) {
     const producto = await ProductosService.getProductoById(data.id_producto);
     if (!producto) throw new Error("Producto no encontrado.");
     return await InventarioRepository.create(data);
-  }
-
-  async updateInventario(id_producto, data) {
-    const updated = await InventarioRepository.update(id_producto, data);
-    if (updated[0] === 0)
-      throw new Error("No se pudo actualizar el inventario.");
-    return await this.getInventarioByProductoId(id_producto);
   }
 
   async verificarInventarioMinimo(id_producto, cantidadMinima) {
@@ -45,20 +39,25 @@ class InventarioService {
   }
 
   // Actualizar el inventario
-  async ajustarCantidadInventario(id_producto, cantidad) {
-    const inventario = await this.getInventarioByProductoId(id_producto);
-
+  async ajustarCantidadInventario(idProducto, cantidad, idUsuario) {
+    const inventario = await InventarioRepository.findByProductoId(idProducto);
+    if (!inventario) throw new Error("Inventario no encontrado.");
+  
     const nuevaCantidad = inventario.cantidad + cantidad;
-    if (nuevaCantidad < 0) {
-      throw new Error(
-        `Stock insuficiente para el producto con ID ${id_producto}.`
-      );
+    if (nuevaCantidad < 0) throw new Error("La cantidad no puede ser negativa.");
+  
+    await InventarioRepository.update(idProducto, { cantidad: nuevaCantidad });
+  
+    if (idUsuario) {
+      await LogInventarioRepository.createLog({
+        id_producto: idProducto,
+        cantidad_ajustada: cantidad,
+        cantidad_resultante: nuevaCantidad,
+        id_usuario: idUsuario,
+      });
     }
-
-    return await InventarioRepository.update(id_producto, {
-      cantidad: nuevaCantidad,
-      fecha_actualizacion: new Date(),
-    });
+  
+    return await InventarioRepository.findByProductoId(idProducto);
   }
 
   // Actualizar el inventario basado en los productos y cantidades de una transacción concreta.
@@ -82,7 +81,7 @@ class InventarioService {
       );
 
       // Registrar un log de inventario para el producto
-      await InventarioRepository.registrarCambio({
+      await InventarioLog.registrarCambio({
         id_producto: detalle.id_producto,
         id_transaccion: idTransaccion,
         cambio: -detalle.cantidad,
@@ -113,10 +112,10 @@ class InventarioService {
     };
   }
 
-  // Generar un resumen del inventario clasificado por categorías de producto.
-  async obtenerResumenInventarioPorCategoria() {
-    return await InventarioRepository.getInventarioGlobal();
+  async obtenerLogsInventario() {
+    return LogInve
   }
+
 }
 
 export default new InventarioService();

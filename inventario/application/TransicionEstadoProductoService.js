@@ -111,18 +111,6 @@ class TransicionEstadoProductoService {
     }
 
     return resultados;
-
-
-    /*   Otra forma
-    // Validar cada transición
-    const resultados = await Promise.all(
-      transiciones.map(async (transicion) => {
-        const { id_producto, id_estado_origen, id_estado_destino } = transicion;
-        const estadosPosibles = await this.obtenerEstadosPosibles(id_estado_origen);
-        return estadosPosibles.includes(id_estado_destino);
-      })
-    );
-    return resultados.every((valido) => valido);*/
   }
 }
 
