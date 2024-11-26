@@ -16,6 +16,7 @@ import Transaccion from "../ventas/domain/models/Transaccion.js";
 import Cliente from "../ventas/domain/models/Cliente.js";
 import EstadoTransaccion from "../ventas/domain/models/EstadoTransaccion.js";
 import TransicionEstadoProducto from "../inventario/domain/models/TransicionEstadoProducto.js";
+import InventarioLog from "../inventario/domain/models/InventarioLogs.js";
 
 async function populateDatabase() {
   try {
@@ -139,9 +140,18 @@ async function populateDatabase() {
     /******************************/
     // Crear Estados productos
     const estados = [
-      { nombre: "Disponible - Bodega", descripcion: "Producto disponible en bodega." },
-      { nombre: "En tránsito - Reservado", descripcion: "Producto reservado y en tránsito." },
-      { nombre: "En tránsito - Disponible", descripcion: "Producto disponible y en tránsito." },
+      {
+        nombre: "Disponible - Bodega",
+        descripcion: "Producto disponible en bodega.",
+      },
+      {
+        nombre: "En tránsito - Reservado",
+        descripcion: "Producto reservado y en tránsito.",
+      },
+      {
+        nombre: "En tránsito - Disponible",
+        descripcion: "Producto disponible y en tránsito.",
+      },
       { nombre: "Fisuras", descripcion: "Producto con fisuras." },
       { nombre: "Contaminado", descripcion: "Producto contaminado." },
       { nombre: "Producción", descripcion: "Producto en etapa de producción." },
@@ -154,12 +164,40 @@ async function populateDatabase() {
 
     // Transiciones FSM
     const transicionesEstado = [
-      { id_producto: 1, id_estado_origen: 1, id_estado_destino: 2, comentarios: 'Asignado a cliente, pendiente de entrega.', id_usuario: "12345678-9", condicion: "" }, // Disponible -> Reservado
-      { id_producto: 1, id_estado_origen: 2, id_estado_destino: 3, comentarios: 'Producto ahora disponible para otros clientes.', id_usuario: "12345678-9", condicion: "" }, // Reservado -> Disponible
-      { id_producto: 1, id_estado_origen: 3, id_estado_destino: 1, comentarios: 'Regreso a bodega después de recolección.', id_usuario: "12345678-9", condicion: "" }, // Disponible -> Bodega
-      { id_producto: 1, id_estado_origen: 1, id_estado_destino: 5, comentarios: 'Producto contaminado durante transporte.', id_usuario: "12345678-9", condicion: "" }, // Bodega -> Contaminado
+      {
+        id_producto: 1,
+        id_estado_origen: 1,
+        id_estado_destino: 2,
+        comentarios: "Asignado a cliente, pendiente de entrega.",
+        id_usuario: "12345678-9",
+        condicion: "",
+      }, // Disponible -> Reservado
+      {
+        id_producto: 1,
+        id_estado_origen: 2,
+        id_estado_destino: 3,
+        comentarios: "Producto ahora disponible para otros clientes.",
+        id_usuario: "12345678-9",
+        condicion: "",
+      }, // Reservado -> Disponible
+      {
+        id_producto: 1,
+        id_estado_origen: 3,
+        id_estado_destino: 1,
+        comentarios: "Regreso a bodega después de recolección.",
+        id_usuario: "12345678-9",
+        condicion: "",
+      }, // Disponible -> Bodega
+      {
+        id_producto: 1,
+        id_estado_origen: 1,
+        id_estado_destino: 5,
+        comentarios: "Producto contaminado durante transporte.",
+        id_usuario: "12345678-9",
+        condicion: "",
+      }, // Bodega -> Contaminado
     ];
-  
+
     await TransicionEstadoProducto.bulkCreate(transicionesEstado);
     console.log("Transiciones FSM creadas exitosamente.");
 
@@ -233,6 +271,23 @@ async function populateDatabase() {
     await Inventario.bulkCreate(inventariosFinales);
     console.log("Inventario inicial creado exitosamente.");
 
+    await InventarioLog.bulkCreate([
+      {
+        id_producto: 1,
+        id_transaccion: null,
+        cambio: 100,
+        motivo: "Stock inicial",
+        fecha: new Date(),
+      },
+      {
+        id_producto: 2,
+        id_transaccion: null,
+        cambio: 50,
+        motivo: "Stock inicial",
+        fecha: new Date(),
+      },
+    ]);
+    console.log("InventarioLog inicial creado exitosamente.");
     /******************************/
     //       Módulo VENTAS        *
     /******************************/
@@ -265,7 +320,8 @@ async function populateDatabase() {
       },
       {
         nombre_estado: "Eliminada",
-        descripcion: "La transacción ha sido eliminada del sistema de manera lógica.",
+        descripcion:
+          "La transacción ha sido eliminada del sistema de manera lógica.",
       },
     ];
     await EstadoTransaccion.bulkCreate(estadosTransaccion);
@@ -308,7 +364,6 @@ async function populateDatabase() {
         direccion: "avenida de prueba 1243",
         telefono: "+56912345678",
         activo: true,
-        
       },
       {
         rut: "123456781-2",
