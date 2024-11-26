@@ -43,6 +43,21 @@ class ProductoRepository extends IProductoRepository {
     return await Producto.destroy({ where: { id_producto: id } });
   }
 
+  async findProductosByEstado(estado) {
+    return await Producto.findAll({ where: { id_estado_producto: estado } });
+  }
+
+  async updateEstadoProducto(idProducto, estado) {
+    return await Producto.update(
+      { id_estado_producto: estado },
+      { where: { id_producto: idProducto } }
+    );
+  }
+
+  async findProductosDisponibles() {
+    return await Producto.findAll({ where: { id_estado_producto: 1 } }); // 1 = "Disponible"
+  }
+
   getModel() {
     return Producto;
   }

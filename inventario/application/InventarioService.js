@@ -1,5 +1,6 @@
 import InventarioRepository from "../infrastructure/repositories/InventarioRepository.js";
 import ProductosService from "./ProductosService.js";
+import TransicionEstadoProductoService from "./TransicionEstadoProductoService.js";
 
 class InventarioService {
   async getInventarioByProductoId(id_producto) {
@@ -25,22 +26,6 @@ class InventarioService {
     return await this.getInventarioByProductoId(id_producto);
   }
 
-  async updateCantidadInventario(id_producto, cantidad) {
-    const inventario = await this.getInventarioByProductoId(id_producto);
-
-    const nuevaCantidad = inventario.cantidad + cantidad;
-    if (nuevaCantidad < 0) {
-      throw new Error(
-        `Stock insuficiente para el producto con ID ${id_producto}.`
-      );
-    }
-
-    return await InventarioRepository.update(id_producto, {
-      cantidad: nuevaCantidad,
-      fecha_actualizacion: new Date(),
-    });
-  }
-
   async verificarInventarioMinimo(id_producto, cantidadMinima) {
     const inventario = await this.getInventarioByProductoId(id_producto);
 
@@ -57,6 +42,80 @@ class InventarioService {
     const deleted = await InventarioRepository.delete(id_producto);
     if (deleted === 0) throw new Error("No se pudo eliminar el inventario.");
     return true;
+  }
+
+  // Actualizar el inventario
+  async ajustarCantidadInventario(id_producto, cantidad) {
+    const inventario = await this.getInventarioByProductoId(id_producto);
+
+    const nuevaCantidad = inventario.cantidad + cantidad;
+    if (nuevaCantidad < 0) {
+      throw new Error(
+        `Stock insuficiente para el producto con ID ${id_producto}.`
+      );
+    }
+
+    return await InventarioRepository.update(id_producto, {
+      cantidad: nuevaCantidad,
+      fecha_actualizacion: new Date(),
+    });
+  }
+
+  // Actualizar el inventario basado en los productos y cantidades de una transacción concreta.
+  async ajustarInventarioPorTransaccion(idTransaccion, detalles) {
+    if (!idTransaccion) {
+      throw new Error("Se requiere un ID de transacción válido.");
+    }
+    for (const detalle of detalles) {
+      // Ajustar cantidad en inventario
+      await this.ajustarCantidadInventario(
+        detalle.id_producto,
+        -detalle.cantidad
+      );
+
+      // Registrar la transición de estado del producto
+      await TransicionEstadoProductoService.crearTransicionEstado(
+        detalle.id_producto,
+        "Disponible - Bodega",
+        "En tránsito - Reservado",
+        idTransaccion // Relacionar la transición con la transacción
+      );
+
+      // Registrar un log de inventario para el producto
+      await InventarioRepository.registrarCambio({
+        id_producto: detalle.id_producto,
+        id_transaccion: idTransaccion,
+        cambio: -detalle.cantidad,
+        motivo: "Transacción asociada",
+        fecha: new Date(),
+      });
+    }
+
+    return {
+      message: `Inventario ajustado para la transacción ${idTransaccion}.`,
+    };
+  }
+  // Registrar productos que han sido devueltos (ej., fallas, contaminación).
+  async registrarDevolucionProducto(id_producto, estadoDevolucion, cantidad) {
+    const inventario = await this.getInventarioByProductoId(id_producto);
+    if (!inventario) throw new Error("Inventario no encontrado.");
+
+    await this.updateCantidadInventario(id_producto, cantidad);
+
+    await TransicionEstadoProductoService.crearTransicionEstado(
+      id_producto,
+      inventario.estado,
+      estadoDevolucion
+    );
+
+    return {
+      message: `Devolución registrada para el producto ${id_producto}.`,
+    };
+  }
+
+  // Generar un resumen del inventario clasificado por categorías de producto.
+  async obtenerResumenInventarioPorCategoria() {
+    return await InventarioRepository.getInventarioGlobal();
   }
 }
 

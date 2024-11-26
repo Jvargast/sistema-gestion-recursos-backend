@@ -5,10 +5,11 @@ import TipoProductoService from "./TipoProductoService.js";
 import EstadoProductoService from "./EstadoProductoService.js";
 import InventarioService from "./InventarioService.js";
 import CategoriaProductoService from "./CategoriaProductoService.js";
+import TransicionEstadoProductoService from "./TransicionEstadoProductoService.js";
+import TransaccionService from "../../ventas/application/TransaccionService.js";
 
 class ProductoService {
   async getProductoById(id) {
-    ProductosRepository.findAll()
     const producto = await ProductosRepository.findById(id);
     if (!producto) throw new Error("Producto no encontrado.");
 
@@ -27,38 +28,20 @@ class ProductoService {
       "precio",
       "id_categoria",
       "id_tipo_producto",
-      "id_estado_producto"
-    ]
+      "id_estado_producto",
+    ];
     const where = createFilter(filters, allowedFields);
-    /* const productos = ProductosRepository.findAll();  */
-/* 
-    for (const producto of productos) {
-      const inventario = await InventarioService.getInventarioByProductoId(
-        producto.id_producto
-      );
-      producto.dataValues.inventario = inventario;
-    } */
 
-    return await paginate(ProductosRepository.getModel(), options, {where})
+    return await paginate(ProductosRepository.getModel(), options, { where });
   }
 
   async createProducto(data) {
     const { cantidad_inicial, ...productoData } = data;
 
-    const categoria = await CategoriaProductoService.getCategoriaById(
-      productoData.id_categoria
-    );
-    if (!categoria) throw new Error("Categoría no encontrada.");
-
-    const tipo = await TipoProductoService.createTipo(
-      productoData.id_tipo_producto
-    );
-    if (!tipo) throw new Error("Tipo de producto no encontrado.");
-
-    const estado = await EstadoProductoService.getEstadoById(
-      productoData.id_estado_producto
-    );
-    if (!estado) throw new Error("Estado de producto no encontrado.");
+    // Validar relaciones
+    await CategoriaProductoService.getCategoriaById(productoData.id_categoria);
+    await TipoProductoService.getTipoById(productoData.id_tipo_producto);
+    await EstadoProductoService.getEstadoById(productoData.id_estado_producto);
 
     // Crear el producto
     const producto = await ProductosRepository.create(productoData);
@@ -75,31 +58,28 @@ class ProductoService {
   }
 
   async updateProducto(id, data) {
-    const { cantidad, ...productoData } = data;
+    const { id_estado_producto, ...productoData } = data;
 
-    // Actualizar el producto
-    const updated = await ProductosRepository.update(id, productoData);
-    if (updated[0] === 0) throw new Error("No se pudo actualizar el producto.");
+    if (id_estado_producto) {
+      const producto = await this.getProductoById(id);
 
-    // Actualizar el inventario si se proporciona la cantidad
-    if (cantidad !== undefined && cantidad >= 0) {
-      await InventarioService.updateInventario(id, {
-        cantidad,
-        fecha_actualizacion: new Date(),
+      await TransicionEstadoProductoService.registrarTransicion({
+        id_producto: id,
+        id_estado_origen: producto.id_estado_producto,
+        id_estado_destino: id_estado_producto,
+        id_usuario: productoData.id_usuario || null, // Asegurar que se pase el usuario
+        condicion: productoData.condicion || "Actualización desde el servicio",
+        comentarios:
+          productoData.comentarios || "Actualización desde el servicio",
       });
     }
 
-    return await this.getProductoById(id);
+    return await ProductosRepository.update(id, productoData);
   }
 
   async deleteProducto(id) {
-    const deletedInventario = await InventarioService.deleteInventario(id);
-    const deletedProducto = await ProductosRepository.delete(id);
-
-    if (deletedInventario === 0 || deletedProducto === 0) {
-      throw new Error("No se pudo eliminar el producto o su inventario.");
-    }
-
+    await InventarioService.deleteInventario(id);
+    await ProductosRepository.delete(id);
     return true;
   }
 
@@ -107,20 +87,106 @@ class ProductoService {
   async getProductosByTipo(tipo) {
     const tipoProducto = await TipoProductoService.getAllTipos();
 
-    const tipoId = tipoProducto.find((t) => t.nombre === tipo)?.id_tipo_producto;
+    const tipoId = tipoProducto.find(
+      (t) => t.nombre === tipo
+    )?.id_tipo_producto;
 
-    if (!tipoId) throw new Error('Tipo de producto no encontrado.');
+    if (!tipoId) throw new Error("Tipo de producto no encontrado.");
 
     const productos = await ProductosRepository.findAll({
       where: { id_tipo_producto: tipoId },
     });
 
     for (const producto of productos) {
-      const inventario = await InventarioService.getInventarioByProductoId(producto.id_producto);
+      const inventario = await InventarioService.getInventarioByProductoId(
+        producto.id_producto
+      );
       producto.dataValues.inventario = inventario;
     }
 
     return productos;
+  }
+
+  async cambiarEstadoProducto(idProducto, nuevoEstado) {
+    const producto = await ProductosRepository.findById(idProducto);
+
+    await TransicionEstadoProductoService.validarTransicion(
+      producto.id_estado_producto,
+      nuevoEstado
+    );
+
+    return await ProductosRepository.updateEstadoProducto(
+      idProducto,
+      nuevoEstado
+    );
+  }
+
+  // Un método más avanzado que integre lógica de transacciones al cambio de estado.
+  async manejarCambioEstadoConTransacciones(
+    idProducto,
+    nuevoEstado,
+    idTransaccion
+  ) {
+    const producto = await ProductosRepository.findById(idProducto);
+    if (!producto) throw new Error("Producto no encontrado");
+
+    await TransicionEstadoProductoService.validarTransicion(
+      producto.id_estado_producto,
+      nuevoEstado
+    );
+
+    if (idTransaccion) {
+      const transaccion = await TransaccionService.getTransaccionById(
+        idTransaccion
+      );
+      if (!transaccion) throw new Error("Transacción no encontrada");
+
+      if (
+        ["venta", "pedido"].includes(transaccion.transaccion.tipo_transaccion)
+      ) {
+        await InventarioService.ajustarInventarioPorTransaccion(idTransaccion);
+      }
+    }
+
+    return await ProductosRepository.updateEstadoProducto(
+      idProducto,
+      nuevoEstado
+    );
+  }
+
+  // Cambiar el estado de varios productos a la vez.
+  async cambiarEstadoMasivo(productos, estadoDestino) {
+    for (const producto of productos) {
+      await TransicionEstadoProductoService.validarTransicion(
+        producto.id_estado_producto,
+        estadoDestino
+      );
+      await ProductosRepository.updateEstadoProducto(
+        producto.id_producto,
+        estadoDestino
+      );
+    }
+    return true;
+  }
+
+  // Buscar productos según un estado específico.
+  async obtenerProductosPorEstado(id) {
+    return await ProductosRepository.findProductosByEstado(id);
+  }
+
+  // Verificar si hay suficiente inventario para procesar un pedido antes de crear una transacción.
+  async validarInventarioParaPedido(productos) {
+    for (const { id_producto, cantidad } of productos) {
+      const inventario = await InventarioService.getInventarioByProductoId(
+        id_producto
+      );
+      if (inventario.cantidad < cantidad) {
+        throw new Error(
+          `Inventario insuficiente para el producto ID ${id_producto}. Disponible: ${inventario.cantidad}`
+        );
+      }
+    }
+    return true;
   }
 }
 

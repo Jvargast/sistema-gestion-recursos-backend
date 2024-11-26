@@ -15,6 +15,7 @@ import DetalleTransaccion from "../ventas/domain/models/DetalleTransaccion.js";
 import Transaccion from "../ventas/domain/models/Transaccion.js";
 import Cliente from "../ventas/domain/models/Cliente.js";
 import EstadoTransaccion from "../ventas/domain/models/EstadoTransaccion.js";
+import TransicionEstadoProducto from "../inventario/domain/models/TransicionEstadoProducto.js";
 
 async function populateDatabase() {
   try {
@@ -138,19 +139,29 @@ async function populateDatabase() {
     /******************************/
     // Crear Estados productos
     const estados = [
-      {
-        nombre_estado: "Disponible",
-        descripcion: "Producto disponible en inventario",
-      },
-      { nombre_estado: "En_Transito", descripcion: "Producto en movimiento" },
-      { nombre_estado: "Fisuras", descripcion: "Producto dañado" },
-      { nombre_estado: "Contaminado", descripcion: "Producto no usable" },
-      { nombre_estado: "Vendido", descripcion: "Producto vendido" },
-      { nombre_estado: "Producción", descripcion: "Producto en producción" },
+      { nombre: "Disponible - Bodega", descripcion: "Producto disponible en bodega." },
+      { nombre: "En tránsito - Reservado", descripcion: "Producto reservado y en tránsito." },
+      { nombre: "En tránsito - Disponible", descripcion: "Producto disponible y en tránsito." },
+      { nombre: "Fisuras", descripcion: "Producto con fisuras." },
+      { nombre: "Contaminado", descripcion: "Producto contaminado." },
+      { nombre: "Producción", descripcion: "Producto en etapa de producción." },
+      { nombre: "Defectuoso", descripcion: "Producto defectuoso." },
+      { nombre: "Devuelto", descripcion: "Producto devuelto por el cliente." },
     ];
 
     await EstadoProducto.bulkCreate(estados);
     console.log("Estados productos creados");
+
+    // Transiciones FSM
+    const transicionesEstado = [
+      { id_producto: 1, id_estado_origen: 1, id_estado_destino: 2, comentarios: 'Asignado a cliente, pendiente de entrega.', id_usuario: "12345678-9", condicion: "" }, // Disponible -> Reservado
+      { id_producto: 1, id_estado_origen: 2, id_estado_destino: 3, comentarios: 'Producto ahora disponible para otros clientes.', id_usuario: "12345678-9", condicion: "" }, // Reservado -> Disponible
+      { id_producto: 1, id_estado_origen: 3, id_estado_destino: 1, comentarios: 'Regreso a bodega después de recolección.', id_usuario: "12345678-9", condicion: "" }, // Disponible -> Bodega
+      { id_producto: 1, id_estado_origen: 1, id_estado_destino: 5, comentarios: 'Producto contaminado durante transporte.', id_usuario: "12345678-9", condicion: "" }, // Bodega -> Contaminado
+    ];
+  
+    await TransicionEstadoProducto.bulkCreate(transicionesEstado);
+    console.log("Transiciones FSM creadas exitosamente.");
 
     // Crear Tipos de productos
     const tipos = [

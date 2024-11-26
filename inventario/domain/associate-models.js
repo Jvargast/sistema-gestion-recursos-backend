@@ -3,6 +3,7 @@ import EstadoProducto from './models/EstadoProducto.js';
 import CategoriaProducto from './models/CategoriaProducto.js';
 import TipoProducto from './models/TipoProducto.js';
 import Inventario from './models/Inventario.js';
+import TransicionEstadoProducto from './models/TransicionEstadoProducto.js';
 
 function loadInventarioAssociations() {
   // Relación Producto - EstadoProducto
@@ -20,6 +21,21 @@ function loadInventarioAssociations() {
   // Relación Producto - Inventario (Uno a Uno)
   Producto.hasOne(Inventario, { foreignKey: 'id_producto', as: 'inventario', onDelete: 'CASCADE' });
   Inventario.belongsTo(Producto, { foreignKey: 'id_producto', as: 'producto' });
+
+  // Relación TransicionEstadoProducto - Producto
+  Producto.hasMany(TransicionEstadoProducto, { foreignKey: 'id_producto', as: 'transiciones' });
+  TransicionEstadoProducto.belongsTo(Producto, { foreignKey: 'id_producto', as: 'producto' });
+
+  // Relación TransicionEstadoProducto - EstadoProducto (Origen)
+  EstadoProducto.hasMany(TransicionEstadoProducto, { foreignKey: 'id_estado_origen', as: 'transicionesOrigen' });
+  TransicionEstadoProducto.belongsTo(EstadoProducto, { foreignKey: 'id_estado_origen', as: 'estadoOrigen' });
+
+  // Relación TransicionEstadoProducto - EstadoProducto (Destino)
+  EstadoProducto.hasMany(TransicionEstadoProducto, { foreignKey: 'id_estado_destino', as: 'transicionesDestino' });
+  TransicionEstadoProducto.belongsTo(EstadoProducto, { foreignKey: 'id_estado_destino', as: 'estadoDestino' });
+
 }
+
+
 
 export default loadInventarioAssociations;
