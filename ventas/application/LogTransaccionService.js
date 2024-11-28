@@ -4,7 +4,6 @@ import paginate from "../../shared/utils/pagination.js";
 class LogTransaccionService {
   async createLog(data) {
     const { id_transaccion, id_usuario, accion, detalles, estado } = data;
-    console.log(id_usuario);
     if (!id_transaccion || !id_usuario || !accion) {
       throw new Error("Faltan campos obligatorios para crear el log.");
     }

@@ -16,6 +16,15 @@ class EstadoTransaccionRepository extends IEstadoTransaccionRepository {
     });
   }
 
+  async findByTipoTransaccion(tipo_transaccion) {
+    return await EstadoTransaccion.findOne({
+      where: {
+        tipo_transaccion: tipo_transaccion,
+        es_inicial: true
+      }
+    })
+  }
+
   async create(data) {
     return await EstadoTransaccion.create(data);
   }

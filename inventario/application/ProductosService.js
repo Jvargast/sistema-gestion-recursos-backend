@@ -6,7 +6,6 @@ import EstadoProductoService from "./EstadoProductoService.js";
 import InventarioService from "./InventarioService.js";
 import CategoriaProductoService from "./CategoriaProductoService.js";
 import TransicionEstadoProductoService from "./TransicionEstadoProductoService.js";
-import TransaccionService from "../../ventas/application/TransaccionService.js";
 
 class ProductoService {
   async getProductoById(id) {
@@ -58,32 +57,27 @@ class ProductoService {
   }
 
   async updateProducto(id, data) {
-    const { id_estado_producto, ...productoData } = data;
+    const { id_estado_destino, ...productoData } = data;
 
-    if (id_estado_producto) {
+    if (id_estado_destino) {
       const producto = await this.getProductoById(id);
 
-      await TransicionEstadoProductoService.registrarTransicion({
-        id_producto: id,
-        id_estado_origen: producto.id_estado_producto,
-        id_estado_destino: id_estado_producto,
-        id_usuario: productoData.id_usuario || null, // Asegurar que se pase el usuario
-        condicion: productoData.condicion || "Actualización desde el servicio",
-        comentarios:
-          productoData.comentarios || "Actualización desde el servicio",
-      });
+      await TransicionEstadoProductoService.validarTransicion(
+        producto.id_estado_producto,
+        id_estado_destino
+      );
     }
-
     return await ProductosRepository.update(id, productoData);
   }
 
+  // Eliminar el producto
   async deleteProducto(id) {
     await InventarioService.deleteInventario(id);
     await ProductosRepository.delete(id);
     return true;
   }
 
-  //Modificarla
+  //Modificarla?
   async getProductosByTipo(tipo) {
     const tipoProducto = await TipoProductoService.getAllTipos();
 
@@ -108,50 +102,16 @@ class ProductoService {
   }
 
   async cambiarEstadoProducto(idProducto, nuevoEstado) {
-    const producto = await ProductosRepository.findById(idProducto);
-
-    await TransicionEstadoProductoService.validarTransicion(
-      producto.id_estado_producto,
-      nuevoEstado
-    );
-
-    return await ProductosRepository.updateEstadoProducto(
+    // Actualizar el estado del producto
+    const updated = await ProductosRepository.updateEstadoProducto(
       idProducto,
       nuevoEstado
     );
-  }
 
-  // Un método más avanzado que integre lógica de transacciones al cambio de estado.
-  async manejarCambioEstadoConTransacciones(
-    idProducto,
-    nuevoEstado,
-    idTransaccion
-  ) {
-    const producto = await ProductosRepository.findById(idProducto);
-    if (!producto) throw new Error("Producto no encontrado");
-
-    await TransicionEstadoProductoService.validarTransicion(
-      producto.id_estado_producto,
-      nuevoEstado
-    );
-
-    if (idTransaccion) {
-      const transaccion = await TransaccionService.getTransaccionById(
-        idTransaccion
-      );
-      if (!transaccion) throw new Error("Transacción no encontrada");
-
-      if (
-        ["venta", "pedido"].includes(transaccion.transaccion.tipo_transaccion)
-      ) {
-        await InventarioService.ajustarInventarioPorTransaccion(idTransaccion);
-      }
-    }
-
-    return await ProductosRepository.updateEstadoProducto(
-      idProducto,
-      nuevoEstado
-    );
+    return {
+      message: "Estado del producto actualizado con éxito",
+      producto: updated,
+    };
   }
 
   // Cambiar el estado de varios productos a la vez.

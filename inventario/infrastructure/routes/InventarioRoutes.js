@@ -7,7 +7,7 @@ router.use(verifyToken);
 router.get('/:id_producto', InventarioController.getInventarioByProductoId);
 router.get('/', InventarioController.getAllInventarios);
 router.post('/', InventarioController.createInventario);
-router.put('/:id_producto', InventarioController.updateInventario);
+router.put('/:id_producto', InventarioController.ajustarCantidad);
 router.delete('/:id_producto', InventarioController.deleteInventario);
 
 export default router;

@@ -1,5 +1,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
+import Producto from "./Producto.js";
+import EstadoProducto from "./EstadoProducto.js";
 
 const TransicionEstadoProducto = sequelize.define(
   "TransicionEstadoProducto",
@@ -44,10 +46,6 @@ const TransicionEstadoProducto = sequelize.define(
     },
     condicion: {
       type: DataTypes.STRING, // Condición bajo la cual se permite la transición
-      allowNull: true,
-    },
-    comentarios: {
-      type: DataTypes.STRING,
       allowNull: true,
     },
   },

@@ -1,39 +1,49 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import EstadoTransaccion from "./EstadoTransaccion.js";
-import Transaccion from "./Transaccion.js";
 
-const TransicionEstadoTransaccion = sequelize.define(
-  "TransicionEstadoTransaccion",
+const TransicionTipoTransaccion = sequelize.define(
+  "TransicionTipoTransaccion",
   {
     id_transicion: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
     },
-    id_estado_origen: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: EstadoTransaccion,
-        key: "id_estado_transaccion",
-      },
+    tipo_origen: {
+      type: DataTypes.ENUM("cotizacion", "pedido", "venta"),
+      allowNull: false,
     },
-    id_estado_destino: {
+    tipo_destino: {
+      type: DataTypes.ENUM("cotizacion", "pedido", "venta"),
+      allowNull: false,
+    },
+    estado_origen: {
       type: DataTypes.INTEGER,
       references: {
         model: EstadoTransaccion,
         key: "id_estado_transaccion",
       },
+      allowNull: false,
+    },
+    estado_destino: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: EstadoTransaccion,
+        key: "id_estado_transaccion",
+      },
+      allowNull: false,
     },
     condicion: {
-      type: DataTypes.STRING, // Condición de negocio
+      type: DataTypes.TEXT,
       allowNull: true,
+      comment: "Condiciones específicas para validar la transición",
     },
   },
   {
-    tableName: "TransicionEstadoTransaccion",
+    tableName: "TransicionTipoTransaccion",
     timestamps: false,
   }
 );
 
-export default TransicionEstadoTransaccion;
+export default TransicionTipoTransaccion;

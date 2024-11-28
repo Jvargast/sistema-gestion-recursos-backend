@@ -25,7 +25,7 @@ import EstadoTransaccionRoutes from './ventas/infrastructure/routes/EstadoTransa
 import DetalleTransaccionRoutes from './ventas/infrastructure/routes/DetalleTransaccionroutes.js';
 import LogTransaccionRoutes from './ventas/infrastructure/routes/LogTransaccionesRoutes.js';
 import TransaccionRoutes from './ventas/infrastructure/routes/TransaccionRoutes.js';
-
+import FacturasRoutes from './ventas/infrastructure/routes/FacturasRoutes.js';
 /* import analisisRoutes from "./analisis/infraestructure/routes/";
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
@@ -70,6 +70,7 @@ app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
 app.use("/api/logs-transaccion", LogTransaccionRoutes);
 app.use("/api/transacciones", TransaccionRoutes);
 app.use("/api/detalle-transacciones", DetalleTransaccionRoutes);
+app.use("/api/facturas", FacturasRoutes);
 
 /* app.use("/api/client", clientRoutes);
 app.use("/api/general", generalRoutes);

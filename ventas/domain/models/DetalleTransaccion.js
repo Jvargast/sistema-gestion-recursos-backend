@@ -42,6 +42,11 @@ const DetalleTransaccion = sequelize.define('DetalleTransaccion', {
     allowNull: false,
     defaultValue: 0,
   },
+  estado_producto_transaccion: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1, // Ejemplo inicial "Reservado"
+  },
 }, {
   tableName: 'DetalleTransaccion',
   timestamps: false,

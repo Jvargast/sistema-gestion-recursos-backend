@@ -1,12 +1,12 @@
-import TransicionEstadoProductoRepository from "../infrastructure/repositories/TransicionEstadoProductoRepository.js";
+import TransicionEstadoTransaccionRepository from "../infrastructure/repositories/TransicionEstadoTransaccionRepository.js";
 
-class TransicionEstadoProductoService {
+class TransicionEstadoTransaccionService {
   async getAllTransitions() {
-    return await TransicionEstadoProductoRepository.findAll();
+    return await TransicionEstadoTransaccionRepository.findAll();
   }
 
   async getTransition(estadoOrigen, estadoDestino) {
-    const transition = await TransicionEstadoProductoRepository.findByStates(
+    const transition = await TransicionEstadoTransaccionRepository.findByStates(
       estadoOrigen,
       estadoDestino
     );
@@ -24,7 +24,7 @@ class TransicionEstadoProductoService {
     const { id_estado_origen, id_estado_destino } = data;
 
     // Verificar si la transición ya existe
-    const existente = await TransicionEstadoProductoRepository.findByStates(
+    const existente = await TransicionEstadoTransaccionRepository.findByStates(
       id_estado_origen,
       id_estado_destino
     );
@@ -36,12 +36,12 @@ class TransicionEstadoProductoService {
     }
 
     // Crear la nueva transición
-    return await TransicionEstadoProductoRepository.create(data);
+    return await TransicionEstadoTransaccionRepository.create(data);
   }
 
   // Podría ser un shared/util para varias instancias
   async validarTransicion(estadoOrigen, estadoDestino) {
-    const transicion = await TransicionEstadoProductoRepository.findByStates(
+    const transicion = await TransicionEstadoTransaccionRepository.findByStates(
       estadoOrigen,
       estadoDestino
     );
@@ -55,7 +55,7 @@ class TransicionEstadoProductoService {
   }
 
   async deleteTransition(id) {
-    const deleted = await TransicionEstadoProductoRepository.deleteById(id);
+    const deleted = await TransicionEstadoTransaccionRepository.deleteById(id);
 
     if (!deleted) {
       throw new Error("No se pudo eliminar la transición");
@@ -66,9 +66,8 @@ class TransicionEstadoProductoService {
 
   // Retornar una lista de estados posibles a los que se puede transitar desde un estado específico.
   async obtenerEstadosPosibles(estadoOrigen) {
-    const transiciones = await TransicionEstadoProductoRepository.findByOrigen(
-      estadoOrigen
-    );
+    const transiciones =
+      await TransicionEstadoTransaccionRepository.findByOrigen(estadoOrigen);
 
     if (!transiciones || transiciones.length === 0) {
       throw new Error(
@@ -91,7 +90,7 @@ class TransicionEstadoProductoService {
 
     for (const { estado_origen, estado_destino } of transiciones) {
       const transicionValida =
-        await TransicionEstadoProductoRepository.findByStates(
+        await TransicionEstadoTransaccionRepository.findByStates(
           estado_origen,
           estado_destino
         );
@@ -110,4 +109,4 @@ class TransicionEstadoProductoService {
   }
 }
 
-export default new TransicionEstadoProductoService();
+export default new TransicionEstadoTransaccionService();

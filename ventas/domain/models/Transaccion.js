@@ -1,17 +1,20 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../../../database/database.js';
-import Cliente from './Cliente.js';
-import EstadoTransaccion from './EstadoTransaccion.js';
-import Usuarios from '../../../auth/domain/models/Usuarios.js';
+import { DataTypes } from "sequelize";
+import sequelize from "../../../database/database.js";
+import Cliente from "./Cliente.js";
+import EstadoTransaccion from "./EstadoTransaccion.js";
+import Usuarios from "../../../auth/domain/models/Usuarios.js";
+import Factura from "../models//Factura.js";
 
-const Transaccion = sequelize.define('Transaccion', {
+const Transaccion = sequelize.define(
+  "Transaccion",
+  {
     id_transaccion: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
     tipo_transaccion: {
-      type: DataTypes.STRING, // "cotizacion", "pedido", "venta", "factura"
+      type: DataTypes.STRING, // "cotizacion", "pedido", "venta"
       allowNull: false,
     },
     total: {
@@ -23,22 +26,19 @@ const Transaccion = sequelize.define('Transaccion', {
       type: DataTypes.STRING,
       allowNull: true,
     },
-    numero_factura: {
-      type: DataTypes.STRING,
-      allowNull: true, // Solo aplica si tipo_transaccion = "factura"
-    },
-    tipo_comprobante: {
-      type: DataTypes.STRING, // "factura", "boleta"
+    monto_inicial: {
+      type: DataTypes.FLOAT,
       allowNull: true,
+      defaultValue: 0
     },
-    estado_pago: {
+/*     estado_pago: {
       type: DataTypes.STRING, // "pendiente", "pagado", "anulado"
-      defaultValue: 'pendiente',
-    },
-    fecha_vencimiento: {
+      defaultValue: "pendiente",
+    }, */
+/*     fecha_vencimiento: {
       type: DataTypes.DATE,
       allowNull: true,
-    },
+    }, */
     fecha_creacion: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
@@ -47,27 +47,52 @@ const Transaccion = sequelize.define('Transaccion', {
       type: DataTypes.STRING,
       references: {
         model: Cliente,
-        key: 'rut',
+        key: "rut",
       },
     },
     id_usuario: {
       type: DataTypes.STRING,
       references: {
         model: Usuarios,
-        key: 'rut',
+        key: "rut",
       },
     },
+    asignada_a: {
+      type: DataTypes.STRING,
+      references: {
+        model: Usuarios,
+        key: "rut",
+      },
+      allowNull: true,
+    },
     id_estado_transaccion: {
-        type: DataTypes.INTEGER,
-        references: {
-          model: EstadoTransaccion,
-          key: 'id_estado_transaccion',
-        },
-        allowNull: false,
-      }
-  }, {
-    tableName: 'Transaccion',
+      type: DataTypes.INTEGER,
+      references: {
+        model: EstadoTransaccion,
+        key: "id_estado_transaccion",
+      },
+      allowNull: false,
+    },
+    id_factura: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: Factura,
+        key: "id_factura",
+      },
+      allowNull: true, // Solo algunas transacciones estarán facturadas
+    },
+    tipo_documento: {
+      type: DataTypes.STRING,
+      allowNull: true, // Puede ser null si no se emite ningún documento
+      validate: {
+        isIn: [["factura", "boleta"]],
+      },
+    },
+  },
+  {
+    tableName: "Transaccion",
     timestamps: false,
-  });
-  
-  export default Transaccion;
+  }
+);
+
+export default Transaccion;
