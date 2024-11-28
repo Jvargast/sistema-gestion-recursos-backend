@@ -1,4 +1,4 @@
-import InventarioLog from "../../domain/models/InventarioLogs";
+import InventarioLog from "../../domain/models/InventarioLogs.js";
 
 class LogRepository {
   // Crear 

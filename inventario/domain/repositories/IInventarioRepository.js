@@ -44,40 +44,6 @@ class IInventarioRepository {
     throw new Error("Method not implemented");
   }
 
-  /*
-    Buscar inventario específico para un producto.
-  */
-  async findInventarioByProducto(idProducto) {
-    throw new Error("Method not implemented");
-  }
-
-  /*
-    Ajustar la cantidad de inventario para un producto (incrementar o decrementar).
-  */
-  async updateCantidad(idProducto, cantidad) {
-    throw new Error("Method not implemented");
-  }
-
-  /*
-    Obtener un resumen de inventario global para todos los productos.
-  */
-  async getInventarioGlobal() {
-    throw new Error("Method not implemented");
-  }
-
-  /*
-    Manejar la entrada de productos al inventario.
-  */
-  async registrarEntradaInventario(data) {
-    throw new Error("Method not implemented");
-  }
-
-  /*
-    Manejar la salida de productos desde el inventario.
-  */
-  async registrarSalidaInventario(data) {
-    throw new Error("Method not implemented");
-  }
 }
 
 export default IInventarioRepository;

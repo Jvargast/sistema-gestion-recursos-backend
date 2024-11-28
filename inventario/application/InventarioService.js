@@ -42,27 +42,39 @@ class InventarioService {
   async ajustarCantidadInventario(idProducto, cantidad, idUsuario) {
     const inventario = await InventarioRepository.findByProductoId(idProducto);
     if (!inventario) throw new Error("Inventario no encontrado.");
-  
+
     const nuevaCantidad = inventario.cantidad + cantidad;
-    if (nuevaCantidad < 0) throw new Error("La cantidad no puede ser negativa.");
-  
+    if (nuevaCantidad < 0)
+      throw new Error("La cantidad no puede ser negativa.");
+
     await InventarioRepository.update(idProducto, { cantidad: nuevaCantidad });
-  
+
     if (idUsuario) {
       await LogInventarioRepository.createLog({
         id_producto: idProducto,
-        cantidad_ajustada: cantidad,
-        cantidad_resultante: nuevaCantidad,
-        id_usuario: idUsuario,
+        cambio: cantidad,
+        cantidad_final: nuevaCantidad,
+        motivo: "Por compra",
+        realizado_por: idUsuario,
+        fecha: new Date(),
       });
     }
-  
-    return await InventarioRepository.findByProductoId(idProducto);
-  }
+    const nuevoInventario = await InventarioRepository.findByProductoId(
+      idProducto
+    );
 
+    return nuevoInventario;
+  }
+  /**
+   *
+   *
+   *  AJUSTAR INVENTARIO POR TRANSACCION, PERO CREANDO TRANSICION
+   *
+   *
+   */
   // Actualizar el inventario basado en los productos y cantidades de una transacción concreta.
-  async ajustarInventarioPorTransaccion(idTransaccion, detalles) {
-    if (!idTransaccion) {
+  async ajustarInventarioPorTransaccion(id_usuario, id_transaccion, detalles) {
+    if (!id_transaccion) {
       throw new Error("Se requiere un ID de transacción válido.");
     }
     for (const detalle of detalles) {
@@ -77,45 +89,51 @@ class InventarioService {
         detalle.id_producto,
         "Disponible - Bodega",
         "En tránsito - Reservado",
-        idTransaccion // Relacionar la transición con la transacción
+        id_transaccion // Relacionar la transición con la transacción
       );
 
+      let prodAct = await this.getInventarioByProductoId(detalle.id_producto);
       // Registrar un log de inventario para el producto
       await InventarioLog.registrarCambio({
         id_producto: detalle.id_producto,
-        id_transaccion: idTransaccion,
+        id_transaccion: id_transaccion,
         cambio: -detalle.cantidad,
+        cantidad_final: prodAct.cantidad,
         motivo: "Transacción asociada",
+        realizado_por: id_usuario,
         fecha: new Date(),
       });
     }
 
     return {
-      message: `Inventario ajustado para la transacción ${idTransaccion}.`,
+      message: `Inventario ajustado para la transacción ${id_transaccion}.`,
     };
   }
+
   // Registrar productos que han sido devueltos (ej., fallas, contaminación).
-  async registrarDevolucionProducto(id_producto, estadoDevolucion, cantidad) {
+  async registrarDevolucionProducto(
+    id_producto,
+    id_usuario,
+    id_estado_destino,
+    cantidad
+  ) {
     const inventario = await this.getInventarioByProductoId(id_producto);
     if (!inventario) throw new Error("Inventario no encontrado.");
 
-    await this.updateCantidadInventario(id_producto, cantidad);
+    await this.ajustarCantidadInventario(id_producto, cantidad);
 
     await TransicionEstadoProductoService.crearTransicionEstado(
+      id_usuario,
       id_producto,
       inventario.estado,
-      estadoDevolucion
+      id_estado_destino,
+      (condicion = "Cambio de estado a retornado")
     );
 
     return {
       message: `Devolución registrada para el producto ${id_producto}.`,
     };
   }
-
-  async obtenerLogsInventario() {
-    return LogInve
-  }
-
 }
 
 export default new InventarioService();

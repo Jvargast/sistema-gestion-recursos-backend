@@ -17,6 +17,14 @@ const EstadoTransaccion = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    tipo_transaccion: {
+      type: DataTypes.STRING,
+      allowNull: false, // Por ejemplo: 'venta', 'pedido', 'cotizacion'
+    },
+    es_inicial: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false, // Por defecto, no es inicial
+    },
   },
   {
     tableName: "Estado_Transaccion",

@@ -25,12 +25,22 @@ const InventarioLog = sequelize.define(
     cambio: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      comment: "Cantidad que cambió en el inventario",
+      comment: "Cantidad ajustada en el inventario (positiva o negativa)",
+    },
+    cantidad_final: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      comment: "Cantidad final en el inventario tras el ajuste",
     },
     motivo: {
       type: DataTypes.STRING,
       allowNull: false,
-      comment: "Razón del cambio en el inventario",
+      comment: "Razón del cambio (e.g., ingreso, egreso, ajuste, retorno, etc.)",
+    },
+    realizado_por: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      comment: "Usuario que realizó el cambio",
     },
     fecha: {
       type: DataTypes.DATE,

@@ -26,6 +26,18 @@ class PagoRepository extends IPagoRepository {
   async create(data) {
     return await Pago.create(data);
   }
+
+  async updateEstado(id_pago, nuevo_estado) {
+    const pago = await Pago.findByPk(id_pago);
+    if (!pago) {
+      throw new Error(`Pago con ID ${id_pago} no encontrado.`);
+    }
+
+    pago.id_estado_pago = nuevo_estado;
+    await pago.save();
+
+    return pago;
+  }
 }
 
 export default new PagoRepository();
