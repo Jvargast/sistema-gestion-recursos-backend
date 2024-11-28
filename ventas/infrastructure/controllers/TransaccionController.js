@@ -114,10 +114,11 @@ class TransaccionController {
   async completeTransaction(req, res) {
     try {
       const { rut } = req.user;
-      const { id_transaccion, metodo_pago, referencia } = req.body;
+      const {id} = req.params;
+      const {  metodo_pago, referencia } = req.body;
 
       const completeTransaction = await TransaccionService.completarTransaccion(
-        id_transaccion,
+        id,
         metodo_pago,
         referencia,
         rut

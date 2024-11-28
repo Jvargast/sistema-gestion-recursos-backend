@@ -40,6 +40,9 @@ class EstadoTransaccionRepository extends IEstadoTransaccionRepository {
       where: { id_estado_transaccion: id },
     });
   }
+  getModel() {
+    return EstadoTransaccion;
+  }
 }
 
 export default new EstadoTransaccionRepository();

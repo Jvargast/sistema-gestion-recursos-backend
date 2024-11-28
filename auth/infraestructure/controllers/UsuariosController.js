@@ -29,7 +29,7 @@ class UsuarioController {
    * @param {Request} req - Solicitud HTTP.
    * @param {Response} res - Respuesta HTTP.
    */
-  async findAll(req, res) {
+  async getAllUsers(req, res) {
     try {
       const usuarios = await UsuariosService.getAllUsuarios();
       res.status(200).json(usuarios);
