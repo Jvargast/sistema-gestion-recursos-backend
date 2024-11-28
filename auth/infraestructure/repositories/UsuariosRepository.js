@@ -32,6 +32,10 @@ class UsuarioRepository extends IUsuariosRepository {
   async updateLastLogin(rut, fecha) {
     return await Usuario.update({ ultimo_login: fecha }, { where: { rut } });
   }
+
+  getModel() {
+    return Usuario;
+  }
 }
 
 export default new UsuarioRepository();

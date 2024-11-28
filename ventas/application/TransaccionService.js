@@ -13,6 +13,9 @@ import PagoService from "./PagoService.js";
 import EstadoPagoService from "./EstadoPagoService.js";
 import EstadoDetalleTransaccionService from "./EstadoDetalleTransaccionService.js";
 import MetodoPagoService from "./MetodoPagoService.js";
+import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
+import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
+import EstadoTransaccionRepository from "../infrastructure/repositories/EstadoTransaccionRepository.js";
 
 class TransaccionService {
   async getTransaccionById(id) {
@@ -43,7 +46,8 @@ class TransaccionService {
 
     // Excluir transacciones con estado "Rechazada", "Cancelado", "Cancelada"
     const excludedStates = ["Rechazada", "Cancelado", "Cancelada"];
-    const estadosPermitidos  = await EstadoTransaccionService.obtenerEstadosPermitidos(excludedStates);
+    const estadosPermitidos =
+      await EstadoTransaccionService.obtenerEstadosPermitidos(excludedStates);
 
     // Asegurar que los IDs de los estados se incluyan en la consulta
     if (estadosPermitidos.length > 0) {
@@ -61,11 +65,31 @@ class TransaccionService {
         limit: options.limit,
       };
     }
+    // Incluir datos relacionados (cliente, usuario, estado de la transacción)
+    const include = [
+      {
+        model: ClienteRepository.getModel(), // Modelo de Cliente
+        as: "cliente", // Alias definido en las asociaciones
+        attributes: ["rut", "nombre", "tipo_cliente", "email"], // Campos que deseas incluir
+      },
+      {
+        model: UsuariosRepository.getModel(), // Modelo de Usuario
+        as: "usuario", // Alias definido en las asociaciones
+        attributes: ["rut", "nombre", "email"], // Campos que deseas incluir
+      },
+      {
+        model: EstadoTransaccionRepository.getModel(), // Modelo de EstadoTransaccion
+        as: "estado", // Alias definido en las asociaciones
+        attributes: ["nombre_estado"], // Campos que deseas incluir
+      },
+    ];
 
     // Aplicar paginación
-    return await paginate(TransaccionRepository.getModel(), options, {
+    const result = await paginate(TransaccionRepository.getModel(), options, {
       where,
+      include,
     });
+    return result.data;
   }
 
   async createTransaccion(data, detalles = [], id_usuario) {
@@ -83,7 +107,12 @@ class TransaccionService {
     }
 
     // Buscar el estado inicial de la transacción dependiendo del tipo
-    const estadoInicial = (detalles && tipo_transaccion  == "Pedido")  ? await EstadoTransaccionService.findByNombre("En Proceso") : await EstadoTransaccionService.findEstadoInicialByTipo(tipo_transaccion);
+    const estadoInicial =
+      detalles && tipo_transaccion == "Pedido"
+        ? await EstadoTransaccionService.findByNombre("En Proceso")
+        : await EstadoTransaccionService.findEstadoInicialByTipo(
+            tipo_transaccion
+          );
     // Crear transacción
     const nuevaTransaccion = await TransaccionRepository.create({
       ...data,
@@ -241,9 +270,10 @@ class TransaccionService {
   }
 
   async addDetallesToTransaccion(id_transaccion, detalles, id_usuario) {
-
     const transaccion = await this.getTransaccionById(id_transaccion);
-    const estadoActual = await EstadoTransaccionService.findById(transaccion.transaccion.dataValues.id_estado_transaccion);
+    const estadoActual = await EstadoTransaccionService.findById(
+      transaccion.transaccion.dataValues.id_estado_transaccion
+    );
     //const nuevoEstado = await EstadoTransaccionService.findByNombre("En Proceso");
     // Actualizar estado de la transacción
     /* await this.changeEstadoTransaccion(
@@ -257,7 +287,7 @@ class TransaccionService {
     ); */
     await DetalleTransaccionService.createDetallesTransaccion(
       detalles,
-      id_transaccion,
+      id_transaccion
       /* transaccion.transaccion.dataValues.tipo_transaccion,
       id_usuario */
     );
@@ -279,18 +309,29 @@ class TransaccionService {
     await LogTransaccionService.createLog({
       id_transaccion: id_transaccion,
       id_usuario: id_usuario,
-      estado:  `${estadoActual.dataValues.nombre_estado}`,
+      estado: `${estadoActual.dataValues.nombre_estado}`,
       accion: "Actualización de detalles",
       detalles: "Se agregaron o actualizaron detalles a la transacción.",
     });
   }
 
+  // Darle ojo al como se completa la transacción
   async completarTransaccion(
     id_transaccion,
     metodo_pago,
     referencia,
     id_usuario
   ) {
+    // Verificar si hay pago antes
+    const pagoTransaccion = await PagoService.obtenerPagosPorTransaccion(
+      id_transaccion
+    );
+
+    if (pagoTransaccion) {
+      //Si hay pago verificarlo y devolver completada la transacción, estado del pago puede ser
+    } else {
+      //Agregar el pago, con estado de pagado
+    }
     const transaccion = await this.getTransaccionById(id_transaccion);
 
     if (transaccion.transaccion.id_estado_transaccion !== "Pago Pendiente") {
