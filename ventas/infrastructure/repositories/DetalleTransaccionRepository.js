@@ -21,6 +21,10 @@ class DetalleTransaccionRepository extends IDetalleTransaccionRepository {
     });
   }
 
+  async findAllWithConditions(conditions) {
+    return await DetalleTransaccion.findAll(conditions);
+  }
+
   async findById(id_detalle_transaccion) {
     return await DetalleTransaccion.findOne({
       where: { id_detalle_transaccion },
@@ -85,6 +89,10 @@ class DetalleTransaccionRepository extends IDetalleTransaccionRepository {
         id_detalle_transaccion: ids,
       },
     });
+  }
+
+  getModel() {
+    return DetalleTransaccion;
   }
 }
 

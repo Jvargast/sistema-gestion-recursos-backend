@@ -53,6 +53,28 @@ class EstadoTransaccionService {
     return estado;
   }
 
+  async findByNombres(nombresEstados) {
+    const estados = await EstadoTransaccionRepository.findAll({
+      where: { nombre_estado: nombresEstados },
+    });
+
+    // Verificar que todos los nombres requeridos estén en los resultados
+    const nombresEncontrados = estados.map((estado) => estado.dataValues.nombre_estado);
+    const nombresFaltantes = nombresEstados.filter(
+      (nombre) => !nombresEncontrados.includes(nombre)
+    );
+
+    if (nombresFaltantes.length > 0) {
+      throw new Error(
+        `No se encontraron los estados con los nombres: ${nombresFaltantes.join(
+          ", "
+        )}`
+      );
+    }
+
+    return estados;
+  }
+
   async getAllEstados() {
     return await EstadoTransaccionRepository.findAll();
   }

@@ -17,7 +17,7 @@ import CategoriaProducto from "../inventario/domain/models/CategoriaProducto.js"
 import InventarioLog from "../inventario/domain/models/InventarioLogs.js";
 import TransicionEstadoProducto from "../inventario/domain/models/TransicionEstadoProducto.js";
 /**
- * Módulo Ventas 11
+ * Módulo Ventas 14
  */
 import EstadoPago from "../ventas/domain/models/EstadoPago.js";
 import MetodoPago from "../ventas/domain/models/MetodoPago.js";
@@ -507,21 +507,21 @@ async function populateDatabase() {
       },
       {
         id_estado_origen: 13, // Pagada
-        id_estado_destino: 14, // Completada
+        id_estado_destino: 15, // Completada
         condicion: "Venta completada exitosamente.",
       },
       {
         id_estado_origen: 11, // En Proceso
-        id_estado_destino: 15, // Cancelada
+        id_estado_destino: 14, // Cancelada
         condicion: "Cliente cancela la venta antes del pago.",
       },
       {
         id_estado_origen: 12, // Pago Pendiente
-        id_estado_destino: 15, // Cancelada
+        id_estado_destino: 14, // Cancelada
         condicion: "Cliente cancela la venta.",
       },
       {
-        id_estado_origen: 14, // Completada
+        id_estado_origen: 15, // Completada
         id_estado_destino: 16, // Reembolsada
         condicion: "Reembolso solicitado y procesado.",
       },
@@ -790,7 +790,7 @@ async function populateDatabase() {
         precio_unitario: 2000,
         descuento: 0,
         subtotal: 10000,
-        id_estado_detalle_transaccion: 1, // Estado "En bodega - Disponible"
+        estado_producto_transaccion: 1, // Estado "En bodega - Disponible"
       },
       {
         id_transaccion: cotizacion.id_transaccion,
@@ -799,7 +799,7 @@ async function populateDatabase() {
         precio_unitario: 1500,
         descuento: 0,
         subtotal: 15000,
-        id_estado_detalle_transaccion: 1, // Estado "En bodega - Disponible"
+        estado_producto_transaccion: 1, // Estado "En bodega - Disponible"
       },
     ];
     await DetalleTransaccion.bulkCreate(detallesCotizacion);
@@ -822,7 +822,7 @@ async function populateDatabase() {
         precio_unitario: 2000,
         descuento: 0,
         subtotal: 6000,
-        id_estado_detalle_transaccion: 2, // Estado "En tránsito - Reservado"
+        estado_producto_transaccion: 2, // Estado "En tránsito - Reservado"
       },
       {
         id_transaccion: venta.id_transaccion,
@@ -831,7 +831,7 @@ async function populateDatabase() {
         precio_unitario: 1500,
         descuento: 0,
         subtotal: 7500,
-        id_estado_detalle_transaccion: 2, // Estado "En tránsito - Reservado"
+        estado_producto_transaccion: 2, // Estado "En tránsito - Reservado"
       },
     ];
     await DetalleTransaccion.bulkCreate(detallesVenta);

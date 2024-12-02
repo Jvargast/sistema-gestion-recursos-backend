@@ -1,5 +1,9 @@
 import PagoRepository from "../infrastructure/repositories/PagoRepository.js";
+import EstadoFacturaService from "./EstadoFacturaService.js";
+import EstadoPagoService from "./EstadoPagoService.js";
 import EstadoTransaccionService from "./EstadoTransaccionService.js";
+import FacturaService from "./FacturaService.js";
+import MetodoPagoService from "./MetodoPagoService.js";
 import TransaccionService from "./TransaccionService.js";
 
 class PagoService {
@@ -16,46 +20,79 @@ class PagoService {
     if (!transaccion) {
       throw new Error("Transacción no encontrada");
     }
-
-    if (
-      transaccion.estado === "Completada" ||
-      transaccion.estado === "Pagada"
-    ) {
-      throw new Error("El pago ya ha sido acreditado");
+    // Validar estado de la transacción
+    //console.log(transaccion.transaccion.estado.dataValues.nombre_estado)
+    const estadoPermitido = await EstadoTransaccionService.findByNombre("Pago Pendiente");
+    
+    if (transaccion.transaccion.dataValues.id_estado_transaccion != estadoPermitido.dataValues.id_estado_transaccion) {
+      throw new Error(
+        "El pago no se puede acreditar, se debe cambiar de estado"
+      );
     }
 
-    const estadoPagado = await EstadoPagoService.findByNombre("Pagado");
-    const estadoPagadoTransaccion = await EstadoTransaccionService.findByNombre(
-      "Pagado"
-    );
+    // Validar método de pago
+    if (
+      ![
+        "Efectivo",
+        "Tarjeta_credito",
+        "Tarjeta_debito",
+        "Transferencia",
+      ].includes(metodo_pago)
+    ) {
+      throw new Error("Método de pago no válido.");
+    }
 
+    // Validación del monto del pago, que sea igual o no al total
+    if (monto <= 0) {
+      throw new Error("El monto del pago debe ser mayor a cero.");
+    }
+    const montoTransaccion = transaccion.transaccion.dataValues.total;
+    if (monto !== montoTransaccion) {
+      throw new Error(`El pago no coincide con el ${montoTransaccion} `);
+    }
+
+    // Obtener datos del método de pago y estado "Pagado"
+    const metodoPago = await MetodoPagoService.getMetodoByConditions({
+      nombre: metodo_pago,
+    });
+    const estadoPagado = await EstadoPagoService.findByNombre("Pagado");
     // Registrar el pago
     const pago = await PagoRepository.create({
       id_transaccion,
       monto,
-      id_metodo_pago: metodo_pago,
+      id_metodo_pago: metodoPago[0].dataValues.id_metodo_pago,
       referencia,
-      id_estado_pago: estadoPagado,
+      id_estado_pago: estadoPagado.dataValues.id_estado_pago,
       fecha_pago: new Date(),
     });
+
+    const estadoPagadoTransaccion = await EstadoTransaccionService.findByNombre(
+      "Pagada"
+    );
 
     // Cambiar el estado de la transacción
     await TransaccionService.changeEstadoTransaccion(
       id_transaccion,
-      estadoPagadoTransaccion.id_estado_pago,
+      estadoPagadoTransaccion.dataValues.id_estado_transaccion,
       id_usuario
     );
+    
+    // Si hay una factura asociada, actualizar su estado a "Pagada"
+    if (transaccion.transaccion.dataValues.id_factura != null) {
+      const estadoFacturaPagada = await EstadoFacturaService.findByNombre(
+        "Pagada"
+      );
+      await FacturaService.actualizarEstadoFactura(
+        transaccion.transaccion.dataValues.id_factura,
+        estadoFacturaPagada.dataValues.id_estado_factura
+      );
+    }
 
-    return { message: "Pago acreditado con éxito", pago };
+    return pago;
   }
 
   async obtenerPagosPorTransaccion(id_transaccion) {
     const pagos = await PagoRepository.findByTransaccionId(id_transaccion);
-    if (!pagos || pagos.length === 0) {
-      throw new Error(
-        `No se encontraron pagos para la transacción ${id_transaccion}.`
-      );
-    }
     return pagos;
   }
 

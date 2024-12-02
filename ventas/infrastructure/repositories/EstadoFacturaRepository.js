@@ -12,7 +12,7 @@ class EstadoFacturaRepository extends IEstadoFacturaRepository {
 
   async findByNombre(nombre) {
     return await EstadoFactura.findOne({
-      where: { nombre_estado: nombre },
+      where: { nombre: nombre },
     });
   }
 
@@ -30,6 +30,10 @@ class EstadoFacturaRepository extends IEstadoFacturaRepository {
     return await EstadoFactura.destroy({
       where: { id_estado_transaccion: id },
     });
+  }
+
+  getModel() {
+    return EstadoFactura;
   }
 }
 
