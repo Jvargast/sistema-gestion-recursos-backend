@@ -4,6 +4,10 @@ import DetalleTransaccionService from "./DetalleTransaccionService.js";
 import TransaccionService from "./TransaccionService.js";
 import EstadoFacturaService from "./EstadoFacturaService.js";
 import EstadoTransaccionService from "./EstadoTransaccionService.js";
+import createFilter from "../../shared/utils/helpers.js";
+import paginate from "../../shared/utils/pagination.js";
+import EstadoFacturaRepository from "../infrastructure/repositories/EstadoFacturaRepository.js";
+import TransaccionRepository from "../infrastructure/repositories/TransaccionRepository.js";
 
 class FacturaService {
   // Obtener una factura por ID
@@ -16,7 +20,26 @@ class FacturaService {
   }
   // Obtener todas las facturas con filtros y paginación
   async getAllFacturas(filters = {}, options = { page: 1, limit: 10 }) {
-    return await FacturaRepository.findAll(filters, options);
+    const where = createFilter(filters, allowedFields);
+    if (options.search) {
+      where[Op.or] = [
+        { observaciones: { [Op.like]: `%${options.search}%` } }, // Buscar en
+        { fecha_emision: { [Op.like]: `%${options.search}%` } }, // Buscar
+        { numero_factura: { [Op.like]: `%${options.search}%` } }, // Buscar en
+      ];
+    }
+    const include = [
+      {
+        model: EstadoFacturaRepository.getModel(), // Modelo de EstadoTransaccion
+        as: "estado", // Alias definido en las asociaciones
+        attributes: ["nombre"], // Campos que deseas incluir
+      },
+    ];
+    const result = await paginate(FacturaRepository.getModel(), options, {
+      where,
+      include,
+    });
+    return result.data;
   }
 
   // Crear una factura independiente (sin transacción asociada)
@@ -35,20 +58,50 @@ class FacturaService {
       id_transaccion
     );
 
+    if (transaccion.transaccion.dataValues.id_factura) {
+      throw new Error("La transacción ya tiene una factura asociada");
+    }
+
+    
     // Validar que la transacción esté en un estado adecuado para emitir factura
-    const estadoCompletado = await EstadoTransaccionService.findByNombre("Completada")
-    if (transaccion.id_estado_transaccion !== estadoCompletado.id_estado_transaccion) {
+    const estadoValidos = await EstadoTransaccionService.findByNombres([
+      "En Proceso",
+      "Pago Pendiente",
+      "Pagada",
+    ]);
+
+    if (
+      !estadoValidos.some(
+        (estado) =>
+          estado.dataValues.id_estado_transaccion ===
+          transaccion.transaccion.dataValues.id_estado_transaccion
+      )
+    ) {
       throw new Error(
-        "La transacción debe estar completada para generar una factura."
+        "La transacción no está en un estado válido para generar factura."
       );
     }
-    const estadoFacturaCompletado = await EstadoFacturaService.findByNombre("Creada")
+
+    // Generar número de factura
+    const numeroGenerado = await this.generarNumeroFactura();
+
+    // Crear la factura
+    const estadoFacturaCreada = await EstadoFacturaService.findByNombre(
+      "Creada"
+    );
+
     const factura = await FacturaRepository.create({
-      id_transaccion,
-      id_cliente: transaccion.id_cliente,
-      id_usuario,
-      total: transaccion.total,
-      id_estado_factura: estadoFacturaCompletado.id_estado_Factura
+      numero_factura: numeroGenerado,
+      /* id_cliente: transaccion.transaccion.dataValues.id_cliente, */
+/*       id_usuario, */
+      total: transaccion.transaccion.dataValues.total,
+      id_estado_factura: estadoFacturaCreada.dataValues.id_estado_factura,
+      fecha_emision: new Date(),
+    });
+
+    // Actualizar la transacción con el ID de la factura
+    await TransaccionRepository.update(id_transaccion, {
+      id_factura: factura.dataValues.id_factura,
     });
 
     return factura;
@@ -59,23 +112,71 @@ class FacturaService {
       id_transaccion
     );
 
+    // Verificar si ya tiene una factura o boleta asociada
+    if (transaccion.transaccion.dataValues.id_factura) {
+      throw new Error("La transacción ya tiene una factura o boleta asociada.");
+    }
+
     // Validar que la transacción esté en un estado adecuado para emitir boleta
-    const estadoCompletado = await EstadoTransaccionService.findByNombre("Completada")
-    if (transaccion.id_estado_transaccion !== estadoCompletado.id_estado_transaccion) {
+    const estadoCompletado = await EstadoTransaccionService.findByNombre(
+      "Pagada"
+    );
+    if (
+      transaccion.transaccion.dataValues.id_estado_transaccion !==
+      estadoCompletado.dataValues.id_estado_transaccion
+    ) {
       throw new Error(
-        "La transacción debe estar completada para generar una boleta."
+        "La transacción debe estar pagada para generar una boleta."
       );
     }
-    const estadoFacturaCompletado = await EstadoFacturaService.findByNombre("Pagada")
+    const estadoFacturaCompletado = await EstadoFacturaService.findByNombre(
+      "Pagada"
+    );
+
+    const numeroGenerado = await this.generarNumeroFactura();
     const boleta = await FacturaRepository.create({
+      numero_factura: numeroGenerado,
       id_transaccion,
-      id_cliente: transaccion.id_cliente,
+      id_cliente: transaccion.transaccion.dataValues.id_cliente,
       id_usuario,
-      total: transaccion.total,
-      id_estado_factura: estadoFacturaCompletado.id_estado_Factura, // Las boletas suelen considerarse pagadas automáticamente
+      total: transaccion.transaccion.dataValues.total,
+      id_estado_factura: estadoFacturaCompletado.dataValues.id_estado_factura, // Las boletas suelen considerarse pagadas automáticamente
+    });
+
+    // Actualizar la transacción con el ID de la factura o boleta
+    await TransaccionRepository.update(id_transaccion, {
+      id_factura: boleta.dataValues.id_factura,
     });
 
     return boleta;
+  }
+
+  async generarNumeroFactura() {
+    try {
+      // Obtener el último número de factura
+      const ultimaFactura = await FacturaRepository.findLastFactura({
+        order: [["numero_factura", "DESC"]],
+      });
+
+      let nuevoNumero;
+      const prefijo = new Date().getFullYear(); // Prefijo del año
+      if (ultimaFactura) {
+        // Incrementar el número de factura existente
+        const ultimoNumero = parseInt(
+          ultimaFactura.dataValues.numero_factura.split("-")[1]
+        );
+        nuevoNumero = `${prefijo}-${(ultimoNumero + 1)
+          .toString()
+          .padStart(6, "0")}`;
+      } else {
+        // Primera factura del año
+        nuevoNumero = `${prefijo}-000001`;
+      }
+
+      return nuevoNumero;
+    } catch (error) {
+      throw new Error(`Error al generar número de factura: ${error.message}`);
+    }
   }
 
   async crearFacturaDesdeTransaccion(id_transaccion, id_usuario, data) {
@@ -161,7 +262,7 @@ class FacturaService {
     if (!factura) throw new Error("Factura no encontrada.");
 
     await FacturaRepository.update(id_factura, {
-      estado_factura: nuevo_estado,
+      id_estado_factura: nuevo_estado,
     });
 
     return { message: "Estado de factura actualizado con éxito" };

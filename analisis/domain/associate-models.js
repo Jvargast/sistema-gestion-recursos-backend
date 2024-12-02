@@ -3,34 +3,31 @@ import ProductoEstadisticas from "./models/ProductoEstadisticas.js";
 import Transaccion from "../../ventas/domain/models/Transaccion.js";
 import VentasEstadisticas from "./models/VentasEstadisticas.js";
 
-
 function loadAnalysisAssociations() {
-  // Relación: Producto -> ProductoEstadisticas (1:N)
-  Producto.hasMany(ProductoEstadisticas, {
-    foreignKey: "id_producto",
-    as: "estadisticas",
-    onDelete: "CASCADE",
-    onUpdate: "CASCADE",
-  });
-  ProductoEstadisticas.belongsTo(Producto, {
-    foreignKey: "id_producto",
-    as: "producto",
-    onDelete: "CASCADE",
-    onUpdate: "CASCADE",
-  });
-
-  // Relación: Transaccion -> VentasEstadisticas (1:N)
+  // Relación: Transacción -> VentasEstadisticas
   Transaccion.hasMany(VentasEstadisticas, {
     foreignKey: "id_transaccion",
     as: "estadisticas",
-    onDelete: "CASCADE",
-    onUpdate: "CASCADE",
+    onDelete: "SET NULL", // Permite eliminar transacciones sin afectar estadísticas
   });
+
   VentasEstadisticas.belongsTo(Transaccion, {
     foreignKey: "id_transaccion",
     as: "transaccion",
-    onDelete: "CASCADE",
-    onUpdate: "CASCADE",
+    onDelete: "SET NULL",
+  });
+
+  // Relación: Producto -> ProductoEstadisticas
+  Producto.hasMany(ProductoEstadisticas, {
+    foreignKey: "id_producto",
+    as: "estadisticas",
+    onDelete: "SET NULL", // Permite eliminar productos sin afectar estadísticas
+  });
+
+  ProductoEstadisticas.belongsTo(Producto, {
+    foreignKey: "id_producto",
+    as: "producto",
+    onDelete: "SET NULL",
   });
 
   console.log("Asociaciones del módulo de análisis cargadas");

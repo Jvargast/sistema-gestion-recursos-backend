@@ -9,14 +9,17 @@ import EstadoDetalleTransaccionService from "./EstadoDetalleTransaccionService.j
 import TransicionEstadoDetalleTransaccionService from "./TransicionEstadoDetalleTransaccionService.js";
 
 class DetalleTransaccionService {
-
   async getDetallesByTransaccionId(id_transaccion) {
     return await DetalleTransaccionRepository.findByTransaccionId(
       id_transaccion
     );
   }
 
-/*   async completeTransaccion(id, id_usuario) {
+  async getAllDetalles(conditions) {
+    return await DetalleTransaccionRepository.findAllWithConditions(conditions);
+  }
+
+  /*   async completeTransaccion(id, id_usuario) {
     const transaccion = await TransaccionService.getTransaccionById(id);
 
     // Cambiar estado de la transacción
@@ -43,18 +46,17 @@ class DetalleTransaccionService {
 
   async createDetallesTransaccion(
     productos,
-    id_transaccion,
+    id_transaccion
     /* tipo_transaccion,
     id_usuario */
   ) {
     // Validar la transacción existente
-    await TransaccionService.getTransaccionById(
-      id_transaccion
-    );
+    await TransaccionService.getTransaccionById(id_transaccion);
 
     // Procesar cada detalle
     const detallesData = await Promise.all(
       productos.map(async ({ id_producto, cantidad }) => {
+
         const producto = await ProductosService.getProductoById(id_producto);
 
         if (producto.id_estado_producto !== 1) {
@@ -66,14 +68,7 @@ class DetalleTransaccionService {
 
         const subtotal = producto.precio * cantidad;
 
-        //Validar estado inicial del producto según el tipo de transacción
-        // No se debería considerar cambiar el estado del detalle, hasta que se complete la transacción o si?
-        /* const estadoDetalle =
-          tipo_transaccion === "cotización"
-            ? await EstadoDetalleTransaccionService.findByNombre("En bodega - Disponible")
-            : await EstadoDetalleTransaccionService.findByNombre("En bodega - Reservado"); */
-
-        const estadoInicialDetalle  =
+        const estadoInicialDetalle =
           await EstadoDetalleTransaccionService.findByNombre(
             "En bodega - Disponible"
           );
@@ -86,7 +81,8 @@ class DetalleTransaccionService {
           precio_unitario: producto.precio,
           descuento: 0, // Si no hay descuentos, se puede ajustar más tarde
           subtotal,
-          estado_producto_transaccion: estadoInicialDetalle.dataValues.id_estado_detalle_transaccion,
+          estado_producto_transaccion:
+            estadoInicialDetalle.dataValues.id_estado_detalle_transaccion,
         };
       })
     );
@@ -95,47 +91,37 @@ class DetalleTransaccionService {
       detallesData
     );
 
-    // Realizar ajustes en inventario si el tipo de transacción lo requiere
-    /* if (["venta", "pedido"].includes(tipo_transaccion)) {
-      await Promise.all(
-        productos.map(async ({ id_producto, cantidad }) => {
-          await InventarioService.ajustarCantidadInventario(
-            id_producto,
-            -cantidad,
-            id_usuario
-          );
-        })
-      );
-    } */
-
     return detallesCreados;
   }
   // Es requerido cambiar el estado de los detalles para el movimiento de productos
   async cambiarEstadoDetalles(id_transaccion, nuevoEstado, id_usuario) {
+
     const detalles = await this.getDetallesByTransaccionId(id_transaccion);
     if (!detalles || detalles.length === 0) {
       throw new Error("No se encontraron detalles para esta transacción.");
     }
-    const nuevo_estado = await EstadoDetalleTransaccionService.findById(nuevoEstado);
+    const nuevo_estado = await EstadoDetalleTransaccionService.findById(
+      nuevoEstado
+    );
     const ids = detalles.map((detalle) => ({
       estado_origen: detalle.estado_producto_transaccion,
-    }))
-    
+    }));
+
     // Validar transición de estado
     await TransicionEstadoDetalleTransaccionService.validarTransicionesMasivas(
       ids,
       nuevo_estado.dataValues.id_estado_detalle_transaccion
     );
-  
+
     // Actualizar el estado de todos los detalles
     await Promise.all(
-      detalles.map((detalle) =>
+      detalles.map((detalle) => {
         DetalleTransaccionRepository.update(detalle.id_detalle_transaccion, {
-          estado_producto_transaccion: nuevoEstado,
-        })
-      )
+          estado_producto_transaccion: nuevo_estado.dataValues.id_estado_detalle_transaccion,
+        });
+      })
     );
-  
+
     // Registrar log del cambio de estado
     await LogTransaccionService.createLog({
       id_transaccion,
@@ -144,7 +130,8 @@ class DetalleTransaccionService {
       accion: "Cambio de estado de detalles",
       detalles: `Detalles actualizados al estado: ${nuevo_estado.dataValues.nombre_estado}`,
     });
-  
+
+
     return { mensaje: "Estados de detalles actualizados con éxito." };
   }
 
@@ -246,7 +233,6 @@ class DetalleTransaccionService {
       detalles.map((detalle) => detalle.id_detalle_transaccion)
     );
   }
-
 }
 
 export default new DetalleTransaccionService();

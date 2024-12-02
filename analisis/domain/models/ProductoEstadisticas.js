@@ -5,7 +5,7 @@ import Producto from "../../../inventario/domain/models/Producto.js";
 const ProductoEstadisticas = sequelize.define(
   "ProductoEstadisticas",
   {
-    id:{
+    id_producto_estadisticas:{
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true
@@ -16,7 +16,7 @@ const ProductoEstadisticas = sequelize.define(
         model: Producto,
         key: "id_producto",
       },
-      allowNull: false,
+      allowNull: true,
     },
     year: {
       type: DataTypes.INTEGER,
@@ -44,6 +44,9 @@ const ProductoEstadisticas = sequelize.define(
   {
     tableName: "ProductoEstadisticas",
     timestamps: false,
+    indexes: [
+      { fields: ["year"] }, // Índice para búsquedas rápidas por año
+    ],
   }
 );
 

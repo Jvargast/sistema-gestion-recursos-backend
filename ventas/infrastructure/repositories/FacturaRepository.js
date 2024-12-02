@@ -14,6 +14,10 @@ class FacturaRepository extends IFacturaRepository {
     });
   }
 
+  async findLastFactura(conditions) {
+    return await Factura.findOne(conditions);
+  }
+
   async create(data) {
     return await Factura.create(data);
   }
@@ -23,6 +27,10 @@ class FacturaRepository extends IFacturaRepository {
       where: { id_factura: id },
     });
     return updated > 0 ? await this.findById(id) : null;
+  }
+  
+  getModel() {
+    return Factura;
   }
 }
 

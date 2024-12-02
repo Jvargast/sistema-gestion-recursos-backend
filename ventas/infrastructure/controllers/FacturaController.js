@@ -19,6 +19,7 @@ class FacturaController {
       const options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
+        search: req.query.search
       };
       delete filters.page;
       delete filters.limit;

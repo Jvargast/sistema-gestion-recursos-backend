@@ -9,6 +9,10 @@ class MetodoPagoRepository extends IMetodoPagoRepository {
   async findAll() {
     return await MetodoPago.findAll();
   }
+
+  async findAllWithConditions(conditions) {
+    return await MetodoPago.findAll({where: conditions})
+  }
 }
 
 export default new MetodoPagoRepository();

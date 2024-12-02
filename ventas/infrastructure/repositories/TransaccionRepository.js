@@ -25,6 +25,10 @@ class TransaccionRepository extends ITransaccionRepository {
     });
   }
 
+  async findAllWithConditions(conditions) {
+    return await Transaccion.findAll(conditions);
+  }
+
   async findByIds(ids) {
     console.log(ids)
     return await Transaccion.findAll({

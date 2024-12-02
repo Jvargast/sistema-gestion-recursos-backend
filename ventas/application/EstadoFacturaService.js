@@ -50,7 +50,7 @@ class EstadoFacturaService {
     }
 
     // Validación adicional: evitar eliminar estados críticos si es necesario
-    if (estado.nombre_estado === "En Proceso" || estado.nombre_estado === "Facturación Incompleta") {
+    if (estado.nombre === "En Proceso" || estado.nombre_estado === "Facturación Incompleta") {
       throw new Error(`No se puede eliminar el estado crítico "${estado.nombre_estado}".`);
     }
 

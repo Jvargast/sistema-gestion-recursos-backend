@@ -31,14 +31,6 @@ const Transaccion = sequelize.define(
       allowNull: true,
       defaultValue: 0
     },
-/*     estado_pago: {
-      type: DataTypes.STRING, // "pendiente", "pagado", "anulado"
-      defaultValue: "pendiente",
-    }, */
-/*     fecha_vencimiento: {
-      type: DataTypes.DATE,
-      allowNull: true,
-    }, */
     fecha_creacion: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

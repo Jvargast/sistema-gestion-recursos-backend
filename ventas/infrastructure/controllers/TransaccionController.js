@@ -15,10 +15,12 @@ class TransaccionController {
   async getAllTransacciones(req, res) {
     try {
       const filters = req.query; // Filtros enviados en los query params
-      const options = {
+      let options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
+        search: req.query.search
       };
+    
       delete filters.limit;
       delete filters.offset;
       const transacciones = await TransaccionService.getAllTransacciones(
@@ -114,7 +116,7 @@ class TransaccionController {
   async completeTransaction(req, res) {
     try {
       const { rut } = req.user;
-      const {id} = req.params;
+      const { id } = req.params;
       const {  metodo_pago, referencia } = req.body;
 
       const completeTransaction = await TransaccionService.completarTransaccion(
@@ -129,6 +131,18 @@ class TransaccionController {
     }
   }
 
+  async finalizarTransaccion(req, res) {
+    try {
+      const { rut } = req.user;
+      const {id} = req.params;
+
+      const finalizarTransaccion = await TransaccionService.finalizarTransaccion(id, rut);
+      res.status(200).json(finalizarTransaccion);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   async asignarTransaccion(req, res) {
     try {
       //Falta lógica para el usuario que lo hace
@@ -136,12 +150,12 @@ class TransaccionController {
       const { id } = req.params;
       const { id_usuario } = req.body;
 
-      const resultado = await TransaccionService.asignarTransaccionAUsuario(
+      await TransaccionService.asignarTransaccionAUsuario(
         id,
         id_usuario,
         rut
       );
-      res.status(200).json(resultado);
+      res.status(200).json({message: "Usuario asigado con éxito"});
     } catch (error) {
       res.status(400).json({ error: error.message });
     }

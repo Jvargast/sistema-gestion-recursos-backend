@@ -42,7 +42,18 @@ class TransaccionService {
       "tipo_comprobante",
       "id_estado_transaccion",
     ];
+
     const where = createFilter(filters, allowedFields);
+    // Incluir búsqueda global si se proporciona el parámetro `search`
+
+    if (options.search) {
+      where[Op.or] = [
+        { "$cliente.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en cliente.nombre
+        { "$usuario.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en usuario.nombre
+        { "$estado.nombre_estado$": { [Op.like]: `%${options.search}%` } }, // Buscar en estado.nombre_estado
+        { tipo_transaccion: { [Op.like]: `%${options.search}%` } }, // Buscar en tipo_transaccion
+      ];
+    }
 
     // Excluir transacciones con estado "Rechazada", "Cancelado", "Cancelada"
     const excludedStates = ["Rechazada", "Cancelado", "Cancelada"];
@@ -65,6 +76,7 @@ class TransaccionService {
         limit: options.limit,
       };
     }
+
     // Incluir datos relacionados (cliente, usuario, estado de la transacción)
     const include = [
       {
@@ -93,7 +105,7 @@ class TransaccionService {
   }
 
   async createTransaccion(data, detalles = [], id_usuario) {
-    const { id_cliente, tipo_transaccion, id_metodo_pago } = data;
+    const { id_cliente, tipo_transaccion, id_metodo_pago, tipo_documento } = data;
 
     // Validar cliente
     await ClienteService.getClienteById(id_cliente);
@@ -108,7 +120,7 @@ class TransaccionService {
 
     // Buscar el estado inicial de la transacción dependiendo del tipo
     const estadoInicial =
-      detalles && tipo_transaccion == "Pedido"
+      detalles && tipo_transaccion == "pedido"
         ? await EstadoTransaccionService.findByNombre("En Proceso")
         : await EstadoTransaccionService.findEstadoInicialByTipo(
             tipo_transaccion
@@ -120,6 +132,21 @@ class TransaccionService {
       id_usuario,
     });
 
+    let documentoEmitido = null;
+    if (tipo_transaccion == "venta" && tipo_documento == "factura") {
+      documentoEmitido = await FacturaService.generarFactura(
+        nuevaTransaccion.dataValues.id_transaccion,
+        id_usuario
+      );
+      //Se tiene que insertar la factura en la transacción
+      await TransaccionRepository.update(
+        nuevaTransaccion.dataValues.id_transaccion,
+        {
+          id_factura: documentoEmitido.dataValues.id_factura
+        }
+      );
+    }
+
     // Registrar log de creación de transacción
     await LogTransaccionService.createLog({
       id_transaccion: nuevaTransaccion.id_transaccion,
@@ -130,24 +157,24 @@ class TransaccionService {
     });
 
     // Agregar detalles si existen
-    if (detalles.length > 0) {
-      await DetalleTransaccionService.createDetalles(
+    if (detalles) {
+      await this.addDetallesToTransaccion(
+        nuevaTransaccion.dataValues.id_transaccion,
         detalles,
-        nuevaTransaccion.id_transaccion,
-        tipo_transaccion
+        id_usuario
       );
     }
     // Registrar pago inicial si se proporcionó un método de pago y referencia
     if (data.monto_inicial && metodoPago) {
-      const estadoPagoInicial = await EstadoPagoService.findByNombre(
+      /* const estadoPagoInicial = await EstadoPagoService.findByNombre(
         "Pendiente"
-      );
+      ); */
       await PagoService.acreditarPago({
-        id_transaccion: nuevaTransaccion.id_transaccion,
+        id_transaccion: nuevaTransaccion.dataValues.id_transaccion,
         monto: data.monto_inicial,
-        id_metodo_pago: metodoPago.id_metodo_pago,
+        metodo_pago: metodoPago.dataValues.nombre,
         referencia: data.referencia || null,
-        id_estado_pago: estadoPagoInicial.id_estado_pago,
+        id_usuario: id_usuario,
       });
     }
     return nuevaTransaccion;
@@ -157,10 +184,17 @@ class TransaccionService {
     // Validar transacción existente
     const transaccion = await this.getTransaccionById(id_transaccion);
 
+    const estado_verificador = await EstadoTransaccionService.findById(
+      transaccion.transaccion.id_estado_transaccion
+    );
     // Validar estado de la transacción
-    if (transaccion.transaccion.id_estado_transaccion !== "En Proceso") {
+    if (
+      transaccion.transaccion.id_estado_transaccion !==
+      estado_verificador.dataValues.id_estado_transaccion
+    ) {
       throw new Error("La transacción no está en un estado asignable.");
     }
+
     // Asignar usuario (chofer) a la transacción
     const updatedTransaccion = await TransaccionRepository.update(
       id_transaccion,
@@ -175,6 +209,7 @@ class TransaccionService {
       id_usuario: rut,
       accion: "Asignar transacción",
       detalles: `Transacción asignada al usuario con ID: ${id_usuario}`,
+      estado: `En estado asignada`,
     });
 
     return updatedTransaccion;
@@ -274,17 +309,7 @@ class TransaccionService {
     const estadoActual = await EstadoTransaccionService.findById(
       transaccion.transaccion.dataValues.id_estado_transaccion
     );
-    //const nuevoEstado = await EstadoTransaccionService.findByNombre("En Proceso");
-    // Actualizar estado de la transacción
-    /* await this.changeEstadoTransaccion(
-      id_transaccion,
-      nuevoEstado.dataValues.id_estado_transaccion,
-      id_usuario
-    ); */
-    /* await TransicionEstadoTransaccionService.validarTransicion(
-      transaccion.transaccion.dataValues.id_estado_transaccion,
-      nuevoEstado.dataValues.id_estado_transaccion
-    ); */
+
     await DetalleTransaccionService.createDetallesTransaccion(
       detalles,
       id_transaccion
@@ -296,9 +321,7 @@ class TransaccionService {
     const total = await DetalleTransaccionService.calcularTotales(
       id_transaccion
     );
-    // Buscar el estado de la transacción dependiendo del tipo
-    // cuando se agregan detalles no debería cambiar el estado
-    // const estados = await EstadoTransaccionService.findEstadosByTipo(transaccion.transaccion.tipo_transaccion)
+  
 
     //Actualizar transacción con el total
     await TransaccionRepository.update(id_transaccion, {
@@ -320,54 +343,71 @@ class TransaccionService {
     id_transaccion,
     metodo_pago,
     referencia,
-    id_usuario
+    id_usuario /* ,
+    tipo_documento */
   ) {
-    // Verificar si hay pago antes
-    const pagoTransaccion = await PagoService.obtenerPagosPorTransaccion(
-      id_transaccion
-    );
-
-    if (pagoTransaccion) {
-      //Si hay pago verificarlo y devolver completada la transacción, estado del pago puede ser
-    } else {
-      //Agregar el pago, con estado de pagado
-    }
+    // Verificar el estado de la transacción
     const transaccion = await this.getTransaccionById(id_transaccion);
-
-    if (transaccion.transaccion.id_estado_transaccion !== "Pago Pendiente") {
+    const estadoNuevo = await EstadoTransaccionService.findByNombre(
+      "Pago Pendiente"
+    );
+    // Verificar el estado actual de la transacción
+    if (
+      transaccion.transaccion.dataValues.id_estado_transaccion !==
+      estadoNuevo.dataValues.id_estado_transaccion
+    ) {
       throw new Error(
         "La transacción no está en un estado válido para completar."
       );
     }
-
-    // Registrar el pago
-    const estadoPago = await EstadoPagoService.findByNombre("Pagado");
-    const pagoRegistrado = await PagoService.acreditarPago({
-      id_transaccion,
-      monto: transaccion.monto,
-      id_metodo_pago: metodo_pago,
-      referencia: referencia || null,
-      id_estado_pago: estadoPago.id_estado_pago,
-    });
-
-    // Cambiar estado de la transacción
-    const estadoNuevo = await EstadoTransaccionService.findByNombre(
-      "Completada"
+    // Solo se puede hacer esto cuando el estado de la transacción sea en "Pago Pendiente"
+    // Verificar si hay pago antes
+    const pagosPrevios = await PagoService.obtenerPagosPorTransaccion(
+      id_transaccion
     );
-    await this.changeEstadoTransaccion(
+    let pagoRegistrado;
+
+    const estadoPago = await EstadoTransaccionService.findByNombre("Pagada");
+
+    if (pagosPrevios > 0) {
+      // Validar si el pago previo ya cubre el monto total
+      const totalPagado = pagosPrevios.reduce(
+        (total, pago) => total + pago.monto,
+        0
+      );
+      if (totalPagado < transaccion.transaccion.dataValues.total) {
+        throw new Error(
+          "El monto del pago previo no cubre el total de la transacción."
+        );
+      }
+      // El pago previo ya acredita la transacción como "Pagada"
+      pagoRegistrado = pagosPrevios[0];
+    } else {
+      // Registrar un nuevo pago
+      
+      pagoRegistrado = await PagoService.acreditarPago(
+        id_transaccion,
+        transaccion.transaccion.dataValues.total,
+        metodo_pago,
+        referencia,
+        id_usuario
+      );
+    }
+
+    // Cambiar el estado de los detalles a "En Bodega - Reservado"
+    const nuevoEstadoDetalle =
+      await EstadoDetalleTransaccionService.findByNombre(
+        "En bodega - Reservado"
+      );
+    await DetalleTransaccionService.cambiarEstadoDetalles(
       id_transaccion,
-      estadoNuevo.id_estado_transaccion,
+      nuevoEstadoDetalle.dataValues.id_estado_detalle_transaccion,
       id_usuario
     );
 
-    // Emitir factura o boleta
+    // Emitir boleta si corresponde
     let documentoEmitido = null;
-    if (transaccion.tipo_documento === "factura") {
-      documentoEmitido = await FacturaService.generarFactura({
-        id_transaccion,
-        id_usuario,
-      });
-    } else if (transaccion.tipo_documento === "boleta") {
+    if (transaccion.transaccion.dataValues.tipo_documento === "boleta") {
       documentoEmitido = await FacturaService.generarBoleta(
         id_transaccion,
         id_usuario
@@ -377,15 +417,66 @@ class TransaccionService {
     await LogTransaccionService.createLog({
       id_transaccion,
       id_usuario,
-      accion: "Completar transacción",
-      detalles: `${documentoEmitido}.`,
-      estado: estadoNuevo.id_estado_transaccion,
+      accion: "Transacción Pagada",
+      detalles: `Pago acreditado y productos reservados. Documento emitido: ${
+        documentoEmitido || "N/A"
+      }.`,
+      estado: `${estadoPago.dataValues.nombre_estado}`,
     });
 
     return {
       mensaje: "Transacción completada con éxito.",
       pago: pagoRegistrado,
-      documento: documentoEmitido,
+      documento: documentoEmitido != null ? documentoEmitido 
+      : "",
+    };
+  }
+
+  async finalizarTransaccion(id_transaccion, id_usuario) {
+    // Obtener la transacción
+    const transaccion = await this.getTransaccionById(id_transaccion);
+
+    // Verificar si la transacción está en estado "Pagada"
+    const estadoPagada = await EstadoTransaccionService.findByNombre("Pagada");
+    if (
+      transaccion.transaccion.dataValues.id_estado_transaccion !== estadoPagada.dataValues.id_estado_transaccion
+    ) {
+      throw new Error(
+        "La transacción debe estar en estado 'Pagada' para ser finalizada."
+      );
+    }
+
+    // Cambiar el estado de los detalles a "Entregado"
+    const estadoEntregado = await EstadoDetalleTransaccionService.findByNombre(
+      "Entregado"
+    );
+    await DetalleTransaccionService.cambiarEstadoDetalles(
+      id_transaccion,
+      estadoEntregado.dataValues.id_estado_detalle_transaccion,
+      id_usuario
+    );
+
+    // Cambiar el estado de la transacción a "Completada"
+    const estadoCompletada = await EstadoTransaccionService.findByNombre(
+      "Completada"
+    );
+    await this.changeEstadoTransaccion(
+      id_transaccion,
+      estadoCompletada.dataValues.id_estado_transaccion,
+      id_usuario
+    );
+
+    // Registrar un log
+    await LogTransaccionService.createLog({
+      id_transaccion,
+      id_usuario,
+      accion: "Finalizar transacción",
+      detalles: "La transacción ha sido completada exitosamente",
+      estado: estadoCompletada.dataValues.id_estado_transaccion,
+    });
+
+    return {
+      mensaje: "Transacción finalizada con éxito.",
     };
   }
 
