@@ -1,8 +1,10 @@
 import express from "express";
 import VentasEstadisticasController from "../controllers/VentasEstadisticasController.js"
+import verifyToken from "../../../shared/middlewares/VerifyTokenMiddleware.js";
 
 const router = express.Router();
 
+/* router.use(verifyToken); */
 // CRUD básico
 router.get("/:id", VentasEstadisticasController.getEstadisticasPorId); // Obtener estadísticas por ID
 router.post("/", VentasEstadisticasController.createEstadisticas); // Crear estadísticas
