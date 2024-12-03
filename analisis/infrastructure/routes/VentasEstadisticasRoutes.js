@@ -4,7 +4,7 @@ import verifyToken from "../../../shared/middlewares/VerifyTokenMiddleware.js";
 
 const router = express.Router();
 
-/* router.use(verifyToken); */
+router.use(verifyToken);
 // CRUD básico
 router.get("/:id", VentasEstadisticasController.getEstadisticasPorId); // Obtener estadísticas por ID
 router.post("/", VentasEstadisticasController.createEstadisticas); // Crear estadísticas
