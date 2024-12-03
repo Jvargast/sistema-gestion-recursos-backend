@@ -83,7 +83,7 @@ class VentasEstadisticasService {
     // Obtener todas las transacciones completadas en el año
 
     const estadoPermitido = await EstadoTransaccionService.findByNombre(
-      "Pagada"
+      "Completada"
     );
     //Colocar este detalle para ventas Pagadas y detalles Entregado
     const estadoDetalle = await EstadoDetalleTransaccionService.findByNombre(
@@ -115,12 +115,18 @@ class VentasEstadisticasService {
       ],
     });
 
+
     if (transacciones.length === 0) {
       throw new Error(`No se encontraron transacciones para el año ${year}.`);
     }
 
     const ventasAnuales = transacciones.reduce(
-      (total, transaccion) => total + transaccion.total,
+      (total, transaccion) =>
+        total +
+        transaccion.detalles.reduce(
+          (sum, detalle) => sum + detalle.cantidad,
+          0
+        ),
       0
     );
 
@@ -128,12 +134,41 @@ class VentasEstadisticasService {
       year
     );
 
-    const datosMensuales = await this.calcularDatosMensuales(
+    /* const datosMensuales = await this.calcularDatosMensuales(
       year,
       estadoPermitido.dataValues.id_estado_transaccion,
       estadoDetalle.dataValues.id_estado_detalle_transaccion
-    );
+    ); */
+    // Calcular datos mensuales
+    const datosMensuales = Array.from({ length: 12 }, (_, index) => {
+      const mes = index + 1;
+      const transaccionesMes = transacciones.filter((transaccion) => {
+        const mesTransaccion =
+          new Date(transaccion.fecha_creacion).getMonth() + 1;
+        return mesTransaccion === mes;
+      });
 
+      const totalMes = transaccionesMes.reduce(
+        (total, transaccion) => total + transaccion.total,
+        0
+      );
+
+      const unidadesMes = transaccionesMes.reduce(
+        (total, transaccion) =>
+          total +
+          transaccion.detalles.reduce(
+            (sum, detalle) => sum + detalle.cantidad,
+            0
+          ),
+        0
+      );
+
+      return {
+        mes,
+        total: totalMes,
+        unidades: unidadesMes,
+      };
+    });
     // Crear o actualizar las estadísticas
     const estadisticas = {
       year,
@@ -144,9 +179,9 @@ class VentasEstadisticasService {
 
     const existente = await VentasEstadisticasRepository.findByYear(year);
 
-    if (existente == []) {
+    if (existente) {
       return await VentasEstadisticasRepository.updateById(
-        existente.id_ventas_estadisticas,
+        existente[0].dataValues.id_ventas_estadisticas,
         estadisticas
       );
     } else {
@@ -159,7 +194,7 @@ class VentasEstadisticasService {
    */
   async calcularUnidadesVendidasPorAno(year) {
     const estadoPermitido = await EstadoTransaccionService.findByNombre(
-      "Pagada"
+      "Completada"
     );
 
     const estadoDetalle = await EstadoDetalleTransaccionService.findByNombre(
