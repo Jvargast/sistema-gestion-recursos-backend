@@ -27,6 +27,10 @@ class EstadoProductoRepository extends IEstadoProductoRepository {
   async delete(id) {
     return await EstadoProducto.destroy({ where: { id_estado_producto: id } });
   }
+
+  getModel() {
+    return EstadoProducto;
+  }
 }
 
 export default new EstadoProductoRepository();

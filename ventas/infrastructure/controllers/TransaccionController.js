@@ -18,9 +18,9 @@ class TransaccionController {
       let options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
-        search: req.query.search
+        search: req.query.search,
       };
-    
+
       delete filters.limit;
       delete filters.offset;
       const transacciones = await TransaccionService.getAllTransacciones(
@@ -53,11 +53,7 @@ class TransaccionController {
       const { id } = req.params;
       const { productos } = req.body;
       const { rut } = req.user; // Se obtiene del token del usuario autenticado
-      await TransaccionService.addDetallesToTransaccion(
-        id,
-        productos,
-        rut
-      );
+      await TransaccionService.addDetallesToTransaccion(id, productos, rut);
       res
         .status(200)
         .json({ message: "Detalles agregados a la transacción con éxito." });
@@ -103,12 +99,16 @@ class TransaccionController {
     try {
       const { id } = req.params;
       const { nuevoEstado } = req.body;
-      const { rut } = req.user
-      await DetalleTransaccionService.cambiarEstadoDetalles(id, nuevoEstado, rut);
+      const { rut } = req.user;
+      await DetalleTransaccionService.cambiarEstadoDetalles(
+        id,
+        nuevoEstado,
+        rut
+      );
       res
         .status(200)
         .json({ message: "Estado del detalle cambiado con éxito." });
-    }catch(error) {
+    } catch (error) {
       res.status(400).json({ error: error.message });
     }
   }
@@ -117,7 +117,7 @@ class TransaccionController {
     try {
       const { rut } = req.user;
       const { id } = req.params;
-      const {  metodo_pago, referencia } = req.body;
+      const { metodo_pago, referencia } = req.body;
 
       const completeTransaction = await TransaccionService.completarTransaccion(
         id,
@@ -134,9 +134,10 @@ class TransaccionController {
   async finalizarTransaccion(req, res) {
     try {
       const { rut } = req.user;
-      const {id} = req.params;
+      const { id } = req.params;
 
-      const finalizarTransaccion = await TransaccionService.finalizarTransaccion(id, rut);
+      const finalizarTransaccion =
+        await TransaccionService.finalizarTransaccion(id, rut);
       res.status(200).json(finalizarTransaccion);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -150,12 +151,8 @@ class TransaccionController {
       const { id } = req.params;
       const { id_usuario } = req.body;
 
-      await TransaccionService.asignarTransaccionAUsuario(
-        id,
-        id_usuario,
-        rut
-      );
-      res.status(200).json({message: "Usuario asigado con éxito"});
+      await TransaccionService.asignarTransaccionAUsuario(id, id_usuario, rut);
+      res.status(200).json({ message: "Usuario asigado con éxito" });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }

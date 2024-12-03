@@ -21,6 +21,10 @@ class CategoriaProductoRepository extends ICategoriaProductoRepository {
   async delete(id) {
     return await CategoriaProducto.destroy({ where: { id_categoria: id } });
   }
+
+  getModel() {
+    return CategoriaProducto;
+  }
 }
 
 export default new CategoriaProductoRepository();

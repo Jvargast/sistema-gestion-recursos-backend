@@ -6,6 +6,11 @@ import EstadoProductoService from "./EstadoProductoService.js";
 import InventarioService from "./InventarioService.js";
 import CategoriaProductoService from "./CategoriaProductoService.js";
 import TransicionEstadoProductoService from "./TransicionEstadoProductoService.js";
+import EstadoProductoRepository from "../infrastructure/repositories/EstadoProductoRepository.js";
+import CategoriaProductoRepository from "../infrastructure/repositories/CategoriaProductoRepository.js";
+import TipoProductoRepository from "../infrastructure/repositories/TipoProductoRepository.js";
+import { Op } from "sequelize";
+import InventarioRepository from "../infrastructure/repositories/InventarioRepository.js";
 
 class ProductoService {
   async getProductoById(id) {
@@ -19,7 +24,7 @@ class ProductoService {
     return producto;
   }
 
-  async getAllProductos(filters = {}, options = {}) {
+  async getAllProductos(filters = {}, options = { page: 1, limit: 10 }) {
     const allowedFields = [
       "nombre_producto",
       "marca",
@@ -30,8 +35,55 @@ class ProductoService {
       "id_estado_producto",
     ];
     const where = createFilter(filters, allowedFields);
+    // Filtro adicional para tipo_producto (Insumo)
+    if (options.tipo_producto) {
+      /* where[Op.eq] = [
+        { "$tipo.nombre$": { [Op.eq]: `%${options.tipo_producto}%` } },
+      ]; */
+      where["$tipo.nombre$"] = { [Op.eq]: options.tipo_producto }; // Buscar en tipo.nombre
+    }
 
-    return await paginate(ProductosRepository.getModel(), options, { where });
+
+    if (options.search) {
+      where[Op.or] = [
+        {
+          "$categoria.nombre_categoria$": { [Op.like]: `%${options.search}%` },
+        }, // Buscar en categoria.nombre
+        { "$tipo.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en tipo.nombre
+        { "$estado.nombre_estado$": { [Op.like]: `%${options.search}%` } }, // Buscar en estado.nombre_estado
+        { marca: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+        { descripcion: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+        { nombre_producto: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+      ];
+    }
+    const include = [
+      {
+        model: CategoriaProductoRepository.getModel(),
+        as: "categoria",
+        attributes: ["nombre_categoria", "descripcion"],
+      },
+      {
+        model: TipoProductoRepository.getModel(),
+        as: "tipo",
+        attributes: ["nombre", "descripcion"],
+      },
+      {
+        model: EstadoProductoRepository.getModel(),
+        as: "estado",
+        attributes: ["nombre_estado", "descripcion"],
+      },
+      {
+        model: InventarioRepository.getModel(),
+        as: "inventario",
+        attributes: ["cantidad", "fecha_actualizacion"], // Campos relevantes del inventario
+      },
+    ];
+
+    const result = await paginate(ProductosRepository.getModel(), options, {
+      where,
+      include,
+    });
+    return result.data;
   }
 
   async createProducto(data) {

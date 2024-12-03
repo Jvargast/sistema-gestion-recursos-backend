@@ -25,6 +25,9 @@ class InventarioRepository extends IInventarioRepository {
     return await Inventario.destroy({ where: { id_producto } });
   }
 
+  getModel() {
+    return Inventario;
+  }
 }
 
 export default new InventarioRepository();
