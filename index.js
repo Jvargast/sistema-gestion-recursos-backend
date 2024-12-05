@@ -54,10 +54,10 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-const allowedOrigins = [
+/* const allowedOrigins = [
   "http://localhost:3000",
   "https://jvargast.github.io/sistema-gestion-recursos-frontend",
-];
+]; */
 /* app.use(
   cors({
     origin: process.env.CLIENT_URL, // Asegúrate de que esté configurado
@@ -66,14 +66,10 @@ const allowedOrigins = [
 ); */
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
+    origin: "*",
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
