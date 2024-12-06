@@ -58,20 +58,36 @@ app.use(cookieParser());
   "http://localhost:3000",
   "https://jvargast.github.io/sistema-gestion-recursos-frontend",
 ]; */
-/* app.use(
+app.use(
   cors({
     origin: process.env.CLIENT_URL, // Asegúrate de que esté configurado
     credentials: true,
-  })
-); */
-app.use(
-  cors({
-    origin: "*",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE"], // Métodos permitidos
+    allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
   })
 );
+
+
+/* const allowedOrigins = [
+  "http://localhost:3000", // Para desarrollo local
+  "https://jvargast.github.io", // Dominio base de tu frontend
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Permitir solicitudes sin origen (por ejemplo, herramientas Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`Origen no permitido por CORS: ${origin}`));
+      }
+    },
+    credentials: true, // Permitir cookies y encabezados de autorización
+    methods: ["GET", "POST", "PUT", "DELETE"], // Métodos permitidos
+    allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
+  })
+); */
 
 /* Rutas*/
 /* MÓDULO AUTH */
