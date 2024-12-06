@@ -10,17 +10,17 @@ class AuthController {
     const { rut, password } = req.body;
 
     try {
-      const token = await AuthService.login(rut, password);
+      const {token, usuario} = await AuthService.login(rut, password);
 
       // Configurar cookie con el token JWT
       res.cookie("authToken", token, {
         httpOnly: true, // Asegura que la cookie no sea accesible desde el frontend (prevención de XSS)
-        //secure: process.env.NODE_ENV === 'production', // Solo enviar la cookie en HTTPS en producción
-        sameSite: "strict", // Prevenir ataques CSRF
+        secure: process.env.NODE_ENV === 'production', // Solo enviar la cookie en HTTPS en producción
+        sameSite:"none",//sameSite: "strict", // Prevenir ataques CSRF
         maxAge: 60 * 60 * 1000, // Expira en 1 hora
       });
 
-      res.status(200).json({ message: "Inicio de sesión exitoso", token/* , usuario */ });
+      res.status(200).json({ success: true, token, usuario });
     } catch (error) {
       res.status(401).json({ error: error.message });
     }

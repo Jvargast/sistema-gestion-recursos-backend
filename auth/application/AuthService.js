@@ -32,8 +32,11 @@ class AuthService {
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
-    /* return {token, user}; */
-    return token;
+    return {
+      token,
+      usuario
+    };
+    /* return token; */
   }
 
   async getUserFromToken(decodedToken) {
