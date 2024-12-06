@@ -6,6 +6,7 @@ class UsuarioRepository extends IUsuariosRepository {
   async findByRut(rut) {
     return await Usuario.findOne({
       where: { rut, activo: true },
+      /* attributes: { exclude: ["password"] }, */
       include: { model: Roles, as: "rol", attributes: ["id", "nombre"] },
     });
   }
