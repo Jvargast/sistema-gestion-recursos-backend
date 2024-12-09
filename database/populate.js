@@ -853,6 +853,7 @@ async function populateDatabase() {
       total: venta.total,
       referencia_pago: "12345XYZ", // Referencia de pago
       observaciones: "Factura generada automáticamente para la venta.",
+      id_transaccion: venta.id_transaccion
     });
 
     console.log("Venta y factura creadas con éxito.");

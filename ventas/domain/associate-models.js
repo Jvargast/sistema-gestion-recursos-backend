@@ -80,13 +80,24 @@ function loadSalesAssociations() {
   });
 
   // Relación: Transacción pertenece a Factura
-  Transaccion.belongsTo(Factura, {
+/*   Transaccion.belongsTo(Factura, {
     foreignKey: "id_factura",
     as: "facturaTransaccion",
-  });
-  Factura.hasOne(Transaccion, {
+  }); */
+/*   Factura.hasOne(Transaccion, {
     foreignKey: "id_factura",
     as: "transaccionFactura",
+  }); */
+  // Relación con el modelo Transaccion
+  Factura.belongsTo(Transaccion, {
+    foreignKey: "id_transaccion",
+    as: "transaccion",
+  });
+  //
+  // Relación: Transaccion → Factura
+  Transaccion.hasOne(Factura, {
+    foreignKey: "id_transaccion", // Campo en la tabla Factura
+    as: "factura",
   });
 
   // Relación: Pago -> Transacción
@@ -116,7 +127,7 @@ function loadSalesAssociations() {
   });
   Usuarios.hasMany(LogTransaccion, { foreignKey: "id_usuario", as: "logs" });
 
-/*   // Relación: Transición Tipo Transacción -> Transacción
+  /*   // Relación: Transición Tipo Transacción -> Transacción
   TransicionTipoTransaccion.belongsTo(Transaccion, {
     foreignKey: "id_transaccion",
     as: "transaccionTransicionTipo",
@@ -125,13 +136,13 @@ function loadSalesAssociations() {
     foreignKey: "id_transaccion",
     as: "transicionesTipoTransaccion",
   }); */
-/* 
+  /* 
   // Relación: Transición Estado Transacción -> Transacción
   TransicionEstadoTransaccion.belongsTo(Transaccion, {
     foreignKey: "id_transaccion",
     as: "transaccionTransiciones",
   }); */
-/*   Transaccion.hasMany(TransicionEstadoTransaccion, {
+  /*   Transaccion.hasMany(TransicionEstadoTransaccion, {
     foreignKey: "id_transaccion",
     as: "transicionesTransaccion",
   }); */
@@ -156,7 +167,7 @@ function loadSalesAssociations() {
     as: "transicionesDestino",
   });
 
-/*   // Relación: Transición Estado Detalle -> DetalleTransacción
+  /*   // Relación: Transición Estado Detalle -> DetalleTransacción
   TransicionEstadoDetalle.belongsTo(DetalleTransaccion, {
     foreignKey: "id_detalle_transaccion",
     as: "detalleTransaccion",

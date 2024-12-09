@@ -1,9 +1,10 @@
 import IFacturaRepository from "../../domain/repositories/IFacturaRepository.js";
 import Factura from "../../domain/models/Factura.js";
+import EstadoFactura from "../../domain/models/EstadoFactura.js";
 
 class FacturaRepository extends IFacturaRepository {
   async findById(id) {
-    return await Factura.findByPk(id);
+    return await Factura.findByPk(id, { include: "estado" });
   }
 
   async findAll(filters, options) {
@@ -28,7 +29,7 @@ class FacturaRepository extends IFacturaRepository {
     });
     return updated > 0 ? await this.findById(id) : null;
   }
-  
+
   getModel() {
     return Factura;
   }

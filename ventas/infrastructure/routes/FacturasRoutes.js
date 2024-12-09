@@ -18,7 +18,10 @@ router.post("/", FacturaController.crearFacturaIndependiente);
 // Actualizar el estado de una factura
 router.put("/:id/estado", FacturaController.actualizarEstadoFactura);
 
+// Actualizar factura
+router.put("/:id", FacturaController.actualizarFactura);
+
 // Eliminar una factura
-router.delete("/:id", FacturaController.eliminarFactura);
+router.patch("/:id", FacturaController.eliminarFactura);
 
 export default router;

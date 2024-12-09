@@ -1,7 +1,10 @@
 import { Router } from "express";
 import ClienteController from "../controllers/ClienteController.js";
+import verifyToken from "../../../shared/middlewares/VerifyTokenMiddleware.js";
 
 const router = Router();
+
+router.use(verifyToken);
 
 router.get("/:id", ClienteController.getClienteById); // Obtener cliente por ID
 router.get("/", ClienteController.getAllClientes); // Obtener todos los clientes con filtros y paginación
