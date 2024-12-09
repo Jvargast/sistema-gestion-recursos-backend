@@ -19,7 +19,8 @@ class FacturaController {
       const options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
-        search: req.query.search
+        search: req.query.search,
+        estado: req.query.estado,
       };
       delete filters.page;
       delete filters.limit;
@@ -64,6 +65,16 @@ class FacturaController {
         id,
         estado_factura
       );
+      res.status(200).json(factura);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+  // Actualizar factura
+  async actualizarFactura(req, res) {
+    try {
+      const { id } = req.params;
+      const factura = await FacturaService.updateFactura(id, req.body);
       res.status(200).json(factura);
     } catch (error) {
       res.status(400).json({ error: error.message });

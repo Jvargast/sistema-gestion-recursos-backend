@@ -54,7 +54,7 @@ class AuthService {
       throw new Error("Usuario no encontrado");
     }
     return {
-      id: user.id_usuario,
+      id: user.rut,
       nombre: user.nombre,
       email: user.email,
       rut: user.rut,

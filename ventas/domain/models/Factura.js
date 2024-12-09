@@ -1,6 +1,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import EstadoFactura from "./EstadoFactura.js";
+import Transaccion from "./Transaccion.js";
 
 const Factura = sequelize.define("Factura", {
   id_factura: {
@@ -28,6 +29,14 @@ const Factura = sequelize.define("Factura", {
       key: "id_estado_factura",
     },
     allowNull: false,
+  },
+  id_transaccion: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: "Transaccion",
+      key: "id_transaccion",
+    },
+    allowNull: true, // Permitimos facturas independientes
   },
   observaciones: {
     type: DataTypes.TEXT,

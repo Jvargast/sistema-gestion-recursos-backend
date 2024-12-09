@@ -19,7 +19,6 @@ class EstadoTransaccionService {
     // Buscar el estado inicial en el repositorio
     const estadoInicial =
       await EstadoTransaccionRepository.findByTipoTransaccion(tipoTransaccion);
-
     if (!estadoInicial) {
       throw new Error(
         `No se encontró un estado inicial para el tipo de transacción ${tipoTransaccion}.`

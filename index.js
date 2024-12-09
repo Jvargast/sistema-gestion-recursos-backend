@@ -31,6 +31,7 @@ import DetalleTransaccionRoutes from "./ventas/infrastructure/routes/DetalleTran
 import LogTransaccionRoutes from "./ventas/infrastructure/routes/LogTransaccionesRoutes.js";
 import TransaccionRoutes from "./ventas/infrastructure/routes/TransaccionRoutes.js";
 import FacturasRoutes from "./ventas/infrastructure/routes/FacturasRoutes.js";
+import EstadoFacturaRoutes from "./ventas/infrastructure/routes/EstadoFacturaRoutes.js";
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
 /* import analisisRoutes from "./analisis/infraestructure/routes/";
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
@@ -110,6 +111,7 @@ app.use("/api/logs-transaccion", LogTransaccionRoutes);
 app.use("/api/transacciones", TransaccionRoutes);
 app.use("/api/detalle-transacciones", DetalleTransaccionRoutes);
 app.use("/api/facturas", FacturasRoutes);
+app.use("/api/estado-factura", EstadoFacturaRoutes);
 app.use("/api/pagos", PagosRoutes);
 
 /* MÓDULO ANÁLISIS */

@@ -8,6 +8,8 @@ import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
 import EstadoFacturaRepository from "../infrastructure/repositories/EstadoFacturaRepository.js";
 import TransaccionRepository from "../infrastructure/repositories/TransaccionRepository.js";
+import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
+import { Op } from "sequelize";
 
 class FacturaService {
   // Obtener una factura por ID
@@ -20,6 +22,14 @@ class FacturaService {
   }
   // Obtener todas las facturas con filtros y paginación
   async getAllFacturas(filters = {}, options = { page: 1, limit: 10 }) {
+    const allowedFields = [
+      "id_factura",
+      "numero_factura",
+      "fecha_emision",
+      "total",
+      "id_estado_factura",
+      "observaciones",
+    ];
     const where = createFilter(filters, allowedFields);
     if (options.search) {
       where[Op.or] = [
@@ -28,7 +38,26 @@ class FacturaService {
         { numero_factura: { [Op.like]: `%${options.search}%` } }, // Buscar en
       ];
     }
+
+    const estadoBuscado = await EstadoFacturaRepository.findByNombre(options.estado);
+    
+    if(estadoBuscado) {
+      where.id_estado_factura = {
+        [Op.not]: estadoBuscado.dataValues.id_estado_factura,
+      }
+    }
     const include = [
+      {
+        model: TransaccionRepository.getModel(),
+        as: "transaccion",
+        include: [
+          {
+            model: ClienteRepository.getModel(),
+            as: "cliente",
+            attributes: ["nombre", "email", "rut"], // Atributos del cliente
+          },
+        ],
+      },
       {
         model: EstadoFacturaRepository.getModel(), // Modelo de EstadoTransaccion
         as: "estado", // Alias definido en las asociaciones
@@ -62,7 +91,6 @@ class FacturaService {
       throw new Error("La transacción ya tiene una factura asociada");
     }
 
-    
     // Validar que la transacción esté en un estado adecuado para emitir factura
     const estadoValidos = await EstadoTransaccionService.findByNombres([
       "En Proceso",
@@ -93,10 +121,11 @@ class FacturaService {
     const factura = await FacturaRepository.create({
       numero_factura: numeroGenerado,
       /* id_cliente: transaccion.transaccion.dataValues.id_cliente, */
-/*       id_usuario, */
+      /*       id_usuario, */
       total: transaccion.transaccion.dataValues.total,
       id_estado_factura: estadoFacturaCreada.dataValues.id_estado_factura,
       fecha_emision: new Date(),
+      id_transaccion: transaccion.transaccion.dataValues.id_transaccion
     });
 
     // Actualizar la transacción con el ID de la factura
@@ -287,16 +316,22 @@ class FacturaService {
 
     return { message: "Inventario ajustado por factura emitida" };
   }
+  // Actualizar datos factura
+  async updateFactura(id, data) {
+    return await FacturaRepository.update(id, data);
+  }
+
   // Eliminar una factura (borrado lógico)
   async eliminarFactura(id) {
     const factura = await FacturaRepository.findById(id);
     if (!factura) {
       throw new Error(`Factura con ID ${id} no encontrada.`);
     }
-
-    await FacturaRepository.update(id, { estado: "Eliminada" });
-
-    return { message: "Factura eliminada exitosamente." };
+    const estadoFacturaCancelado = await EstadoFacturaService.findByNombre("Cancelada");
+    // Cambiar el estado de la factura a "Cancelada"
+    await FacturaRepository.update(id, { id_estado_factura: estadoFacturaCancelado.dataValues.id_estado_factura  }); 
+  
+    return { message: "Factura cancelada exitosamente." };
   }
 }
 
