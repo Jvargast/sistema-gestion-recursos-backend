@@ -16,6 +16,7 @@ import MetodoPagoService from "./MetodoPagoService.js";
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import EstadoTransaccionRepository from "../infrastructure/repositories/EstadoTransaccionRepository.js";
+import DetalleTransaccionRepository from "../infrastructure/repositories/DetalleTransaccionRepository.js";
 
 class TransaccionService {
   async getTransaccionById(id) {
@@ -105,7 +106,8 @@ class TransaccionService {
   }
 
   async createTransaccion(data, detalles = [], id_usuario) {
-    const { id_cliente, tipo_transaccion, id_metodo_pago, tipo_documento } = data;
+    const { id_cliente, tipo_transaccion, id_metodo_pago, tipo_documento } =
+      data;
 
     // Validar cliente
     await ClienteService.getClienteById(id_cliente);
@@ -125,6 +127,7 @@ class TransaccionService {
         : await EstadoTransaccionService.findEstadoInicialByTipo(
             tipo_transaccion
           );
+
     // Crear transacción
     const nuevaTransaccion = await TransaccionRepository.create({
       ...data,
@@ -142,7 +145,7 @@ class TransaccionService {
       await TransaccionRepository.update(
         nuevaTransaccion.dataValues.id_transaccion,
         {
-          id_factura: documentoEmitido.dataValues.id_factura
+          id_factura: documentoEmitido.dataValues.id_factura,
         }
       );
     }
@@ -164,11 +167,13 @@ class TransaccionService {
         id_usuario
       );
     }
+
     // Registrar pago inicial si se proporcionó un método de pago y referencia
+
     if (data.monto_inicial && metodoPago) {
       /* const estadoPagoInicial = await EstadoPagoService.findByNombre(
-        "Pendiente"
-      ); */
+                "Pendiente"
+              ); */
       await PagoService.acreditarPago({
         id_transaccion: nuevaTransaccion.dataValues.id_transaccion,
         monto: data.monto_inicial,
@@ -177,6 +182,13 @@ class TransaccionService {
         id_usuario: id_usuario,
       });
     }
+    if (!data.monto_inicial && metodoPago) {
+      await PagoService.crearPago(
+        nuevaTransaccion.dataValues.id_transaccion,
+        metodoPago.dataValues.nombre
+      );
+    }
+
     return nuevaTransaccion;
   }
 
@@ -321,7 +333,6 @@ class TransaccionService {
     const total = await DetalleTransaccionService.calcularTotales(
       id_transaccion
     );
-  
 
     //Actualizar transacción con el total
     await TransaccionRepository.update(id_transaccion, {
@@ -384,7 +395,7 @@ class TransaccionService {
       pagoRegistrado = pagosPrevios[0];
     } else {
       // Registrar un nuevo pago
-      
+
       pagoRegistrado = await PagoService.acreditarPago(
         id_transaccion,
         transaccion.transaccion.dataValues.total,
@@ -427,8 +438,7 @@ class TransaccionService {
     return {
       mensaje: "Transacción completada con éxito.",
       pago: pagoRegistrado,
-      documento: documentoEmitido != null ? documentoEmitido 
-      : "",
+      documento: documentoEmitido != null ? documentoEmitido : "",
     };
   }
 
@@ -439,7 +449,8 @@ class TransaccionService {
     // Verificar si la transacción está en estado "Pagada"
     const estadoPagada = await EstadoTransaccionService.findByNombre("Pagada");
     if (
-      transaccion.transaccion.dataValues.id_estado_transaccion !== estadoPagada.dataValues.id_estado_transaccion
+      transaccion.transaccion.dataValues.id_estado_transaccion !==
+      estadoPagada.dataValues.id_estado_transaccion
     ) {
       throw new Error(
         "La transacción debe estar en estado 'Pagada' para ser finalizada."
@@ -581,6 +592,65 @@ class TransaccionService {
     return { message: "Transacción eliminada exitosamente." };
   }
 
+  async changeDetallesInfo(idTransaccion, detalles) {
+    try {
+      const transaccionExistente = await TransaccionRepository.findById(
+        idTransaccion
+      );
+      if (!transaccionExistente) {
+        throw new Error(`Transacción con ID ${idTransaccion} no encontrada.`);
+      }
+      for (const detalle of detalles) {
+        const {
+          id_detalle_transaccion,
+          cantidad,
+          precio_unitario,
+          estado_producto_transaccion,
+          id_producto,
+        } = detalle;
+
+        if (!id_detalle_transaccion) {
+          console.log("hola")
+          await DetalleTransaccionRepository.create({
+            id_transaccion: idTransaccion,
+            id_producto: id_producto,
+            cantidad: cantidad ?? 1,
+            precio_unitario: precio_unitario ?? 0,
+            subtotal: (cantidad ?? 1) * (precio_unitario ?? 0),
+            estado_producto_transaccion: estado_producto_transaccion ?? 1,
+          });
+        } else {
+          // Buscar el detalle existente
+          const detalleExistente = await DetalleTransaccionRepository.findById(
+            id_detalle_transaccion
+          );
+
+          if (!detalleExistente) {
+            throw new Error(
+              `Detalle con ID ${id_detalle_transaccion} no encontrado.`
+            );
+          }
+
+          // Actualizar los campos necesarios
+          await detalleExistente.update({
+            cantidad: cantidad ?? detalleExistente.cantidad,
+            precio_unitario:
+              precio_unitario ?? detalleExistente.precio_unitario,
+            subtotal:
+              (cantidad ?? detalleExistente.cantidad) *
+              (precio_unitario ?? detalleExistente.precio_unitario),
+            estado_producto_transaccion:
+              estado_producto_transaccion ??
+              detalleExistente.estado_producto_transaccion,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error en TransaccionService.changeDetallesInfo:", error);
+      throw error;
+    }
+  }
+
   // Borrar múltiples o una sola
   async deleteTransacciones(ids, id_usuario) {
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -631,6 +701,21 @@ class TransaccionService {
     return {
       message: `Se marcaron como eliminadas ${ids.length} transacciones.`,
     };
+  }
+
+  async deleteDetalle(idTransaccion, idDetalle) {
+    const detalle = await DetalleTransaccionRepository.findOne(
+      idTransaccion,
+      idDetalle
+    );
+
+    if (!detalle) {
+      throw new Error(
+        "El detalle no existe o no está asociado a esta transacción"
+      );
+    }
+
+    await detalle.destroy(); // Elimina el detalle de la base de datos
   }
 }
 

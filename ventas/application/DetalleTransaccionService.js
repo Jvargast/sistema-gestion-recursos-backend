@@ -11,7 +11,7 @@ import TransicionEstadoDetalleTransaccionService from "./TransicionEstadoDetalle
 class DetalleTransaccionService {
   async getDetallesByTransaccionId(id_transaccion) {
     return await DetalleTransaccionRepository.findByTransaccionId(
-      id_transaccion
+      id_transaccion, 
     );
   }
 

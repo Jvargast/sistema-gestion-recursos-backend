@@ -558,10 +558,10 @@ async function populateDatabase() {
     const metodosPago = [
       { nombre: "Efectivo", descripcion: "Pago en efectivo." },
       {
-        nombre: "Tarjeta_credito",
+        nombre: "Tarjeta crédito",
         descripcion: "Pago con tarjeta de crédito.",
       },
-      { nombre: "Tarjeta_debito", descripcion: "Pago con tarjeta de débito." },
+      { nombre: "Tarjeta deébito", descripcion: "Pago con tarjeta de débito." },
       { nombre: "Transferencia", descripcion: "Transferencia bancaria." },
     ];
     await MetodoPago.bulkCreate(metodosPago);

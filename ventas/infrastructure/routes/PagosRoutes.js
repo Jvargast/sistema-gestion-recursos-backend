@@ -15,4 +15,6 @@ router.get("/:id_transaccion/pagos", authenticate, PagosController.obtenerPagosP
 // Cambiar el estado de un pago
 router.patch("/:id_pago/estado", authenticate,  PagosController.cambiarEstadoPago);
 
+// Obtener metodos de pagos
+router.get("/metodos-pago", authenticate, PagosController.obtenerMetodosDePago);
 export default router;

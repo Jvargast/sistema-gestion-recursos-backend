@@ -13,7 +13,14 @@ class EstadoTransaccionController {
 
   async getAllEstados(req, res) {
     try {
-      const estados = await EstadoTransaccionService.getAllEstados();
+      const filters = req.query;
+      let options = {
+        search: req.query.search,
+      };
+      const estados = await EstadoTransaccionService.getAllEstados(
+        filters,
+        options
+      );
       res.status(200).json(estados);
     } catch (error) {
       res.status(500).json({ error: error.message });

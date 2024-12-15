@@ -1,5 +1,7 @@
 import { Op } from "sequelize";
 import EstadoTransaccionRepository from "../infrastructure/repositories/EstadoTransaccionRepository.js";
+import paginate from "../../shared/utils/pagination.js";
+import createFilter from "../../shared/utils/helpers.js";
 
 class EstadoTransaccionService {
   async findByNombre(nombreEstado) {
@@ -74,8 +76,30 @@ class EstadoTransaccionService {
     return estados;
   }
 
-  async getAllEstados() {
-    return await EstadoTransaccionRepository.findAll();
+  async getAllEstados(filters = {}, options = {}) {
+    const allowedFields = [
+      "id_estado_transaccion",
+      "nombre_estado",
+      "descripcion",
+      "tipo_transaccion",
+      "es_inicial"
+    ];
+    const where = createFilter(filters, allowedFields);
+    if (options.search) {
+      where[Op.or] = [
+        { descripcion: { [Op.like]: `%${options.search}%` } }, 
+        { nombre_estado: { [Op.like]: `%${options.search}%` } }, 
+        { tipo_transaccion: { [Op.like]: `%${options.search}%` } }, 
+      ];
+    }
+
+    const result = await paginate(EstadoTransaccionRepository.getModel(), options, {
+      where
+    })
+
+    // Falta agregar lógica para cuando los estados son vacíos
+
+    return await result.data;
   }
 
   async obtenerEstadosPermitidos(estadosExcluidos) {
