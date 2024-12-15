@@ -4,19 +4,36 @@ import Producto from "../../../inventario/domain/models/Producto.js";
 import CategoriaProducto from "../../../inventario/domain/models/CategoriaProducto.js";
 import EstadoProducto from "../../../inventario/domain/models/EstadoProducto.js";
 import TipoProducto from "../../../inventario/domain/models/TipoProducto.js";
+import EstadoDetalleTransaccion from "../../domain/models/EstadoDetalleTransaccion.js";
 
 class DetalleTransaccionRepository extends IDetalleTransaccionRepository {
   async findByTransaccionId(id_transaccion) {
     return await DetalleTransaccion.findAll({
       where: { id_transaccion },
-      include: {
-        model: Producto,
-        as: "producto",
-        include: [
-          { model: CategoriaProducto, as: "categoria" },
-          { model: EstadoProducto, as: "estado" },
-          { model: TipoProducto, as: "tipo" },
-        ],
+      include: [
+        {
+          model: Producto,
+          as: "producto",
+          include: [
+            { model: CategoriaProducto, as: "categoria" },
+            { model: EstadoProducto, as: "estado" },
+            { model: TipoProducto, as: "tipo" },
+          ],
+        },
+        {
+          model: EstadoDetalleTransaccion,
+          as: "estado",
+          attributes: ["id_estado_detalle_transaccion", "nombre_estado"],
+        },
+      ],
+    });
+  }
+
+  async findOne(id_transaccion, id_detalle) {
+    return await DetalleTransaccion.findOne({
+      where: {
+        id_transaccion: id_transaccion,
+        id_detalle_transaccion: id_detalle,
       },
     });
   }
@@ -41,12 +58,13 @@ class DetalleTransaccionRepository extends IDetalleTransaccionRepository {
   }
 
   async create(data) {
-    if (!Array.isArray(data) || data.length === 0) {
+    return await DetalleTransaccion.create(data);
+    /* if (!Array.isArray(data) || data.length === 0) {
       throw new Error(
         "Los datos proporcionados no son válidos para crear detalles."
       );
     }
-    return await DetalleTransaccion.bulkCreate(data, { validate: true });
+    return await DetalleTransaccion.bulkCreate(data, { validate: true }); */
   }
 
   async bulkCreate(data) {

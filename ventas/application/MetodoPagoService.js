@@ -8,6 +8,16 @@ class MetodoPagoService {
   async getMetodoByConditions(conditions) {
     return await MetodoPagoRepository.findAllWithConditions(conditions);
   }
+
+  async getMetodoByNombre(nombre) {
+    const metodo = await MetodoPagoRepository.findByNombre(nombre);
+    if (!metodo) throw new Error('Metodo no encontrado.');
+    return metodo;
+  }
+
+  async getMetodosPago() {
+    return await MetodoPagoRepository.findAll();
+  }
 }
 
 export default new MetodoPagoService();

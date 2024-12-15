@@ -7,6 +7,23 @@ import MetodoPagoService from "./MetodoPagoService.js";
 import TransaccionService from "./TransaccionService.js";
 
 class PagoService {
+  async crearPago(id_transaccion, metodo_pago) {
+    const metodoPago = await MetodoPagoService.getMetodoByNombre(metodo_pago);
+
+    if (!metodoPago) {
+      throw new Error("Método de pago no encontrado");
+    }
+    const estadoInicial = await EstadoPagoService.findByNombre("Pendiente");
+
+    const nuevoPago = await PagoRepository.create({
+      id_transaccion,
+      id_estado_pago: estadoInicial.dataValues.id_estado_pago,
+      id_metodo_pago: metodoPago.dataValues.id_metodo_pago,
+      monto: 0
+    });
+
+    return nuevoPago;
+  }
   async acreditarPago(
     id_transaccion,
     monto,
@@ -22,9 +39,14 @@ class PagoService {
     }
     // Validar estado de la transacción
     //console.log(transaccion.transaccion.estado.dataValues.nombre_estado)
-    const estadoPermitido = await EstadoTransaccionService.findByNombre("Pago Pendiente");
-    
-    if (transaccion.transaccion.dataValues.id_estado_transaccion != estadoPermitido.dataValues.id_estado_transaccion) {
+    const estadoPermitido = await EstadoTransaccionService.findByNombre(
+      "Pago Pendiente"
+    );
+
+    if (
+      transaccion.transaccion.dataValues.id_estado_transaccion !=
+      estadoPermitido.dataValues.id_estado_transaccion
+    ) {
       throw new Error(
         "El pago no se puede acreditar, se debe cambiar de estado"
       );
@@ -76,7 +98,7 @@ class PagoService {
       estadoPagadoTransaccion.dataValues.id_estado_transaccion,
       id_usuario
     );
-    
+
     // Si hay una factura asociada, actualizar su estado a "Pagada"
     if (transaccion.transaccion.dataValues.id_factura != null) {
       const estadoFacturaPagada = await EstadoFacturaService.findByNombre(
@@ -112,6 +134,10 @@ class PagoService {
       message: `Estado del pago actualizado a ${estado.nombre}.`,
       pagoActualizado,
     };
+  }
+
+  async obtenerMetodosPago() {
+    return await MetodoPagoService.getMetodosPago();
   }
 }
 export default new PagoService();

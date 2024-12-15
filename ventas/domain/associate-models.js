@@ -179,11 +179,11 @@ function loadSalesAssociations() {
 
   // Relación: Detalle Transacción -> Estado Detalle Transacción
   DetalleTransaccion.belongsTo(EstadoDetalleTransaccion, {
-    foreignKey: "id_estado_detalle_transaccion",
+    foreignKey: "estado_producto_transaccion",
     as: "estado",
   });
   EstadoDetalleTransaccion.hasMany(DetalleTransaccion, {
-    foreignKey: "id_estado_detalle_transaccion", //estado_producto_transaccion o id_estado_detalle_transaccion
+    foreignKey: "estado_producto_transaccion", //estado_producto_transaccion o id_estado_detalle_transaccion
     as: "detalles_transacciones",
   });
 

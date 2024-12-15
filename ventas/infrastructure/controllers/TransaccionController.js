@@ -62,6 +62,26 @@ class TransaccionController {
     }
   }
 
+  async changeDetallesInfo(req, res) {
+    const { id } = req.params; // ID de la transacción
+    const { detalles } = req.body; // Detalles actualizados que vienen en el body
+    try {
+      // Delegar la lógica al servicio
+      await TransaccionService.changeDetallesInfo(id, detalles);
+
+      // Enviar respuesta exitosa
+      res.status(200).json({
+        message: "Detalles actualizados correctamente.",
+      });
+    } catch (error) {
+      console.error("Error al actualizar los detalles:", error);
+      res.status(500).json({
+        message: "Hubo un error al actualizar los detalles.",
+        error: error.message,
+      });
+    }
+  }
+
   async changeEstado(req, res) {
     try {
       const { id } = req.params;
@@ -183,6 +203,19 @@ class TransaccionController {
       res.status(200).json(result);
     } catch (error) {
       res.status(400).json({ error: error.message });
+    }
+  }
+
+  async deleteDetalle(req, res) {
+    const { id, idDetalle } = req.params;
+
+    try {
+      // Llamar al servicio que realiza la eliminación
+      await TransaccionService.deleteDetalle(id, idDetalle);
+      return res.status(200).json({ message: "Detalle eliminado correctamente" });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Error al eliminar el detalle" });
     }
   }
 }

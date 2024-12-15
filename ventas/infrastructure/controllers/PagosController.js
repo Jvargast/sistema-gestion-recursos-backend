@@ -23,9 +23,20 @@ class PagoController {
   async obtenerPagosPorTransaccion(req, res) {
     try {
       const { id_transaccion } = req.params;
-      const pagos = await PagoService.obtenerPagosPorTransaccion(id_transaccion);
+      const pagos = await PagoService.obtenerPagosPorTransaccion(
+        id_transaccion
+      );
 
       res.status(200).json(pagos);
+    } catch (error) {
+      res.status(404).json({ error: error.message });
+    }
+  }
+
+  async obtenerMetodosDePago(req, res) {
+    try {
+      const estados = await PagoService.obtenerMetodosPago();
+      res.status(200).json(estados);
     } catch (error) {
       res.status(404).json({ error: error.message });
     }

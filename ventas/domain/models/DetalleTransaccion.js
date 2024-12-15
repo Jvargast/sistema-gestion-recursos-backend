@@ -2,6 +2,7 @@ import { DataTypes } from 'sequelize';
 import sequelize from '../../../database/database.js';
 import Producto from '../../../inventario/domain/models/Producto.js';
 import Transaccion from './Transaccion.js';
+import EstadoDetalleTransaccion from './EstadoDetalleTransaccion.js';
 
 const DetalleTransaccion = sequelize.define('DetalleTransaccion', {
   id_detalle_transaccion: {
@@ -44,8 +45,11 @@ const DetalleTransaccion = sequelize.define('DetalleTransaccion', {
   },
   estado_producto_transaccion: {
     type: DataTypes.INTEGER,
+    references: {
+      model: EstadoDetalleTransaccion,
+      key: 'id_estado_detalle_transaccion',
+    },
     allowNull: false,
-    defaultValue: 1, // Ejemplo inicial "Reservado"
   },
 }, {
   tableName: 'DetalleTransaccion',
