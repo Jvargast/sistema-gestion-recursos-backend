@@ -21,4 +21,5 @@ router.post("/:id/asignar", authenticate, TransaccionController.asignarTransacci
 router.put("/:id/changeDetallesInfo", authenticate, TransaccionController.changeDetallesInfo);
 router.delete("/:id/detalles/:idDetalle", authenticate, TransaccionController.deleteDetalle);
 
+router.get("/exportar-pdf/:id", authenticate, TransaccionController.createPdf);
 export default router;

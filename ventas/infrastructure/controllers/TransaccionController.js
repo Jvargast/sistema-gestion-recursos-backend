@@ -1,5 +1,10 @@
 import DetalleTransaccionService from "../../application/DetalleTransaccionService.js";
 import TransaccionService from "../../application/TransaccionService.js";
+import PDFDocument from "pdfkit";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import express from "express";
 
 class TransaccionController {
   async getTransaccionById(req, res) {
@@ -212,10 +217,125 @@ class TransaccionController {
     try {
       // Llamar al servicio que realiza la eliminación
       await TransaccionService.deleteDetalle(id, idDetalle);
-      return res.status(200).json({ message: "Detalle eliminado correctamente" });
+      return res
+        .status(200)
+        .json({ message: "Detalle eliminado correctamente" });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ error: "Error al eliminar el detalle" });
+    }
+  }
+
+  // PDF
+  async createPdf(req, res) {
+    try {
+      const { id } = req.params;
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      // Obtener la transacción y sus detalles
+      const transaccion = await TransaccionService.getTransaccionById(id);
+
+      if (!transaccion || !transaccion.transaccion) {
+        return res.status(404).json({ message: "Transacción no encontrada" });
+      }
+
+      const { transaccion: transaccionData, detalles } = transaccion;
+
+      // Validar que existan detalles
+      if (!Array.isArray(detalles) || detalles.length === 0) {
+        return res
+          .status(400)
+          .json({ message: "La transacción no tiene detalles." });
+      }
+
+      // Configurar encabezados para descarga
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=cotizacion_${id}.pdf`
+      );
+      res.setHeader("Content-Type", "application/pdf");
+
+      // Crear un nuevo PDF
+      const doc = new PDFDocument({ margin: 50 });
+      doc.pipe(res); // Enviar el PDF al cliente directamente
+
+      // Cargar el logo
+      const logoPath = path.join(__dirname, "../../../public/images/logoLogin.png");
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 50, 50, { width: 100 }); // Posicionar y ajustar tamaño
+      }
+
+      // Manejar errores en la transmisión del PDF
+      doc.on("error", (err) => {
+        console.error("Error al generar el PDF:", err);
+        return res.status(500).json({ message: "Error al generar el PDF." });
+      });
+
+      // Título
+      doc
+        .fillColor("#005cbf")
+        .fontSize(24)
+        .text("Cotización", { align: "center" })
+        .moveDown(2);
+      // Información general
+      doc
+        .fillColor("black")
+        .fontSize(14)
+        .text(`ID de Transacción: ${transaccion.transaccion.id_transaccion}`)
+        .text(`Cliente: ${transaccion.transaccion.cliente.nombre}`)
+        .text(
+          `Fecha: ${new Date(
+            transaccion.transaccion.fecha_creacion
+          ).toLocaleDateString("es-ES")}`
+        )
+        .moveDown();
+
+      // Línea separadora
+      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke("#cccccc").moveDown(1);
+
+      // Encabezado de detalles
+      doc
+        .fillColor("#333333")
+        .fontSize(16)
+        .text("Detalles de la Cotización", { underline: true })
+        .moveDown();
+
+      // Tabla de productos
+      transaccion.detalles.forEach((detalle, index) => {
+        doc
+          .fillColor("#555555")
+          .fontSize(12)
+          .text(
+            `${index + 1}. ${detalle.producto.nombre_producto} - Cantidad: ${
+              detalle.cantidad
+            } - Precio: $${detalle.precio_unitario.toLocaleString()} - Subtotal: $${detalle.subtotal.toLocaleString()}`
+          );
+      });
+
+      // Total
+      doc
+        .moveDown()
+        .fillColor("black")
+        .fontSize(14)
+        .text(`Total: $${transaccion.transaccion.total.toLocaleString()}`, {
+          align: "right",
+        });
+
+      // Firma o pie de página
+      doc
+        .moveDown(3)
+        .fontSize(10)
+        .fillColor("#888888")
+        .text("Aguas Valentino © 2024 - Todos los derechos reservados", {
+          align: "center",
+        });
+
+      // Finalizar el PDF
+      doc.end();
+
+    } catch (error) {
+      console.error("Error en createPdf:", error);
+      res.status(500).json({ message: "Error interno del servidor." });
     }
   }
 }

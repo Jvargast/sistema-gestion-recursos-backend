@@ -28,6 +28,7 @@ import TipoProductoRoutes from "./inventario/infrastructure/routes/TipoProductoR
 import ClienteRoutes from "./ventas/infrastructure/routes/ClienteRoutes.js";
 import EstadoTransaccionRoutes from "./ventas/infrastructure/routes/EstadoTransaccionRoutes.js";
 import DetalleTransaccionRoutes from "./ventas/infrastructure/routes/DetalleTransaccionroutes.js";
+import EstadoDetallesRoutes from "./ventas/infrastructure/routes/EstadoDetallesRoutes.js";
 import LogTransaccionRoutes from "./ventas/infrastructure/routes/LogTransaccionesRoutes.js";
 import TransaccionRoutes from "./ventas/infrastructure/routes/TransaccionRoutes.js";
 import FacturasRoutes from "./ventas/infrastructure/routes/FacturasRoutes.js";
@@ -110,6 +111,7 @@ app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
 app.use("/api/logs-transaccion", LogTransaccionRoutes);
 app.use("/api/transacciones", TransaccionRoutes);
 app.use("/api/detalle-transacciones", DetalleTransaccionRoutes);
+app.use("/api/estado-detalle", EstadoDetallesRoutes)
 app.use("/api/facturas", FacturasRoutes);
 app.use("/api/estado-factura", EstadoFacturaRoutes);
 app.use("/api/pagos", PagosRoutes);
