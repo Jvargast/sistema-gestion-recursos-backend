@@ -28,7 +28,10 @@ class TransaccionService {
     const detalles = await DetalleTransaccionService.getDetallesByTransaccionId(
       id
     );
-    return { transaccion, detalles };
+
+    const pago = await PagoService.obtenerPagosPorTransaccion(id);
+
+    return { transaccion, detalles, pago };
   }
 
   async getAllTransacciones(filters = {}, options = { page: 1, limit: 10 }) {
@@ -600,6 +603,7 @@ class TransaccionService {
       if (!transaccionExistente) {
         throw new Error(`Transacción con ID ${idTransaccion} no encontrada.`);
       }
+      let totalTransaccion = 0; // Variable para acumular el total
       for (const detalle of detalles) {
         const {
           id_detalle_transaccion,
@@ -608,15 +612,16 @@ class TransaccionService {
           estado_producto_transaccion,
           id_producto,
         } = detalle;
+        const subtotal = (cantidad ?? 1) * (precio_unitario ?? 0);
 
         if (!id_detalle_transaccion) {
-          console.log("hola")
+          console.log("hola");
           await DetalleTransaccionRepository.create({
             id_transaccion: idTransaccion,
             id_producto: id_producto,
             cantidad: cantidad ?? 1,
             precio_unitario: precio_unitario ?? 0,
-            subtotal: (cantidad ?? 1) * (precio_unitario ?? 0),
+            subtotal: subtotal,
             estado_producto_transaccion: estado_producto_transaccion ?? 1,
           });
         } else {
@@ -636,15 +641,16 @@ class TransaccionService {
             cantidad: cantidad ?? detalleExistente.cantidad,
             precio_unitario:
               precio_unitario ?? detalleExistente.precio_unitario,
-            subtotal:
-              (cantidad ?? detalleExistente.cantidad) *
-              (precio_unitario ?? detalleExistente.precio_unitario),
+            subtotal: subtotal,
             estado_producto_transaccion:
               estado_producto_transaccion ??
               detalleExistente.estado_producto_transaccion,
           });
         }
+        totalTransaccion += subtotal;
       }
+
+      await transaccionExistente.update({ total: totalTransaccion });
     } catch (error) {
       console.error("Error en TransaccionService.changeDetallesInfo:", error);
       throw error;
