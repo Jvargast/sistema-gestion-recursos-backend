@@ -17,6 +17,7 @@ import ClienteRepository from "../infrastructure/repositories/ClienteRepository.
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import EstadoTransaccionRepository from "../infrastructure/repositories/EstadoTransaccionRepository.js";
 import DetalleTransaccionRepository from "../infrastructure/repositories/DetalleTransaccionRepository.js";
+import UsuariosService from "../../auth/application/UsuariosService.js";
 
 class TransaccionService {
   async getTransaccionById(id) {
@@ -31,10 +32,17 @@ class TransaccionService {
 
     const pago = await PagoService.obtenerPagosPorTransaccion(id);
 
-    return { transaccion, detalles, pago };
+    const usuario_asignado = await UsuariosService.getUsuarioById(
+      transaccion.dataValues.asignada_a
+    );
+
+    return { transaccion, detalles, pago, usuario_asignado };
   }
 
-  async getAllTransacciones(filters = {}, options = { page: 1, limit: 10 }) {
+  async getAllTransacciones(
+    filters = {},
+    options = { page: 1, limit: 10, rolId: null }
+  ) {
     const allowedFields = [
       "tipo_transaccion",
       "estado_pago",
@@ -59,26 +67,18 @@ class TransaccionService {
       ];
     }
 
-    // Excluir transacciones con estado "Rechazada", "Cancelado", "Cancelada"
-    const excludedStates = ["Rechazada", "Cancelado", "Cancelada"];
-    const estadosPermitidos =
-      await EstadoTransaccionService.obtenerEstadosPermitidos(excludedStates);
+    // Excluir estados para roles no administradores
+    if (options.rolId !== 2) {
+      // Asume que rolId 2 = administrador
+      const excludedStates = ["Rechazada", "Cancelado", "Cancelada"];
 
-    // Asegurar que los IDs de los estados se incluyan en la consulta
-    if (estadosPermitidos.length > 0) {
+      const estadosPermitidos =
+        await EstadoTransaccionService.obtenerEstadosPermitidos(excludedStates);
+
       where.id_estado_transaccion = {
-        [Op.in]: estadosPermitidos.map(
-          (estado) => estado.id_estado_transaccion
-        ),
+        [Op.in]: estadosPermitidos, // Directamente el array de IDs devuelto
       };
-    } else {
-      // Si no hay estados permitidos, devolver lista vacía
-      return {
-        data: [],
-        total: 0,
-        page: options.page,
-        limit: options.limit,
-      };
+      /* console.log(estadosPermitidos) */
     }
 
     // Incluir datos relacionados (cliente, usuario, estado de la transacción)
@@ -210,6 +210,16 @@ class TransaccionService {
       throw new Error("La transacción no está en un estado asignable.");
     }
 
+    // Verificar si el usuario ya está asignado o no no
+    if (id_usuario == transaccion.transaccion.dataValues.asignada_a) {
+      const usuario_asignado = await UsuariosService.getUsuarioByRut(
+        transaccion.transaccion.dataValues.asignada_a
+      );
+      throw new Error(
+        `Ya tiene conductor asignado ${usuario_asignado.dataValues.nombre} ${usuario_asignado.dataValues.apellido}`
+      );
+    }
+
     // Asignar usuario (chofer) a la transacción
     const updatedTransaccion = await TransaccionRepository.update(
       id_transaccion,
@@ -225,6 +235,36 @@ class TransaccionService {
       accion: "Asignar transacción",
       detalles: `Transacción asignada al usuario con ID: ${id_usuario}`,
       estado: `En estado asignada`,
+    });
+
+    return updatedTransaccion;
+  }
+
+  async eliminarTransaccionAUsuario(id_transaccion, rut) {
+    const transaccionExistente = await TransaccionRepository.findById(
+      id_transaccion
+    );
+
+    if(!transaccionExistente) {
+      throw new Error("Transacción no encontrada");
+    }
+
+    if(transaccionExistente.dataValues.asignada_a == null) {
+      throw new Error("La transacción no tiene chofer asignado")
+    }
+
+    const updatedTransaccion = await TransaccionRepository.update(
+      transaccionExistente.dataValues.id_transaccion,
+      { asignada_a: null }
+    );
+
+    // Registrar log de asignación
+    await LogTransaccionService.createLog({
+      id_transaccion,
+      id_usuario: rut,
+      accion: "Desasignar transacción",
+      detalles: `Transacción desasignada`,
+      estado: `En estado desasignada`,
     });
 
     return updatedTransaccion;
@@ -565,6 +605,37 @@ class TransaccionService {
     return updated;
   }
 
+  async cambiarMetodoPago(id, metodo_pago, rut) {
+    const transaccionExistente = await TransaccionRepository.findById(id);
+    if (!transaccionExistente)
+      throw new Error(`Transacción con ID ${id} no encontrada.`);
+
+    const pagoAsociado = await PagoService.obtenerPagosPorTransaccion(
+      transaccionExistente.dataValues.id_transaccion
+    );
+
+    if (!pagoAsociado)
+      throw new Error(
+        `La ${transaccionExistente.dataValues.tipo_transaccion} no tiene método de pago asociado`
+      );
+
+    const metodoNuevo = await MetodoPagoService.getMetodoByNombre(metodo_pago);
+
+    const updated = await PagoService.actualizarMetodoPago(
+      metodoNuevo?.dataValues.id_metodo_pago
+    );
+
+    await LogTransaccionService.createLog({
+      id_transaccion: id,
+      id_usuario: rut,
+      accion: "Cambio de método de pago",
+      detalles: `Método de pago cambiado a ${metodoNuevo.dataValues.nombre}`,
+      estado: `Nuevo Método`,
+    });
+
+    return updated;
+  }
+
   async getTransaccionesByCliente(id_cliente, filters = {}, options = {}) {
     const cliente = await ClienteService.getClienteById(id_cliente);
 
@@ -615,7 +686,6 @@ class TransaccionService {
         const subtotal = (cantidad ?? 1) * (precio_unitario ?? 0);
 
         if (!id_detalle_transaccion) {
-          console.log("hola");
           await DetalleTransaccionRepository.create({
             id_transaccion: idTransaccion,
             id_producto: id_producto,
@@ -681,18 +751,41 @@ class TransaccionService {
       );
     }
 
-    // Obtener el estado "Eliminada"
-    const estadoEliminada = await EstadoTransaccionService.findByNombre(
-      "Eliminada"
+    // Obtener los estados en una sola consulta
+    const estadoNombres = ["Rechazada", "Cancelado", "Cancelada"];
+    const estadoIds = await EstadoTransaccionService.obtenerIdsPorNombres(
+      estadoNombres
     );
-    if (!estadoEliminada) {
-      throw new Error('El estado "Eliminada" no fue encontrado.');
-    }
+
+    // Mapear estados por nombre
+    const estados = {
+      Rechazada: estadoIds[0],
+      Cancelado: estadoIds[1],
+      Cancelada: estadoIds[2],
+    };
 
     // Cambiar el estado de las transacciones a "Eliminada"
     for (const transaccion of transacciones) {
+      let nuevoEstadoId;
+
+      switch (transaccion.tipo_transaccion) {
+        case "cotizacion":
+          nuevoEstadoId = estados.Rechazada;
+          break;
+        case "pedido":
+          nuevoEstadoId = estados.Cancelado;
+          break;
+        case "venta":
+          nuevoEstadoId = estados.Cancelada;
+          break;
+        default:
+          throw new Error(
+            `Tipo de transacción no reconocido: ${transaccion.tipo_transaccion}`
+          );
+      }
+
       await TransaccionRepository.update(transaccion.id_transaccion, {
-        id_estado_transaccion: estadoEliminada.id_estado_transaccion,
+        id_estado_transaccion: nuevoEstadoId,
       });
 
       // Registrar log
@@ -700,7 +793,20 @@ class TransaccionService {
         id_transaccion: transaccion.id_transaccion,
         id_usuario,
         accion: "Cambio de estado",
-        detalles: `Estado cambiado a Eliminada`,
+        detalles: `Estado cambiado a ${
+          transaccion.tipo_transaccion === "cotizacion"
+            ? "Rechazada"
+            : transaccion.tipo_transaccion === "pedido"
+            ? "Cancelado"
+            : "Cancelada"
+        }`,
+        estado: `${
+          transaccion.tipo_transaccion === "cotizacion"
+            ? "Rechazada"
+            : transaccion.tipo_transaccion === "pedido"
+            ? "Cancelado"
+            : "Cancelada"
+        }`,
       });
     }
 

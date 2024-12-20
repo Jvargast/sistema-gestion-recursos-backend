@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
+import EmpresaService from "../../../auth/application/EmpresaService.js";
 
 class TransaccionController {
   async getTransaccionById(req, res) {
@@ -20,10 +21,12 @@ class TransaccionController {
   async getAllTransacciones(req, res) {
     try {
       const filters = req.query; // Filtros enviados en los query params
+      const rolId = req.user.rol.id;
       let options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
         search: req.query.search,
+        rolId,
       };
 
       delete filters.limit;
@@ -138,6 +141,18 @@ class TransaccionController {
     }
   }
 
+  async changeMetodoPago(req, res) {
+    try {
+      const { id } = req.params;
+      const { metodo_pago } = req.body;
+      const { rut } = req.user;
+      await TransaccionService.cambiarMetodoPago(id, metodo_pago, rut);
+      res.status(200).json({ message: "Método de pago actualizado" });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   async completeTransaction(req, res) {
     try {
       const { rut } = req.user;
@@ -178,6 +193,19 @@ class TransaccionController {
 
       await TransaccionService.asignarTransaccionAUsuario(id, id_usuario, rut);
       res.status(200).json({ message: "Usuario asigado con éxito" });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async eliminarAsignadoTransaccion(req, res) {
+    try {
+      const { rut } = req.user;
+      const { id } = req.params;
+
+      await TransaccionService.eliminarTransaccionAUsuario(id, rut);
+      
+      res.status(200).json({ message: "Usuario eliminado con éxito" });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -234,7 +262,7 @@ class TransaccionController {
       const __dirname = path.dirname(__filename);
       // Obtener la transacción y sus detalles
       const transaccion = await TransaccionService.getTransaccionById(id);
-
+      const empresa = await EmpresaService.obtenerEmpresaPorId(1);
       if (!transaccion || !transaccion.transaccion) {
         return res.status(404).json({ message: "Transacción no encontrada" });
       }
@@ -260,7 +288,10 @@ class TransaccionController {
       doc.pipe(res); // Enviar el PDF al cliente directamente
 
       // Cargar el logo
-      const logoPath = path.join(__dirname, "../../../public/images/logoLogin.png");
+      const logoPath = path.join(
+        __dirname,
+        "../../../public/images/logoLogin.png"
+      );
       if (fs.existsSync(logoPath)) {
         doc.image(logoPath, 50, 50, { width: 100 }); // Posicionar y ajustar tamaño
       }
@@ -271,68 +302,129 @@ class TransaccionController {
         return res.status(500).json({ message: "Error al generar el PDF." });
       });
 
-      // Título
+      // Encabezado Empresa
       doc
         .fillColor("#005cbf")
         .fontSize(24)
-        .text("Cotización", { align: "center" })
-        .moveDown(2);
-      // Información general
+        .text("COTIZACIÓN", 0, 50, { align: "right" });
+
       doc
-        .fillColor("black")
-        .fontSize(14)
-        .text(`ID de Transacción: ${transaccion.transaccion.id_transaccion}`)
-        .text(`Cliente: ${transaccion.transaccion.cliente.nombre}`)
-        .text(
-          `Fecha: ${new Date(
-            transaccion.transaccion.fecha_creacion
-          ).toLocaleDateString("es-ES")}`
-        )
-        .moveDown();
+        .fillColor("#000000")
+        .fontSize(12)
+        .text(`Nombre Empresa: ${empresa.nombre}`, 50, 130)
+        .text(`Dirección: ${empresa.direccion}`, 50, 145)
+        .text(`Teléfono: ${empresa.telefono}`, 50, 160)
+        .text(`Email: ${empresa.email}`, 50, 175);
 
-      // Línea separadora
-      doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke("#cccccc").moveDown(1);
-
-      // Encabezado de detalles
+      // Información del Cliente
       doc
-        .fillColor("#333333")
-        .fontSize(16)
-        .text("Detalles de la Cotización", { underline: true })
-        .moveDown();
-
-      // Tabla de productos
-      transaccion.detalles.forEach((detalle, index) => {
-        doc
-          .fillColor("#555555")
-          .fontSize(12)
-          .text(
-            `${index + 1}. ${detalle.producto.nombre_producto} - Cantidad: ${
-              detalle.cantidad
-            } - Precio: $${detalle.precio_unitario.toLocaleString()} - Subtotal: $${detalle.subtotal.toLocaleString()}`
-          );
-      });
-
-      // Total
-      doc
-        .moveDown()
-        .fillColor("black")
-        .fontSize(14)
-        .text(`Total: $${transaccion.transaccion.total.toLocaleString()}`, {
-          align: "right",
-        });
-
-      // Firma o pie de página
-      doc
-        .moveDown(3)
         .fontSize(10)
-        .fillColor("#888888")
-        .text("Aguas Valentino © 2024 - Todos los derechos reservados", {
+        .text(`Fecha: ${new Date().toLocaleDateString("es-ES")}`, 400, 130)
+        .text(`Cotización #: ${transaccionData.id_transaccion}`, 400, 145);
+
+      doc.moveDown();
+
+      // Cliente
+      doc
+        .fontSize(12)
+        .fillColor("#005cbf")
+        .text("Vendedor:", 50, 200)
+        .fillColor("#000000")
+        .text(
+          `Nombre vendedor: ${transaccionData.usuario.nombre} ${transaccionData.usuario.apellido}`,
+          50,
+          215
+        )
+        .text(`Rut: ${transaccionData.usuario.rut}`, 50, 230);
+
+      doc
+        .fillColor("#005cbf")
+        .text("Enviado a:", 300, 200)
+        .fillColor("#000000")
+        .text(`Nombre Cliente: ${transaccionData.cliente.nombre}`, 300, 215)
+        .text(`Dirección: ${transaccionData.cliente.direccion}`, 300, 230)
+        .text(`Telefono: ${transaccionData.cliente.telefono}`, 300, 245);
+
+      // Línea Separadora
+      doc.moveTo(50, 260).lineTo(550, 260).stroke("#cccccc");
+
+      // Tabla de Detalles
+      const tableTop = 270;
+      const columnWidths = [50, 200, 70, 70, 70];
+
+      doc.fontSize(10).fillColor("#000000");
+
+      // Encabezado de la tabla
+      const headers = ["# Artículo", "Descripción", "Cant", "P/U", "Total"];
+      let x = 50;
+
+      headers.forEach((header, i) => {
+        doc.text(header, x, tableTop, {
+          width: columnWidths[i],
           align: "center",
         });
+        x += columnWidths[i];
+      });
 
-      // Finalizar el PDF
+      doc
+        .moveTo(50, tableTop + 15)
+        .lineTo(550, tableTop + 15)
+        .stroke();
+
+      // Contenido de la tabla
+      let position = tableTop + 25;
+      let totalNeto = 0;
+
+      detalles.forEach((detalle, index) => {
+        const subtotal = detalle.cantidad * detalle.precio_unitario;
+        totalNeto += subtotal;
+
+        x = 50;
+        const row = [
+          detalle.id_producto,
+          detalle.producto.nombre_producto,
+          detalle.cantidad,
+          `$${detalle.precio_unitario.toLocaleString()}`,
+          `$${subtotal.toLocaleString()}`,
+        ];
+
+        row.forEach((cell, i) => {
+          doc.text(cell, x, position, {
+            width: columnWidths[i],
+            align: "center",
+          });
+          x += columnWidths[i];
+        });
+
+        position += 20;
+      });
+
+      // Calcular IVA y Total
+      const iva = totalNeto * 0.19;
+      const totalFinal = totalNeto + iva;
+
+      // Totales
+      doc
+        .fontSize(10)
+        .text(`Subtotal: $${totalNeto.toLocaleString()}`, 400, position + 10)
+        .text(`IVA (19%): $${iva.toLocaleString()}`, 400, position + 25)
+        .text(`Total: $${totalFinal.toLocaleString()}`, 400, position + 40, {
+          align: "right",
+          underline: true,
+        });
+
+      // Pie de página
+      doc
+        .fontSize(10)
+        .fillColor("#888888")
+        .text(
+          "Si tiene alguna consulta sobre esta cotización, por favor contáctenos.",
+          50,
+          position + 100,
+          { align: "center" }
+        );
+
       doc.end();
-
     } catch (error) {
       console.error("Error en createPdf:", error);
       res.status(500).json({ message: "Error interno del servidor." });

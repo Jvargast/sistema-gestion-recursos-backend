@@ -1,6 +1,8 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Roles from "./Roles.js";
+import Empresa from "./Empresa.js";
+import Sucursal from "./Sucursal.js";
 
 const Usuarios = sequelize.define(
   "Usuarios",
@@ -50,7 +52,23 @@ const Usuarios = sequelize.define(
         key: "id",
       },
       allowNull: false, // Cada usuario debe tener un rol asignado
-    },    
+    },
+    id_empresa: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: Empresa,
+        key: "id_empresa",
+      },
+      allowNull: false,
+    },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: Sucursal,
+        key: "id_sucursal",
+      },
+      allowNull: true, // Puede ser opcional si el usuario no está asignado a ninguna sucursal específica
+    },
   },
   {
     tableName: "Usuarios",

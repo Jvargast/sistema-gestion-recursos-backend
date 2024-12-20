@@ -6,6 +6,8 @@ import Usuarios from "../auth/domain/models/Usuarios.js";
 import Roles from "../auth/domain/models/Roles.js";
 import Permisos from "../auth/domain/models/Permisos.js";
 import RolesPermisos from "../auth/domain/models/RolesPermisos.js";
+import Empresa from "../auth/domain/models/Empresa.js";
+import Sucursal from "../auth/domain/models/Sucursal.js";
 /**
  * Módulo Inventario 7
  */
@@ -127,6 +129,26 @@ async function populateDatabase() {
 
     console.log("Permisos asignados a roles");
 
+    // Crear empresa Aguas Valentino
+    const empresaData = {
+      nombre: "Aguas Valentino",
+      direccion: "Av. Principal 1234, Ciudad Central",
+      telefono: "+56 9 1234 5678",
+      email: "contacto@aguasvalentino.com",
+      rut_empresa: "12345678-9",
+    };
+    console.log("Empresa 'Aguas Valentino' creada exitosamente.");
+    const empresaCreada = await Empresa.create(empresaData);
+
+    const sucursalData = {
+      nombre: "Sucursal Central",
+      direccion: "Av. Secundaria 5678, Ciudad Central",
+      telefono: "+56 9 8765 4321",
+      id_empresa: empresaCreada.id_empresa, // Relación con la empresa creada
+    };
+    
+    const sucursalCreada = await Sucursal.create(sucursalData);
+    console.log("Sucursal 'Sucursal Central' creada exitosamente.");
     // Crear usuarios
     const usuariosData = [
       {
@@ -137,6 +159,8 @@ async function populateDatabase() {
         password:
           "$2a$12$hpZ1Dq.mAvJLKJhZyQq6Ie2FSYsWzx46WJcJFpBXWG/Tvxx2HPibG", // Asegúrate de encriptar las contraseñas en producción
         rolId: rolesCreados.find((r) => r.nombre === "administrador").id,
+        id_empresa: empresaCreada.dataValues.id_empresa,
+        id_sucursal: sucursalCreada.dataValues.id_sucursal
       },
       {
         rut: "98765432-1",
@@ -146,6 +170,8 @@ async function populateDatabase() {
         password:
           "$2a$12$hpZ1Dq.mAvJLKJhZyQq6Ie2FSYsWzx46WJcJFpBXWG/Tvxx2HPibG", // Asegúrate de encriptar las contraseñas en producción
         rolId: rolesCreados.find((r) => r.nombre === "vendedor").id,
+        id_empresa: empresaCreada.dataValues.id_empresa,
+        id_sucursal: sucursalCreada.dataValues.id_sucursal
       },
     ];
 
@@ -491,6 +517,11 @@ async function populateDatabase() {
         id_estado_destino: 10, // Rechazado
         condicion: "Pedido no puede ser procesado.",
       },
+      {
+        id_estado_origen: 7, // En Proceso
+        id_estado_destino: 10, // Rechazado
+        condicion: "Pedido no puede ser procesado.",
+      },
     ];
 
     // Transiciones para Venta
@@ -741,21 +772,21 @@ async function populateDatabase() {
         tipo_destino: "pedido",
         condicion: "Cotización convertida a Pedido",
         estado_origen: 3,
-        estado_destino: 6
+        estado_destino: 6,
       },
       {
         tipo_origen: "pedido",
         tipo_destino: "venta",
         condicion: "Pedido convertido en Venta",
         estado_origen: 8,
-        estado_destino: 11
+        estado_destino: 11,
       },
       {
         tipo_origen: "cotizacion",
         tipo_destino: "venta",
         condicion: "Cotización convertida directamente en Venta",
         estado_origen: 3,
-        estado_destino: 11
+        estado_destino: 11,
       },
     ];
     await TransicionTipoTransaccion.bulkCreate(transicionesTipoTransaccion);
@@ -781,7 +812,6 @@ async function populateDatabase() {
     /***********************************************************************************/
     console.log("Creando transacciones de ejemplo...");
 
-    
     const detallesCotizacion = [
       {
         id_transaccion: cotizacion.id_transaccion,
@@ -853,7 +883,7 @@ async function populateDatabase() {
       total: venta.total,
       referencia_pago: "12345XYZ", // Referencia de pago
       observaciones: "Factura generada automáticamente para la venta.",
-      id_transaccion: venta.id_transaccion
+      id_transaccion: venta.id_transaccion,
     });
 
     console.log("Venta y factura creadas con éxito.");

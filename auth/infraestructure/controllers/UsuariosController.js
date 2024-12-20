@@ -7,7 +7,16 @@ class UsuarioController {
    * @param {Response} res - Respuesta HTTP.
    */
   async create(req, res) {
-    const { rut, nombre, apellido, email, password, rolId } = req.body;
+    const {
+      rut,
+      nombre,
+      apellido,
+      email,
+      password,
+      rolId,
+      id_empresa,
+      id_sucursal,
+    } = req.body;
 
     try {
       const usuario = await UsuariosService.createUsuario({
@@ -17,6 +26,8 @@ class UsuarioController {
         email,
         password,
         rolId,
+        id_empresa,
+        id_sucursal,
       });
       res.status(201).json(usuario);
     } catch (error) {
@@ -35,6 +46,16 @@ class UsuarioController {
       res.status(200).json(usuarios);
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getAllChoferes(req, res) {
+    try {
+      const choferes = await UsuariosService.getAllChoferes();
+      res.status(200).json(choferes);
+    } catch (error) {
+      console.error("Error al obtener choferes:", error.message);
+      res.status(500).json({ error: "Error interno del servidor" });
     }
   }
 
@@ -103,7 +124,6 @@ class UsuarioController {
       const { rut } = req.user;
       const { currentPassword, newPassword } = req.body;
 
-      console.log(rut)
       // Validar que se reciban las contraseñas
       if (!currentPassword || !newPassword) {
         return res

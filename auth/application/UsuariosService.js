@@ -3,6 +3,7 @@ import crypto from "crypto";
 import UsuariosRepository from "../infraestructure/repositories/UsuariosRepository.js";
 import RolesRepository from "../infraestructure/repositories/RolRepository.js";
 import EmailService from "../application/helpers/EmailService.js";
+import RolesService from "./RolesService.js";
 
 class UsuarioService {
   /**
@@ -11,7 +12,8 @@ class UsuarioService {
    * @returns {Promise<Object>} - Retorna el usuario creado.
    */
   async createUsuario(data) {
-    const { rut, nombre, apellido, email, rolId } = data;
+    const { rut, nombre, apellido, email, rolId, id_empresa, id_sucursal } =
+      data;
 
     const usuario_existente = await UsuariosRepository.findByRut(rut);
     if (usuario_existente) {
@@ -37,6 +39,8 @@ class UsuarioService {
       email,
       password: hashedPassword,
       rolId,
+      id_empresa,
+      id_sucursal
     });
 
     // Enviar la contraseña temporal por correo
@@ -54,11 +58,27 @@ class UsuarioService {
     return await UsuariosRepository.findAll();
   }
 
+  async getAllChoferes() {
+    try {
+      const rolIdChofer = await RolesService.getRolIdByName("chofer");
+
+      const choferes = await UsuariosRepository.findAllByRolId(rolIdChofer);
+
+      return choferes;
+    } catch (error) {
+      throw new Error(`Error al obtener choferes: ${error.message}`);
+    }
+  }
+
   /**
    * Obtener un usuario por su RUT.
    */
   async getUsuarioByRut(rut) {
     return await UsuariosRepository.findByRut(rut);
+  }
+
+  async getUsuarioById(rut){
+    return await UsuariosRepository.findOne(rut);
   }
 
   /**

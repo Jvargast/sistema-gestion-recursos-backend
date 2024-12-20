@@ -19,6 +19,10 @@ class RolRepository extends IRolRepository {
     });
   }
 
+  async findByIdConditions(conditions) {
+    return await Roles.findOne(conditions);
+  }
+
   /**
    * Crea un nuevo rol.
    * @param {Object} data - Datos del rol.

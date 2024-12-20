@@ -6,8 +6,10 @@ class EstadoTransaccionRepository extends IEstadoTransaccionRepository {
     return await EstadoTransaccion.findByPk(id);
   }
 
-  async findAll() {
-    return await EstadoTransaccion.findAll();
+  async findAll(options = {}) {
+    return await EstadoTransaccion.findAll({
+      ...options, // Inserta las opciones dinámicas
+    });
   }
 
   async findByNombre(nombre) {

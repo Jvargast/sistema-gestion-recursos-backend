@@ -94,6 +94,23 @@ class RolesService {
     return await RolRepository.findAll();
   }
 
+  async getRolIdByName(nombreRol) {
+    try {
+      const rol = await RolRepository.findByIdConditions({
+        where: { nombre: nombreRol }, // Filtra por nombre del rol
+        attributes: ['id'], // Solo trae el campo 'id'
+      });
+
+      if (!rol) {
+        throw new Error(`No se encontró un rol con el nombre: ${nombreRol}`);
+      }
+
+      return rol.id; // Retorna el ID del rol
+    } catch (error) {
+      throw new Error(`Error al obtener el ID del rol: ${error.message}`);
+    }
+  }
+
   /**
    * Eliminar un rol por su ID (sin eliminar permisos).
    * @param {number} id - ID del rol.

@@ -38,6 +38,21 @@ class PagoRepository extends IPagoRepository {
 
     return pago;
   }
+
+  async updatePago(id_pago, id_metodo_pago) {
+    
+    const pago = await Pago.findByPk(id_pago);
+ 
+    if (!pago) throw new Error(`Pago con ID ${id_pago} no encontrado.`);
+    if (pago.dataValues.id_metodo_pago != id_metodo_pago) {
+      throw new Error(`No se puede actualizar al mismo método de pago`)
+    } 
+    pago.dataValues.id_metodo_pago = id_metodo_pago;
+
+    await pago.save();
+
+    return pago;
+  }
 }
 
 export default new PagoRepository();

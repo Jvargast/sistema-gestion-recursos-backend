@@ -30,6 +30,30 @@ class UsuarioRepository extends IUsuariosRepository {
     return await Usuario.findAll();
   }
 
+  async findAllByRolId(rolId) {
+    return await Usuario.findAll({
+      where: { rolId },
+      attributes: ["rut", "nombre", "apellido", "email", "rolId"],
+      include: {
+        model: Roles,
+        as: "rol",
+        attributes: ["nombre"],
+      },
+    });
+  }
+
+  async findOne(rut) {
+    return await Usuario.findOne({
+      where: { rut },
+      attributes: ["rut", "nombre", "apellido", "email", "rolId"],
+      include: {
+        model: Roles,
+        as: "rol",
+        attributes: ["nombre"],
+      },
+    });
+  }
+
   async updateLastLogin(rut, fecha) {
     return await Usuario.update({ ultimo_login: fecha }, { where: { rut } });
   }

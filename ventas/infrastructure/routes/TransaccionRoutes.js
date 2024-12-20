@@ -18,7 +18,9 @@ router.put("/:id/finalizarTransaction", authenticate, TransaccionController.fina
 router.patch("/", authenticate, TransaccionController.deleteTransacciones); // Eliminar transacciones
 router.post("/:id/detalles", authenticate, TransaccionController.addDetallesToTransaccion);// Ruta para agregar detalles a una transacción existente
 router.post("/:id/asignar", authenticate, TransaccionController.asignarTransaccion); // Ruta para asignar un usuario a la transacción existente
+router.patch("/:id/desasignar", authenticate, TransaccionController.eliminarAsignadoTransaccion); // Ruta para eliminar usuario asignado
 router.put("/:id/changeDetallesInfo", authenticate, TransaccionController.changeDetallesInfo);
+router.put("/:id/changeMetodoPago", authenticate, TransaccionController.changeMetodoPago);
 router.delete("/:id/detalles/:idDetalle", authenticate, TransaccionController.deleteDetalle);
 
 router.get("/exportar-pdf/:id", authenticate, TransaccionController.createPdf);

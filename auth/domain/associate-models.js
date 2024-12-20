@@ -2,6 +2,8 @@ import Usuarios from "./models/Usuarios.js";
 import Roles from "./models/Roles.js";
 import RolesPermisos from "./models/RolesPermisos.js";
 import Permisos from "./models/Permisos.js";
+import Empresa from "./models/Empresa.js";
+import Sucursal from "./models/Sucursal.js";
 
 function loadAuthAssociations() {
   // Relación: Un Usuario pertenece a un Rol
@@ -45,6 +47,12 @@ function loadAuthAssociations() {
     onDelete: "CASCADE", // Si se elimina un permiso, elimina las asociaciones en RolesPermisos
     onUpdate: "CASCADE",
   });
+
+  Usuarios.belongsTo(Empresa, { foreignKey: "id_empresa" });
+  Empresa.hasMany(Usuarios, { foreignKey: "id_empresa" });
+
+  Usuarios.belongsTo(Sucursal, { foreignKey: "id_sucursal" });
+  Sucursal.hasMany(Usuarios, { foreignKey: "id_sucursal" });
 
   console.log("Asociaciones del módulo de autenticación cargadas");
 }

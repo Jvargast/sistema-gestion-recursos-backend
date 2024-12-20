@@ -10,7 +10,7 @@ class TransaccionRepository extends ITransaccionRepository {
       include: [
         { model: EstadoTransaccion, as: "estado" },
         { model: Cliente, as: "cliente" },
-        { model: Usuarios, as: "usuario"}
+        { model: Usuarios, as: "usuario" },
       ],
     });
   }
@@ -20,7 +20,7 @@ class TransaccionRepository extends ITransaccionRepository {
       include: [
         { model: EstadoTransaccion, as: "estado" },
         { model: Cliente, as: "cliente" },
-        { model: Usuarios, as: "usuario"}
+        { model: Usuarios, as: "usuario" },
       ],
     });
   }
@@ -30,7 +30,6 @@ class TransaccionRepository extends ITransaccionRepository {
   }
 
   async findByIds(ids) {
-    console.log(ids)
     return await Transaccion.findAll({
       where: { id_transaccion: ids },
     });
