@@ -2,6 +2,7 @@ import { Router } from 'express';
 import UsuariosController from '../controllers/UsuariosController.js';
 import checkPermissions from '../../../shared/middlewares/CheckPermissionsMiddleware.js';
 import verifyToken from '../../../shared/middlewares/VerifyTokenMiddleware.js';
+import authenticate from '../../../shared/middlewares/authenticate.js';
 
 const router = Router();
 
@@ -13,6 +14,9 @@ router.post('/', checkPermissions('crear_usuarios'), UsuariosController.create);
 
 // Obtener todos los usuarios
 router.get('/', checkPermissions('ver_usuarios'), UsuariosController.getAllUsers);
+
+// Obtener todos los usuarios rol chofer
+router.get('/choferes', authenticate, UsuariosController.getAllChoferes);
 
 // Obtener un usuario por RUT
 router.get('/:rut', /* checkPermissions('ver_usuario'), */ UsuariosController.findByRut);

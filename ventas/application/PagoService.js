@@ -19,7 +19,7 @@ class PagoService {
       id_transaccion,
       id_estado_pago: estadoInicial.dataValues.id_estado_pago,
       id_metodo_pago: metodoPago.dataValues.id_metodo_pago,
-      monto: 0
+      monto: 0,
     });
 
     return nuevoPago;
@@ -38,7 +38,6 @@ class PagoService {
       throw new Error("Transacción no encontrada");
     }
     // Validar estado de la transacción
-    //console.log(transaccion.transaccion.estado.dataValues.nombre_estado)
     const estadoPermitido = await EstadoTransaccionService.findByNombre(
       "Pago Pendiente"
     );
@@ -134,6 +133,14 @@ class PagoService {
       message: `Estado del pago actualizado a ${estado.nombre}.`,
       pagoActualizado,
     };
+  }
+
+  async actualizarMetodoPago(id_pago, id_metodo_pago) {
+    const metodoPagoNuevo = await PagoRepository.updatePago(
+      id_pago,
+      id_metodo_pago
+    );
+    return metodoPagoNuevo;
   }
 
   async obtenerMetodosPago() {

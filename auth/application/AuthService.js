@@ -20,7 +20,7 @@ class AuthService {
     // Verificar la contraseña
     const isPasswordValid = await bcrypt.compare(password, usuario.password);
     if (!isPasswordValid) {
-      throw new Error("Credenciales inválidas");
+      throw new Error("Usuario o contraseña incorrectos.");
     }
 
     const now = new Date();

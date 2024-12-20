@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import EstadoTransaccionRepository from "../infrastructure/repositories/EstadoTransaccionRepository.js";
 import paginate from "../../shared/utils/pagination.js";
 import createFilter from "../../shared/utils/helpers.js";
@@ -60,7 +60,9 @@ class EstadoTransaccionService {
     });
 
     // Verificar que todos los nombres requeridos estén en los resultados
-    const nombresEncontrados = estados.map((estado) => estado.dataValues.nombre_estado);
+    const nombresEncontrados = estados.map(
+      (estado) => estado.dataValues.nombre_estado
+    );
     const nombresFaltantes = nombresEstados.filter(
       (nombre) => !nombresEncontrados.includes(nombre)
     );
@@ -82,20 +84,24 @@ class EstadoTransaccionService {
       "nombre_estado",
       "descripcion",
       "tipo_transaccion",
-      "es_inicial"
+      "es_inicial",
     ];
     const where = createFilter(filters, allowedFields);
     if (options.search) {
       where[Op.or] = [
-        { descripcion: { [Op.like]: `%${options.search}%` } }, 
-        { nombre_estado: { [Op.like]: `%${options.search}%` } }, 
-        { tipo_transaccion: { [Op.like]: `%${options.search}%` } }, 
+        { descripcion: { [Op.like]: `%${options.search}%` } },
+        { nombre_estado: { [Op.like]: `%${options.search}%` } },
+        { tipo_transaccion: { [Op.like]: `%${options.search}%` } },
       ];
     }
 
-    const result = await paginate(EstadoTransaccionRepository.getModel(), options, {
-      where
-    })
+    const result = await paginate(
+      EstadoTransaccionRepository.getModel(),
+      options,
+      {
+        where,
+      }
+    );
 
     // Falta agregar lógica para cuando los estados son vacíos
 
@@ -103,24 +109,57 @@ class EstadoTransaccionService {
   }
 
   async obtenerEstadosPermitidos(estadosExcluidos) {
+    // Realizar la consulta para excluir los estados
+    if (!Array.isArray(estadosExcluidos) || estadosExcluidos.length === 0) {
+      throw new Error("Debe proporcionar un array de estados a excluir.");
+    }
+
+    // Realizar la consulta usando Op.notIn
     const estados = await EstadoTransaccionRepository.findAll({
       where: {
         nombre_estado: {
-          [Op.notIn]: estadosExcluidos,
+          [Op.notIn]: estadosExcluidos, // Excluir los nombres especificados
         },
       },
+      attributes: ["id_estado_transaccion", "nombre_estado"],
+
     });
 
-    return estados;
+    // Mapear solo los IDs encontrados
+    return estados.map((estado) => estado.id_estado_transaccion);
   }
 
   // Obtener IDs por nombres
   async obtenerIdsPorNombres(nombres) {
     const estados = await EstadoTransaccionRepository.findAll({
-      where: { nombre_estado: { [Op.in]: nombres } },
+      where: {
+        nombre_estado: {
+          [Op.in]: nombres, // Solo nombres especificados en el array
+        },
+      },
+      attributes: ["nombre_estado", "id_estado_transaccion"], // Seleccionar solo las columnas necesarias
     });
+    // Construir un objeto clave-valor { nombre_estado: id_estado_transaccion }
+    const estadosFiltrados = estados.reduce((acc, estado) => {
+      acc[estado.nombre_estado] = estado.id_estado_transaccion;
+      return acc;
+    }, {});
 
-    return estados.map((estado) => estado.id_estado_transaccion);
+    // Validar si faltan nombres en la respuesta
+    const missingNombres = nombres.filter(
+      (nombre) => !estadosFiltrados.hasOwnProperty(nombre)
+    );
+
+    if (missingNombres.length > 0) {
+      throw new Error(
+        `No se encontraron los estados para los nombres: ${missingNombres.join(
+          ", "
+        )}`
+      );
+    }
+
+    // Retornar solo los IDs en un array ordenado por el orden de nombres
+    return nombres.map((nombre) => estadosFiltrados[nombre]);
   }
 
   async createEstado(data) {

@@ -15,6 +15,7 @@ import setupAnalysisCronJobs from "./analisis/infrastructure/cron/analysisCronJo
 /* MÓDULO AUTH */
 import AuthRoutes from "./auth/infraestructure/routes/AuthRoutes.js";
 import UsuariosRoutes from "./auth/infraestructure/routes/UsuariosRoutes.js";
+import EmpresaRoutes from "./auth/infraestructure/routes/EmpresaRoutes.js";
 import RolRoutes from "./auth/infraestructure/routes/RolRoutes.js";
 import PermisosRoutes from "./auth/infraestructure/routes/PermisosRoutes.js";
 /* MÓDULO INVENTARIO */
@@ -64,7 +65,7 @@ app.use(
   cors({
     origin: process.env.CLIENT_URL, // Asegúrate de que esté configurado
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"], // Métodos permitidos
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Métodos permitidos
     allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
   })
 );
@@ -95,6 +96,7 @@ app.use(
 /* MÓDULO AUTH */
 app.use("/api/usuarios", UsuariosRoutes);
 app.use("/api/auth", AuthRoutes);
+app.use("/api/empresas", EmpresaRoutes);
 app.use("/api/roles", RolRoutes);
 app.use("/api/permisos", PermisosRoutes);
 

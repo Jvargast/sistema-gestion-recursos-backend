@@ -5,7 +5,6 @@ import UsuariosRepository from "../../auth/infraestructure/repositories/Usuarios
 export default function checkPermissions(requiredPermission) {
     return async (req, res, next) => {
         try {
-            console.log(req.user.rut);
             const rut = req.user.rut; // esto debe venir de la cookie
             const usuario = await UsuariosRepository.findByRut(rut);
             const rol = await RolRepository.findById(usuario.rolId);
