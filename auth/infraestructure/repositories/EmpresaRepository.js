@@ -63,6 +63,10 @@ class EmpresaRepository {
       throw new Error("Error al actualizar la empresa.");
     }
   }
+
+  getModel() {
+    return Empresa;
+  }
 }
 
 export default new EmpresaRepository();

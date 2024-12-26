@@ -6,30 +6,46 @@
  * @returns {Promise<Object>} - Resultados paginados y metadatos.
  */
 async function paginate(model, options, queryOptions = {}) {
-    const { page = 1, pageSize = 10 } = options;
-  
-    const limit = parseInt(pageSize, 10);
-    const offset = (parseInt(page, 10) - 1) * limit;
-  
-    // Obtener los resultados paginados
-    const { count, rows } = await model.findAndCountAll({
-      ...queryOptions,
-      limit,
-      offset,
-    });
-  
-    const totalPages = Math.ceil(count / limit);
-  
+  const page = Math.max(1, parseInt(options.page, 10) || 1); // Página >= 1
+  const pageSize = Math.max(1, parseInt(options.limit, 10) || 10); // Tamaño >= 1
+
+  const limit = pageSize; // Filas por página
+  const offset = (page - 1) * limit; // Desplazamiento
+
+
+  const order = queryOptions.order || [["id", "DESC"]];
+  // Obtener los resultados paginados
+  const { count, rows } = await model.findAndCountAll({
+    ...queryOptions,
+    order,
+    limit,
+    offset,
+  });
+
+  // Asignar un ID secuencial global basado en el índice absoluto
+  const data = rows.map((row, index) => {
+    // Usa el método `toJSON` para convertir cada instancia en un objeto plano
+    const plainRow = row.toJSON();
+
     return {
-      data: rows,
-      pagination: {
-        totalItems: count,
-        totalPages,
-        currentPage: parseInt(page, 10),
-        pageSize: limit,
-      },
+      ...plainRow,
+      sequentialId: offset + index + 1, // ID único basado en la paginación
     };
-  }
-  
-  export default paginate;
-  
+  });
+
+  console.log("Filas devueltas:", rows.length);
+
+  const totalPages = Math.ceil(count / limit);
+
+  return {
+    data,
+    pagination: {
+      totalItems: count,
+      totalPages,
+      currentPage: page,
+      pageSize: limit,
+    },
+  };
+}
+
+export default paginate;

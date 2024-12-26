@@ -22,20 +22,20 @@ class TransaccionController {
     try {
       const filters = req.query; // Filtros enviados en los query params
       const rolId = req.user.rol.id;
+
       let options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
         search: req.query.search,
         rolId,
       };
-
       delete filters.limit;
       delete filters.offset;
       const transacciones = await TransaccionService.getAllTransacciones(
         filters,
         options
       );
-      res.status(200).json(transacciones);
+      res.status(200).json({data: transacciones.data, total: transacciones.pagination});
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -157,11 +157,11 @@ class TransaccionController {
     try {
       const { rut } = req.user;
       const { id } = req.params;
-      const { metodo_pago, referencia } = req.body;
-
+      const { metodo_pago, monto, referencia } = req.body;
       const completeTransaction = await TransaccionService.completarTransaccion(
         id,
         metodo_pago,
+        monto,
         referencia,
         rut
       );

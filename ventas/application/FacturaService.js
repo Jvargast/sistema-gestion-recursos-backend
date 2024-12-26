@@ -21,7 +21,7 @@ class FacturaService {
     return factura;
   }
   // Obtener todas las facturas con filtros y paginación
-  async getAllFacturas(filters = {}, options = { page: 1, limit: 10 }) {
+  async getAllFacturas(filters = {}, options) {
     const allowedFields = [
       "id_factura",
       "numero_factura",
@@ -39,12 +39,14 @@ class FacturaService {
       ];
     }
 
-    const estadoBuscado = await EstadoFacturaRepository.findByNombre(options.estado);
-    
-    if(estadoBuscado) {
+    const estadoBuscado = await EstadoFacturaRepository.findByNombre(
+      options.estado
+    );
+
+    if (estadoBuscado) {
       where.id_estado_factura = {
         [Op.not]: estadoBuscado.dataValues.id_estado_factura,
-      }
+      };
     }
     const include = [
       {
@@ -67,8 +69,9 @@ class FacturaService {
     const result = await paginate(FacturaRepository.getModel(), options, {
       where,
       include,
+      order:[["id_factura", "ASC"]]
     });
-    return result.data;
+    return result;
   }
 
   // Crear una factura independiente (sin transacción asociada)
@@ -120,12 +123,11 @@ class FacturaService {
 
     const factura = await FacturaRepository.create({
       numero_factura: numeroGenerado,
-      /* id_cliente: transaccion.transaccion.dataValues.id_cliente, */
-      /*       id_usuario, */
+      observaciones: "Factura generada",
       total: transaccion.transaccion.dataValues.total,
       id_estado_factura: estadoFacturaCreada.dataValues.id_estado_factura,
       fecha_emision: new Date(),
-      id_transaccion: transaccion.transaccion.dataValues.id_transaccion
+      id_transaccion: transaccion.transaccion.dataValues.id_transaccion,
     });
 
     // Actualizar la transacción con el ID de la factura
@@ -137,54 +139,77 @@ class FacturaService {
   }
 
   async generarBoleta(id_transaccion, id_usuario) {
-    const transaccion = await TransaccionService.getTransaccionById(
-      id_transaccion
-    );
-
-    // Verificar si ya tiene una factura o boleta asociada
-    if (transaccion.transaccion.dataValues.id_factura) {
-      throw new Error("La transacción ya tiene una factura o boleta asociada.");
-    }
-
-    // Validar que la transacción esté en un estado adecuado para emitir boleta
-    const estadoCompletado = await EstadoTransaccionService.findByNombre(
-      "Pagada"
-    );
-    if (
-      transaccion.transaccion.dataValues.id_estado_transaccion !==
-      estadoCompletado.dataValues.id_estado_transaccion
-    ) {
-      throw new Error(
-        "La transacción debe estar pagada para generar una boleta."
+    try {
+      const transaccion = await TransaccionService.getTransaccionById(
+        id_transaccion
       );
+
+      // Verificar si ya tiene una factura o boleta asociada
+      if (transaccion.transaccion.dataValues.id_factura) {
+        throw new Error(
+          "La transacción ya tiene una factura o boleta asociada."
+        );
+      }
+
+      // Validar que la transacción esté en un estado adecuado para emitir boleta
+      const estadoCompletado = await EstadoTransaccionService.findByNombre(
+        "Pagada"
+      );
+
+
+      if (
+        transaccion.transaccion.dataValues.id_estado_transaccion !==
+        estadoCompletado.dataValues.id_estado_transaccion
+      ) {
+        throw new Error(
+          "La transacción debe estar pagada para generar una boleta."
+        );
+      }
+      const estadoFacturaCompletado = await EstadoFacturaService.findByNombre(
+        "Pagada"
+      );
+
+
+      const numeroGenerado = await this.generarNumeroFactura();
+
+      console.log("Datos para FacturaRepository.create:", {
+        numero_factura: numeroGenerado,
+        id_transaccion,
+        id_cliente: transaccion.transaccion.dataValues.id_cliente,
+        id_usuario,
+        total: transaccion.transaccion.dataValues.total,
+        id_estado_factura: estadoFacturaCompletado.dataValues.id_estado_factura,
+      });
+      
+
+      const boleta = await FacturaRepository.create({
+        numero_factura: numeroGenerado,
+        id_transaccion,
+        id_cliente: transaccion.transaccion.dataValues.id_cliente,
+        id_usuario,
+        total: transaccion.transaccion.dataValues.total,
+        id_estado_factura: estadoFacturaCompletado.dataValues.id_estado_factura, // Las boletas suelen considerarse pagadas automáticamente
+    });
+      console.log("Boleta creada:", boleta);
+
+      // Actualizar la transacción con el ID de la factura o boleta
+      await TransaccionRepository.update(id_transaccion, {
+        id_factura: boleta.dataValues.id_factura,
+      });
+      console.log("Transacción actualizada con ID de boleta:", boleta.dataValues.id_factura);
+
+      return boleta;
+    } catch (error) {
+      console.log("Error en generar Boleta", error.message);
+      throw error;
     }
-    const estadoFacturaCompletado = await EstadoFacturaService.findByNombre(
-      "Pagada"
-    );
-
-    const numeroGenerado = await this.generarNumeroFactura();
-    const boleta = await FacturaRepository.create({
-      numero_factura: numeroGenerado,
-      id_transaccion,
-      id_cliente: transaccion.transaccion.dataValues.id_cliente,
-      id_usuario,
-      total: transaccion.transaccion.dataValues.total,
-      id_estado_factura: estadoFacturaCompletado.dataValues.id_estado_factura, // Las boletas suelen considerarse pagadas automáticamente
-    });
-
-    // Actualizar la transacción con el ID de la factura o boleta
-    await TransaccionRepository.update(id_transaccion, {
-      id_factura: boleta.dataValues.id_factura,
-    });
-
-    return boleta;
   }
 
   async generarNumeroFactura() {
     try {
       // Obtener el último número de factura
       const ultimaFactura = await FacturaRepository.findLastFactura({
-        order: [["numero_factura", "DESC"]],
+        order: [["numero_factura", "DESC"]]
       });
 
       let nuevoNumero;
@@ -327,11 +352,34 @@ class FacturaService {
     if (!factura) {
       throw new Error(`Factura con ID ${id} no encontrada.`);
     }
-    const estadoFacturaCancelado = await EstadoFacturaService.findByNombre("Cancelada");
+    const estadoFacturaCancelado = await EstadoFacturaService.findByNombre(
+      "Cancelada"
+    );
     // Cambiar el estado de la factura a "Cancelada"
-    await FacturaRepository.update(id, { id_estado_factura: estadoFacturaCancelado.dataValues.id_estado_factura  }); 
-  
+    await FacturaRepository.update(id, {
+      id_estado_factura: estadoFacturaCancelado.dataValues.id_estado_factura,
+    });
+
     return { message: "Factura cancelada exitosamente." };
+  }
+
+  async deleteFacturas(ids, id_usuario) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new Error(
+        "Debe proporcionar al menos un ID de factura para eliminar."
+      );
+    }
+    const facturas = await FacturaRepository.findByIds(ids);
+    if (facturas.length !== ids.length) {
+      const notFoundIds = ids.filter(
+        (id) => !facturas.some((factura) => factura.id_factura === id)
+      );
+      throw new Error(
+        `Los siguientes facturas no fueron encontrados: ${notFoundIds.join(
+          ", "
+        )}`
+      );
+    }
   }
 }
 

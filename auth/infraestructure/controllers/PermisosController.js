@@ -1,7 +1,7 @@
 import PermisosService from "../../application/PermisosService.js";
 
 class PermisosController {
-  async create(req, res) {
+  async createPermiso(req, res) {
     try {
       const permiso = await PermisosService.createPermiso(req.body);
       res.status(201).json(permiso);
@@ -10,7 +10,7 @@ class PermisosController {
     }
   }
 
-  async update(req, res) {
+  async updatePermiso(req, res) {
     try {
       const { id } = req.params;
       const permiso = await PermisosService.updatePermiso(id, req.body);
@@ -20,26 +20,35 @@ class PermisosController {
     }
   }
 
-  async delete(req, res) {
+  async deletePermiso(req, res) {
     try {
       const { id } = req.params;
       await PermisosService.deletePermiso(id);
-      res.status(200).json({ message: 'Permiso eliminado con éxito' });
+      res.status(200).json({ message: "Permiso eliminado con éxito" });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
   }
 
-  async findAll(req, res) {
+  async getAllPermisos(req, res) {
     try {
-      const permisos = await PermisosService.getAllPermisos();
-      res.status(200).json(permisos);
+      const filters = req.query;
+      let options = {
+        page: parseInt(req.query.page, 10) || 1,
+        limit: parseInt(req.query.limit, 20) || 20,
+        search: req.query.search,
+      };
+      delete filters.limit;
+      delete filters.offset;
+
+      const permisos = await PermisosService.findAllPermisos(filters, options);
+      res.status(200).json({ data: permisos.data, total: permisos.pagination });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
   }
 
-  async findById(req, res) {
+  async getPermisoById(req, res) {
     try {
       const { id } = req.params;
       const permiso = await PermisosService.getPermisoById(id);

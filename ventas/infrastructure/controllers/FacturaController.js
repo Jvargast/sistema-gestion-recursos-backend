@@ -22,11 +22,11 @@ class FacturaController {
         search: req.query.search,
         estado: req.query.estado,
       };
-      delete filters.page;
       delete filters.limit;
+      delete filters.offset;
 
       const facturas = await FacturaService.getAllFacturas(filters, options);
-      res.status(200).json(facturas);
+      res.status(200).json({data: facturas.data, total: facturas.pagination});
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -87,6 +87,17 @@ class FacturaController {
       const { id } = req.params;
       const factura = await FacturaService.eliminarFactura(id);
       res.status(200).json(factura);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async deleteFacturas (req, res) {
+    try {
+      const {ids} = req.body;
+      const {rut} = req.user;
+      const result = await FacturaService.deleteFacturas(ids, rut);
+      res.status(200).json(result);
     } catch (error) {
       res.status(400).json({ error: error.message });
     }

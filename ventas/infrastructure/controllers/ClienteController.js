@@ -17,9 +17,12 @@ class ClienteController {
       const options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
+        search: req.query.search
       };
+      delete filters.limit;
+      delete filters.offset;
       const clientes = await ClienteService.getAllClientes(filters, options);
-      res.status(200).json(clientes);
+      res.status(200).json({data: clientes.data, total: clientes.pagination});
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -37,8 +40,9 @@ class ClienteController {
   async updateCliente(req, res) {
     try {
       const { id } = req.params;
-      const updated = await ClienteService.updateCliente(id, req.body);
-      res.status(200).json(updated);
+      console.log("REQ", req.body);
+      const updated = await ClienteService.updateCliente(id, req.body.formData);
+      res.status(200).json({message: "Cliente actualizado correctamente",updated});
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -71,6 +75,18 @@ class ClienteController {
       res.status(200).json(clientes);
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  }
+
+  async deleteClientes(req,res) {
+    try {
+      const { ids } = req.body;
+      const { rut } = req.user;
+
+      const result = await ClienteService.deleteClientes(ids, rut);
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
   }
 }

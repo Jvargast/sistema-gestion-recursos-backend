@@ -100,6 +100,7 @@ class EstadoTransaccionService {
       options,
       {
         where,
+        order: [["id_estado_transaccion", "ASC"]]
       }
     );
 

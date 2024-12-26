@@ -11,6 +11,6 @@ router.post('/login', AuthController.login);
 router.get('/me', authenticate, AuthController.getAuthenticatedUser);
 
 // Ruta para cerrar sesión
-router.post('/logout', AuthController.logout);
+router.post('/logout', authenticate, AuthController.logout);
 
 export default router;

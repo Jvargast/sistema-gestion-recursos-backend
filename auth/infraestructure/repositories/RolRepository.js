@@ -111,6 +111,9 @@ class RolRepository extends IRolRepository {
       },
     });
   }
+  getModel() {
+    return Roles;
+  }
 }
 
 export default new RolRepository();

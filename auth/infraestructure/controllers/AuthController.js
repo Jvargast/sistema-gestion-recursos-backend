@@ -1,5 +1,6 @@
+import AuditLogsService from "../../application/AuditLogsService.js";
 import AuthService from "../../application/AuthService.js";
-
+import jwt from 'jsonwebtoken';
 class AuthController {
   /**
    * Iniciar sesión: manejar solicitud HTTP para autenticación.
@@ -8,11 +9,14 @@ class AuthController {
    */
   async login(req, res) {
     const { rut, password } = req.body;
+    const ip = req.ip;
     const cookies =  req.cookies;
 
     try {
       const { token, usuario } = await AuthService.login(rut, password);
 
+      //Audiar inicio de sesión
+      await AuditLogsService.logAction(rut, "Inicio de sesión", "Autenticación", ip);
       // Configurar cookie con el token JWT
       res.cookie("authToken", token, {
         httpOnly: true, // Asegura que la cookie no sea accesible desde el frontend (prevención de XSS)
@@ -34,7 +38,9 @@ class AuthController {
    */
   async logout(req, res) {
     try {
+      const ip = req.ip;
       res.clearCookie("authToken");
+      await AuditLogsService.logAction(req.user.rut, "Cerrar Sesión", "Autenticación", ip);
       res.status(200).json({ message: "Cierre de sesión exitoso" });
     } catch {
       res.status(401).json({ error: error.message });

@@ -4,7 +4,12 @@ import EstadoFactura from "../../domain/models/EstadoFactura.js";
 
 class FacturaRepository extends IFacturaRepository {
   async findById(id) {
-    return await Factura.findByPk(id, { include: "estado" });
+    try {
+      return await Factura.findByPk(id, { include: "estado" });
+    } catch (error) {
+      console.log("Error en Factura repo", error.message);
+    }
+    
   }
 
   async findAll(filters, options) {
@@ -28,6 +33,12 @@ class FacturaRepository extends IFacturaRepository {
       where: { id_factura: id },
     });
     return updated > 0 ? await this.findById(id) : null;
+  }
+
+  async findByIds(ids) {
+    return await Factura.findAll({
+      where: { id_factura: ids },
+    });
   }
 
   getModel() {

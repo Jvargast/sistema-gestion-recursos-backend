@@ -44,6 +44,7 @@ class VentasEstadisticasService {
       options,
       {
         where,
+        order: [["id_ventas_estadisticas", "ASC"]]
       }
     );
     return result.data;

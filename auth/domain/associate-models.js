@@ -4,6 +4,7 @@ import RolesPermisos from "./models/RolesPermisos.js";
 import Permisos from "./models/Permisos.js";
 import Empresa from "./models/Empresa.js";
 import Sucursal from "./models/Sucursal.js";
+import AuditLogs from "./models/AuditLogs.js";
 
 function loadAuthAssociations() {
   // Relación: Un Usuario pertenece a un Rol
@@ -53,6 +54,20 @@ function loadAuthAssociations() {
 
   Usuarios.belongsTo(Sucursal, { foreignKey: "id_sucursal" });
   Sucursal.hasMany(Usuarios, { foreignKey: "id_sucursal" });
+  AuditLogs.belongsTo(Usuarios, {
+    foreignKey: "userId",
+    as: "usuario",
+    onDelete: "SET NULL", // Si se elimina un usuario, el log permanece con userId NULL
+    onUpdate: "CASCADE",
+  });
+
+  // Opcional: Un Usuario puede tener muchos AuditLogs
+  Usuarios.hasMany(AuditLogs, {
+    foreignKey: "userId",
+    as: "auditLogs",
+    onDelete: "CASCADE", // Si se elimina un usuario, se eliminan sus logs
+    onUpdate: "CASCADE",
+  });
 
   console.log("Asociaciones del módulo de autenticación cargadas");
 }

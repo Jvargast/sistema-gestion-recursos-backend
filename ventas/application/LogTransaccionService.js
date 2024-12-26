@@ -7,7 +7,7 @@ class LogTransaccionService {
     if (!id_transaccion || !id_usuario || !accion) {
       throw new Error("Faltan campos obligatorios para crear el log.");
     }
-    
+
     return await LogTransaccionRepository.create({
       id_transaccion,
       id_usuario,
@@ -41,8 +41,16 @@ class LogTransaccionService {
     return await LogTransaccionRepository.findByTransaccionId(id_transaccion);
   }
 
-  async getAllLogs(options = {}) {
-    return await paginate(LogTransaccionRepository.getModel(), options);
+  async getAllLogs(filters = {}, options) {
+    console.log(options)
+    const result = await paginate(
+      LogTransaccionRepository.getModel(),
+      options,
+      {
+        order: [["id_log", "ASC"]],
+      }
+    );
+    return result;
   }
 }
 

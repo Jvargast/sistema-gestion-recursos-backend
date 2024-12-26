@@ -12,6 +12,8 @@ router.use(verifyToken);
 // Ruta para crear usuario, protegida con el middleware para verificar el permiso 'crear_usuario'
 router.post('/', checkPermissions('crear_usuarios'), UsuariosController.create);
 
+router.post('/crear', checkPermissions('crear_usuarios'), UsuariosController.createNewUser);
+
 // Obtener todos los usuarios
 router.get('/', checkPermissions('ver_usuarios'), UsuariosController.getAllUsers);
 
