@@ -11,11 +11,15 @@ class MetodoPagoRepository extends IMetodoPagoRepository {
   }
 
   async findAllWithConditions(conditions) {
-    return await MetodoPago.findAll({where: conditions})
+    return await MetodoPago.findAll({ where: conditions });
   }
 
   async findByNombre(nombre) {
     return await MetodoPago.findOne({ where: { nombre: nombre } });
+  }
+
+  getModel() {
+    return MetodoPago;
   }
 }
 

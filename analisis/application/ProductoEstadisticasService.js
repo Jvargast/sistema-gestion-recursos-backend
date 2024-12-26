@@ -246,6 +246,7 @@ class ProductoEstadisticasService {
       {
         where,
         include,
+        order: [["id_producto_estadisticas", "ASC"]]
       }
     );
     return result.data;

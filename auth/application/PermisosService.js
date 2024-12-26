@@ -1,4 +1,7 @@
+import { Op } from 'sequelize';
 import PermisosRepository from '../../auth/infraestructure/repositories/PermisosRepository.js';
+import createFilter from '../../shared/utils/helpers.js';
+import paginate from '../../shared/utils/pagination.js';
 
 class PermisosService {
   async createPermiso(data) {
@@ -33,8 +36,17 @@ class PermisosService {
     return await PermisosRepository.delete(id);
   }
 
-  async getAllPermisos() {
-    return await PermisosRepository.findAll();
+  async findAllPermisos(filters = {}, options) {
+    const allowedFields = ["id"];
+    const where = createFilter(filters, allowedFields);
+    if (options.search) {
+      where[Op.or] = [{ nombre: { [Op.like]: `%${options.search}%` } }];
+    }
+    const result = await paginate(PermisosRepository.getModel(), options, {
+      where,
+      order: [["id", "ASC"]],
+    });
+    return result;
   }
 
   async getPermisoById(id) {

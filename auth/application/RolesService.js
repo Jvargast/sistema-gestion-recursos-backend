@@ -1,5 +1,10 @@
+import { Op } from "sequelize";
+import createFilter from "../../shared/utils/helpers.js";
 import RolRepository from "../infraestructure/repositories/RolRepository.js";
 import validatePermissionsExist from "./helpers/ValidatePermissions.js";
+import paginate from "../../shared/utils/pagination.js";
+import RolesPermisosRepository from "../infraestructure/repositories/RolesPermisosRepository.js";
+import PermisosRepository from "../infraestructure/repositories/PermisosRepository.js";
 
 class RolesService {
   /**
@@ -18,8 +23,8 @@ class RolesService {
 
     // Asignar permisos al rol
     if (permisos.length > 0) {
-        await RolRepository.addPermisos(rol.id, permisos);
-      }
+      await RolRepository.addPermisos(rol.id, permisos);
+    }
 
     return rol;
   }
@@ -62,13 +67,7 @@ class RolesService {
       await RolRepository.removePermisos(id, permisosEliminar);
     }
 
-    /*         // Actualizar el rol
-        await RolRepository.update(id, { nombre, descripcion });
-
-        // Actualizar permisos asociados
-        await RolRepository.updatePermisos(id, permisos); */
-
-    return await RolRepository.findById(id); // Retornar el rol actualizado con permisos
+    return await RolRepository.findById(id);
   }
 
   /**
@@ -90,15 +89,62 @@ class RolesService {
    * Obtener todos los roles con sus permisos.
    * @returns {Promise<Array>} - Retorna la lista de roles con sus permisos.
    */
-  async getAllRoles() {
-    return await RolRepository.findAll();
+  async getAllRoles(filters = {}, options) {
+    const allowedFields = ["id"];
+    const where = createFilter(filters, allowedFields);
+    if (options.search) {
+      where[Op.or] = [{ nombre: { [Op.like]: `%${options.search}%` } }];
+    }
+    const include = [
+      {
+        model: RolesPermisosRepository.getModel(),
+        as: "rolesPermisos",
+        includes: [
+          {
+            model: PermisosRepository.getModel(),
+            as: "permisos",
+          },
+        ],
+      },
+    ];
+    const result = await paginate(RolRepository.getModel(), options, {
+      where,
+      include,
+      order: [["id", "ASC"]],
+    });
+    // Transformar los resultados para incluir los conteos
+    // Obtener la cantidad total de permisos disponibles
+    const totalPermissions = await PermisosRepository.getModel().count();
+
+    // Transformar los resultados para incluir los conteos de permisos aprobados y no aprobados
+    const rolesWithPermissions = result.data.map((role) => {
+      const rolesPermisos = role.rolesPermisos || [];
+
+      // Contar los permisos asignados
+      const approvedPermissionsCount = rolesPermisos.length;
+      const notApprovedPermissionsCount =
+        totalPermissions - approvedPermissionsCount;
+
+      return {
+        ...role,
+        permissionsCount: {
+          approved: approvedPermissionsCount,
+          notApproved: notApprovedPermissionsCount,
+        },
+      };
+    });
+    //console.log(rolesWithPermissions)
+    return {
+      ...result,
+      data: rolesWithPermissions
+    };
   }
 
   async getRolIdByName(nombreRol) {
     try {
       const rol = await RolRepository.findByIdConditions({
         where: { nombre: nombreRol }, // Filtra por nombre del rol
-        attributes: ['id'], // Solo trae el campo 'id'
+        attributes: ["id"], // Solo trae el campo 'id'
       });
 
       if (!rol) {

@@ -42,6 +42,7 @@ class TransaccionRepository extends ITransaccionRepository {
   }
 
   async create(data) {
+    console.log("Data: ", data)
     return await Transaccion.create(data);
   }
 

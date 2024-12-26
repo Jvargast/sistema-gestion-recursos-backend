@@ -15,6 +15,7 @@ import TransicionEstadoDetalle from "./models/TransicionEstadoDetalle.js";
 import Factura from "./models/Factura.js";
 import TransicionTipoTransaccion from "./models/TransicionTipoTransaccion.js";
 import EstadoFactura from "./models/EstadoFactura.js";
+import Documento from "./models/Documento.js";
 
 function loadSalesAssociations() {
   // Relación: Cliente -> Transacción
@@ -80,11 +81,11 @@ function loadSalesAssociations() {
   });
 
   // Relación: Transacción pertenece a Factura
-/*   Transaccion.belongsTo(Factura, {
+  /*   Transaccion.belongsTo(Factura, {
     foreignKey: "id_factura",
     as: "facturaTransaccion",
   }); */
-/*   Factura.hasOne(Transaccion, {
+  /*   Factura.hasOne(Transaccion, {
     foreignKey: "id_factura",
     as: "transaccionFactura",
   }); */
@@ -205,6 +206,15 @@ function loadSalesAssociations() {
   EstadoDetalleTransaccion.hasMany(TransicionEstadoDetalle, {
     foreignKey: "id_estado_destino",
     as: "transicionesDestino",
+  });
+
+  //Implementación futura
+  Transaccion.hasMany(Documento, {
+    foreignKey: "id_transaccion",
+    as: "documentos",
+  });
+  Documento.belongsTo(Transaccion, {
+    foreignKey: "id_transaccion",
   });
 
   console.log("Asociaciones del módulo de ventas cargadas correctamente.");

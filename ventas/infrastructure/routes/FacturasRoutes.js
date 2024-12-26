@@ -1,27 +1,31 @@
 import { Router } from "express";
 import FacturaController from "../controllers/FacturaController.js";
+import authenticate from "../../../shared/middlewares/authenticate.js";
 
 const router = Router();
 
 // Obtener todas las facturas (con filtros y paginación)
-router.get("/", FacturaController.getAllFacturas);
+router.get("/", authenticate, FacturaController.getAllFacturas);
 
 // Obtener una factura por ID
-router.get("/:id", FacturaController.getFacturaById);
+router.get("/:id",authenticate, FacturaController.getFacturaById);
 
 // Crear una factura desde una transacción
-router.post("/desde-transaccion", FacturaController.crearFacturaDesdeTransaccion);
+router.post("/desde-transaccion", authenticate,FacturaController.crearFacturaDesdeTransaccion);
 
 // Crear una factura independiente
-router.post("/", FacturaController.crearFacturaIndependiente);
+router.post("/", authenticate, FacturaController.crearFacturaIndependiente);
+
+// Eliminar multiple
+router.patch("/", authenticate,FacturaController.deleteFacturas);
 
 // Actualizar el estado de una factura
-router.put("/:id/estado", FacturaController.actualizarEstadoFactura);
+router.put("/:id/estado", authenticate,FacturaController.actualizarEstadoFactura);
 
 // Actualizar factura
-router.put("/:id", FacturaController.actualizarFactura);
+router.put("/:id",authenticate, FacturaController.actualizarFactura);
 
 // Eliminar una factura
-router.patch("/:id", FacturaController.eliminarFactura);
+router.patch("/:id",authenticate, FacturaController.eliminarFactura);
 
 export default router;

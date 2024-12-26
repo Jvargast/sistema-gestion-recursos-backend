@@ -18,6 +18,9 @@ import UsuariosRoutes from "./auth/infraestructure/routes/UsuariosRoutes.js";
 import EmpresaRoutes from "./auth/infraestructure/routes/EmpresaRoutes.js";
 import RolRoutes from "./auth/infraestructure/routes/RolRoutes.js";
 import PermisosRoutes from "./auth/infraestructure/routes/PermisosRoutes.js";
+import AuditLogsRoutes from "./auth/infraestructure/routes/AuditLogsRoutes.js";
+import SecuritySettingsRoutes from "./auth/infraestructure/routes/SecuritySettingsRoutes.js";
+import SucursalesRoutes from "./auth/infraestructure/routes/SucursalesRoutes.js";
 /* MÓDULO INVENTARIO */
 import EstadoProductoRoutes from "./inventario/infrastructure/routes/EstadoProductoRoutes.js";
 import CategoriaProductoRoutes from "./inventario/infrastructure/routes/CategoriaProductoRoutes.js";
@@ -43,8 +46,8 @@ import proveedoresRoutes from "./proveedores/infrastructure/routes/proveedoesrRo
 
 /* MÓDULO ANÁLISIS */
 // Rutas del módulo de análisis
-import ProductoEstadisticaRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js"
-import VentasEstadisticasRoutes from "./analisis/infrastructure/routes/VentasEstadisticasRoutes.js"
+import ProductoEstadisticaRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
+import VentasEstadisticasRoutes from "./analisis/infrastructure/routes/VentasEstadisticasRoutes.js";
 /* Configuración */
 
 dotenv.config();
@@ -63,13 +66,12 @@ app.use(cookieParser());
 ]; */
 app.use(
   cors({
-    origin: process.env.CLIENT_URL, // Asegúrate de que esté configurado
+    origin: "http://localhost:3000", // Asegúrate de que esté configurado
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Métodos permitidos
     allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
   })
 );
-
 
 /* const allowedOrigins = [
   "http://localhost:3000", // Para desarrollo local
@@ -99,6 +101,9 @@ app.use("/api/auth", AuthRoutes);
 app.use("/api/empresas", EmpresaRoutes);
 app.use("/api/roles", RolRoutes);
 app.use("/api/permisos", PermisosRoutes);
+app.use("/api/audit-logs", AuditLogsRoutes);
+app.use("/api/security-settings", SecuritySettingsRoutes);
+app.use("/api/sucursales", SucursalesRoutes);
 
 /* MÓDULO INVENTARIO */
 app.use("/api/estados-productos", EstadoProductoRoutes);
@@ -113,7 +118,7 @@ app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
 app.use("/api/logs-transaccion", LogTransaccionRoutes);
 app.use("/api/transacciones", TransaccionRoutes);
 app.use("/api/detalle-transacciones", DetalleTransaccionRoutes);
-app.use("/api/estado-detalle", EstadoDetallesRoutes)
+app.use("/api/estado-detalle", EstadoDetallesRoutes);
 app.use("/api/facturas", FacturasRoutes);
 app.use("/api/estado-factura", EstadoFacturaRoutes);
 app.use("/api/pagos", PagosRoutes);

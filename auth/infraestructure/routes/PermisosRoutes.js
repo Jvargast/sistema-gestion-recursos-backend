@@ -8,18 +8,18 @@ const router = Router();
 router.use(verifyToken);
 
 // Crear un permiso
-router.post('/', PermisosController.create);
+router.post('/', PermisosController.createPermiso);
 
 // Actualizar un permiso
-router.put('/:id', PermisosController.update);
+router.put('/:id', PermisosController.updatePermiso);
 
 // Eliminar un permiso
-router.delete('/:id', PermisosController.delete);
+router.delete('/:id', PermisosController.deletePermiso);
 
 // Obtener todos los permisos
-router.get('/', PermisosController.findAll);
+router.get('/', PermisosController.getAllPermisos);
 
 // Obtener un permiso por ID
-router.get('/:id', PermisosController.findById);
+router.get('/:id', PermisosController.getPermisoById);
 
 export default router;

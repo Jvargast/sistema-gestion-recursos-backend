@@ -82,6 +82,7 @@ class ProductoService {
     const result = await paginate(ProductosRepository.getModel(), options, {
       where,
       include,
+      order: [["id_producto", "ASC"]]
     });
     return result.data;
   }

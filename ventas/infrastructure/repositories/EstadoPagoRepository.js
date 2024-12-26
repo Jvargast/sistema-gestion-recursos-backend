@@ -40,6 +40,10 @@ class EstadoPagoRepository extends IEstadoPagoRepository {
     await estado.destroy();
     return true;
   }
+
+  getModel() {
+    return EstadoPago;
+  } 
 }
 
 export default new EstadoPagoRepository();

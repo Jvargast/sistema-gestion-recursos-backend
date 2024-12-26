@@ -35,6 +35,35 @@ class UsuarioController {
     }
   }
 
+  async createNewUser(req, res) {
+    const {
+      rut,
+      nombre,
+      apellido,
+      email,
+      password,
+      rolId,
+      id_empresa,
+      id_sucursal,
+    } = req.body;
+    try {
+      const usuario = await UsuariosService.createNewUsuario({
+        rut,
+        nombre,
+        apellido,
+        email,
+        password,
+        rolId,
+        id_empresa,
+        id_sucursal,
+      });
+
+      res.status(201).json({usuario: usuario.usuario, tempPassword: usuario.tempPassword});
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   /**
    * Obtener todos los usuarios.
    * @param {Request} req - Solicitud HTTP.
@@ -42,8 +71,16 @@ class UsuarioController {
    */
   async getAllUsers(req, res) {
     try {
-      const usuarios = await UsuariosService.getAllUsuarios();
-      res.status(200).json(usuarios);
+      const filters = req.query;
+      let options = {
+        page: parseInt(req.query.page, 10) || 1,
+        limit: parseInt(req.query.limit, 20) || 20,
+        search: req.query.search,
+      };
+      delete filters.limit;
+      delete filters.offset;
+      const usuarios = await UsuariosService.getAllUsuarios(filters, options);
+      res.status(200).json({ data: usuarios.data, total: usuarios.pagination });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }

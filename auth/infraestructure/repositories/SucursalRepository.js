@@ -1,7 +1,8 @@
+import Empresa from "../../domain/models/Empresa.js";
 import Sucursal from "../../domain/models/Sucursal.js";
+import Usuarios from "../../domain/models/Usuarios.js";
 
 class SucursalRepository {
-
   async getAllSucursales() {
     try {
       const sucursales = await Sucursal.findAll();
@@ -22,6 +23,32 @@ class SucursalRepository {
     }
   }
 
+  async getSucursalByUsuario(rutUsuario) {
+    return await Sucursal.findOne({
+      include: [
+        {
+          model: Usuarios,
+          as: "usuarios",
+          where: { rut: rutUsuario },
+          attributes: ["rut", "nombre", "apellido", "email"],
+        },
+      ],
+    });
+  }
+
+  async getSucursalByNombre(nombre) {
+    return await Sucursal.findOne({
+      where: { nombre: { [Op.iLike]: `%${nombre}%` } }, // Búsqueda no sensible a mayúsculas
+      include: [
+        {
+          model: Empresa,
+          as: "empresas",
+          attributes: ["id_empresa", "nombre", "direccion", "telefono"],
+        },
+      ],
+    });
+  }
+
   async updateSucursal(id_sucursal, data) {
     try {
       const sucursal = await Sucursal.findByPk(id_sucursal);
@@ -37,6 +64,10 @@ class SucursalRepository {
       console.error("Error al actualizar la sucursal:", error);
       throw new Error("Error al actualizar la sucursal.");
     }
+  }
+
+  getModel() {
+    return Sucursal;
   }
 }
 

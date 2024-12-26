@@ -4,6 +4,11 @@ import UsuariosRepository from "../infraestructure/repositories/UsuariosReposito
 import RolesRepository from "../infraestructure/repositories/RolRepository.js";
 import EmailService from "../application/helpers/EmailService.js";
 import RolesService from "./RolesService.js";
+import createFilter from "../../shared/utils/helpers.js";
+import { Op } from "sequelize";
+import EmpresaRepository from "../infraestructure/repositories/EmpresaRepository.js";
+import SucursalRepository from "../infraestructure/repositories/SucursalRepository.js";
+import paginate from "../../shared/utils/pagination.js";
 
 class UsuarioService {
   /**
@@ -40,7 +45,7 @@ class UsuarioService {
       password: hashedPassword,
       rolId,
       id_empresa,
-      id_sucursal
+      id_sucursal,
     });
 
     // Enviar la contraseña temporal por correo
@@ -51,14 +56,81 @@ class UsuarioService {
     return usuario;
   }
 
+  async createNewUsuario(userData) {
+    const { rut, nombre, apellido, email, rolId, id_empresa, id_sucursal } =
+      userData;
+
+    const usuario_existente = await UsuariosRepository.findByRut(rut);
+    if (usuario_existente) {
+      throw new Error("El usuario ya existe en el sistema");
+    }
+
+    const rol = await RolesRepository.findById(rolId);
+    if (!rol) {
+      throw new Error("El rol especificado no existe");
+    }
+
+    // Generar una contraseña temporal
+    const tempPassword = crypto.randomBytes(8).toString("hex"); // Genera una contraseña segura de 8 caracteres
+    // Encriptar la contraseña
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(tempPassword, saltRounds);
+
+    // Crear el usuario con la contraseña encriptada
+    const usuario = await UsuariosRepository.create({
+      rut,
+      nombre,
+      apellido,
+      email,
+      password: hashedPassword,
+      rolId,
+      id_empresa,
+      id_sucursal,
+    });
+
+    return {usuario, tempPassword};
+  }
+
   /**
    * Obtener todos los usuarios.
    */
-  async getAllUsuarios() {
-    return await UsuariosRepository.findAll();
+  async getAllUsuarios(filters = {}, options) {
+    const allowedFields = ["rut"];
+    const where = createFilter(filters, allowedFields);
+    if (options.search) {
+      where[Op.or] = [
+        { nombre: { [Op.like]: `%${options.search}%` } },
+        { apellido: { [Op.like]: `%${options.search}%` } },
+        { email: { [Op.like]: `%${options.search}%` } },
+      ];
+    }
+    const include = [
+      {
+        model: RolesRepository.getModel(),
+        as: "rol",
+        attributes: ["nombre"],
+      },
+      {
+        model: EmpresaRepository.getModel(),
+        as: "Empresa",
+        attributes: ["nombre", "direccion", "telefono", "email", "rut_empresa"],
+      },
+      {
+        model: SucursalRepository.getModel(),
+        as: "Sucursal",
+        attributes: ["nombre", "direccion", "telefono"],
+      },
+    ];
+    const result = await paginate(UsuariosRepository.getModel(), options, {
+      where,
+      include,
+      order: [["fecha_registro", "ASC"]],
+    });
+
+    return result;
   }
 
-  async getAllChoferes() {
+  async getAllChoferes(filters = {}, options) {
     try {
       const rolIdChofer = await RolesService.getRolIdByName("chofer");
 
@@ -77,7 +149,7 @@ class UsuarioService {
     return await UsuariosRepository.findByRut(rut);
   }
 
-  async getUsuarioById(rut){
+  async getUsuarioById(rut) {
     return await UsuariosRepository.findOne(rut);
   }
 
