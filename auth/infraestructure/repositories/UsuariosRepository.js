@@ -1,4 +1,6 @@
+import Empresa from "../../domain/models/Empresa.js";
 import Roles from "../../domain/models/Roles.js";
+import Sucursal from "../../domain/models/Sucursal.js";
 import Usuario from "../../domain/models/Usuarios.js";
 import IUsuariosRepository from "../../domain/repositories/IUsuariosRepository.js";
 
@@ -7,7 +9,15 @@ class UsuarioRepository extends IUsuariosRepository {
     return await Usuario.findOne({
       where: { rut, activo: true },
       /* attributes: { exclude: ["password"] }, */
-      include: { model: Roles, as: "rol", attributes: ["id", "nombre"] },
+      include: [
+        { model: Roles, as: "rol", attributes: ["id", "nombre"] },
+        { model: Empresa, as: "Empresa", attributes: ["id_empresa", "nombre"] },
+        {
+          model: Sucursal,
+          as: "Sucursal",
+          attributes: ["id_sucursal", "nombre"],
+        },
+      ],
     });
   }
 

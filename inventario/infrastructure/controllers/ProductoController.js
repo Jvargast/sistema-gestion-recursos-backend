@@ -13,18 +13,20 @@ class ProductoController {
   async getAllProductos(req, res) {
     try {
       const filters = req.query;
-      const options = {
+      let options = {
         page: parseInt(req.query.page, 10) || 1,
-        limit: parseInt(req.query.limit, 10) || 10,
+        limit: parseInt(req.query.limit, 20) || 20,
         search: req.query.search,
-        tipo_producto: req.query.tipo_producto
+        tipo_producto: req.query.tipo_producto,
       };
       delete filters.limit;
       delete filters.offset;
 
       const productos = await ProductoService.getAllProductos(filters, options);
 
-      res.status(200).json(productos);
+      res
+        .status(200)
+        .json({ data: productos.data, total: productos.pagination });
     } catch (error) {
       res.status(404).json({ error: error.message });
     }
@@ -55,6 +57,17 @@ class ProductoController {
     try {
       await ProductoService.deleteProducto(req.params.id);
       res.status(200).json({ message: "Producto eliminado con éxito" });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async deleteProductos(req, res) {
+    try {
+      const { ids } = req.body;
+      const { rut } = req.user;
+      const result = await ProductoService.deleteProductos(ids, rut);
+      res.status(200).json(result);
     } catch (error) {
       res.status(400).json({ error: error.message });
     }

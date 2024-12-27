@@ -57,7 +57,7 @@ class TransaccionService {
     ];
 
     const where = createFilter(filters, allowedFields);
-    
+
     if (options.search) {
       where[Op.or] = [
         { "$cliente.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en cliente.nombre
@@ -104,14 +104,13 @@ class TransaccionService {
     const result = await paginate(TransaccionRepository.getModel(), options, {
       where,
       include,
-      order: [["id_transaccion","ASC"]]
+      order: [["id_transaccion", "ASC"]],
     });
     return result;
   }
 
   async createTransaccion(data, detalles = [], id_usuario) {
-    const { id_cliente, tipo_transaccion, id_metodo_pago } =
-      data;
+    const { id_cliente, tipo_transaccion, id_metodo_pago } = data;
 
     // Validar cliente
     const clienteObtenido = await ClienteService.getClienteById(id_cliente);
@@ -132,7 +131,8 @@ class TransaccionService {
         : await EstadoTransaccionService.findEstadoInicialByTipo(
             tipo_transaccion
           );
-    const tipo_documento = clienteEsEmpresa === "empresa" ? "factura":"boleta";
+    const tipo_documento =
+      clienteEsEmpresa === "empresa" ? "factura" : "boleta";
 
     // Crear transacción
     const nuevaTransaccion = await TransaccionRepository.create({
@@ -141,7 +141,6 @@ class TransaccionService {
       id_estado_transaccion: estadoInicial.id_estado_transaccion,
       id_usuario,
     });
-    
 
     let documentoEmitido = null;
     if (tipo_transaccion == "venta" && clienteEsEmpresa == "empresa") {
@@ -410,8 +409,11 @@ class TransaccionService {
     // Solo se puede hacer esto cuando el estado de la transacción sea en "Pago Pendiente"
     const estadoPago = await EstadoTransaccionService.findByNombre("Pagada");
 
-    if(transaccion.transaccion.dataValues.id_estado_transaccion == estadoPago.dataValues.id_estado_transaccion) {
-      throw new Error("La transacción se encuentra pagada")
+    if (
+      transaccion.transaccion.dataValues.id_estado_transaccion ==
+      estadoPago.dataValues.id_estado_transaccion
+    ) {
+      throw new Error("La transacción se encuentra pagada");
     }
 
     // Verificar el estado actual de la transacción
@@ -423,7 +425,7 @@ class TransaccionService {
         "La transacción no está en un estado válido para completar."
       );
     }
-    
+
     // Procesar el pago
     const pagoRegistrado = await PagoService.acreditarPago(
       id_transaccion,
@@ -433,7 +435,7 @@ class TransaccionService {
     );
 
     // Cambiar el estado de los detalles a "En Bodega - Reservado"
-    const nuevoEstadoDetalle =
+    /*     const nuevoEstadoDetalle =
       await EstadoDetalleTransaccionService.findByNombre(
         "En bodega - Reservado"
       );
@@ -441,7 +443,7 @@ class TransaccionService {
       id_transaccion,
       nuevoEstadoDetalle.dataValues.id_estado_detalle_transaccion,
       id_usuario
-    );
+    ); */
 
     // Cambiar el estado de la transacción
     await this.changeEstadoTransaccion(
@@ -450,7 +452,6 @@ class TransaccionService {
       id_usuario
     );
 
-    console.log("Tipo documento", transaccion.transaccion.dataValues.tipo_documento)
     // Emitir boleta si corresponde
     let documentoEmitido = null;
     const tipoDocumento =
@@ -559,6 +560,7 @@ class TransaccionService {
         `La transición de estado de ${estadoActual} a ${id_estado_transaccion} no es válida.`
       );
     }
+
     // Actualizar el estado de la transacción
     const updated = await TransaccionRepository.update(id, {
       id_estado_transaccion,
@@ -568,6 +570,18 @@ class TransaccionService {
     const estadoACambiar = await EstadoTransaccionService.findById(
       id_estado_transaccion
     );
+
+    if (estadoACambiar.dataValues.nombre_estado === "Pago Pendiente") {
+      const nuevoEstadoDetalle =
+        await EstadoDetalleTransaccionService.findByNombre(
+          "En bodega - Reservado"
+        );
+      await DetalleTransaccionService.cambiarEstadoDetalles(
+        id,
+        nuevoEstadoDetalle.dataValues.id_estado_detalle_transaccion,
+        rut
+      );
+    }
 
     // Registrar log de cambio de estado
     await LogTransaccionService.createLog({
@@ -838,6 +852,7 @@ class TransaccionService {
 
     await detalle.destroy(); // Elimina el detalle de la base de datos
   }
+
 }
 
 export default new TransaccionService();

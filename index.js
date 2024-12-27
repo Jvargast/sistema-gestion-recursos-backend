@@ -27,7 +27,7 @@ import CategoriaProductoRoutes from "./inventario/infrastructure/routes/Categori
 import InventarioRoutes from "./inventario/infrastructure/routes/InventarioRoutes.js";
 import ProductoRoutes from "./inventario/infrastructure/routes/ProductoRoutes.js";
 import TipoProductoRoutes from "./inventario/infrastructure/routes/TipoProductoRoutes.js";
-
+import ProductoImageRoutes from "./inventario/infrastructure/routes/ProductoImageRoutes.js"
 /* MÓDULO VENTAS */
 import ClienteRoutes from "./ventas/infrastructure/routes/ClienteRoutes.js";
 import EstadoTransaccionRoutes from "./ventas/infrastructure/routes/EstadoTransaccionRoutes.js";
@@ -43,7 +43,11 @@ import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.j
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
 import proveedoresRoutes from "./proveedores/infrastructure/routes/proveedoesrRoutes.js";
  */
-
+/* MÓDULO DE ENTREGAS */
+import CamionRoutes from "./Entregas/infrastructure/routes/CamionRoutes.js";
+import AgendaCargaRoutes from "./Entregas/infrastructure/routes/AgendaCargaRoutes.js";
+import InventarioCamionRoutes from "./Entregas/infrastructure/routes/InvetarioCamionRoutes.js";
+import EntregaRoutes from "./Entregas/infrastructure/routes/EntregaRoutes.js";
 /* MÓDULO ANÁLISIS */
 // Rutas del módulo de análisis
 import ProductoEstadisticaRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
@@ -78,21 +82,6 @@ app.use(
   "https://jvargast.github.io", // Dominio base de tu frontend
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Permitir solicitudes sin origen (por ejemplo, herramientas Postman)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`Origen no permitido por CORS: ${origin}`));
-      }
-    },
-    credentials: true, // Permitir cookies y encabezados de autorización
-    methods: ["GET", "POST", "PUT", "DELETE"], // Métodos permitidos
-    allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
-  })
-); */
 
 /* Rutas*/
 /* MÓDULO AUTH */
@@ -111,6 +100,11 @@ app.use("/api/categorias-productos", CategoriaProductoRoutes);
 app.use("/api/inventarios", InventarioRoutes);
 app.use("/api/productos", ProductoRoutes);
 app.use("/api/tipo-productos", TipoProductoRoutes);
+/**
+ * Para carga de fotos
+ */
+app.use("/api/productos/imagenes", ProductoImageRoutes);
+
 
 /* MÓDULO VENTAS */
 app.use("/api/clientes", ClienteRoutes);
@@ -126,6 +120,13 @@ app.use("/api/pagos", PagosRoutes);
 /* MÓDULO ANÁLISIS */
 app.use("/api/analisis/productos", ProductoEstadisticaRoutes);
 app.use("/api/analisis/ventas", VentasEstadisticasRoutes);
+
+/* MÓDULO DE ENTREGAS */
+app.use("/api/camiones", CamionRoutes);
+app.use("/api/inventario-camion", InventarioCamionRoutes);
+app.use("/api/agendas", AgendaCargaRoutes);
+app.use("/api/entregas", EntregaRoutes);
+
 
 const PORT = process.env.PORT || 9000;
 

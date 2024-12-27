@@ -5,6 +5,7 @@ import loadAuthAssociations from '../auth/domain/associate-models.js';
 import loadInventarioAssociations from '../inventario/domain/associate-models.js';
 import loadSalesAssociations from '../ventas/domain/associate-models.js';
 import loadAnalysisAssociations from '../analisis/domain/associate-models.js';
+import loadEntregasAssociations from '../Entregas/domain/associate-model.js';
 //import loadGeografiaAssociations from '../geografia/domain/associate-models.js';
 //import loadManagementAssociations from '../management/domain/associate-models.js';
 //import loadProveedoresAssociations from '../proveedores/domain/associate-models.js';
@@ -23,6 +24,7 @@ async function initializeDatabase() {
     loadInventarioAssociations();
     loadSalesAssociations();
     loadAnalysisAssociations();
+    loadEntregasAssociations();
     //loadGeografiaAssociations();
     //loadManagementAssociations();
     //loadProveedoresAssociations();

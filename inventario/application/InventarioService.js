@@ -134,6 +134,38 @@ class InventarioService {
       message: `Devolución registrada para el producto ${id_producto}.`,
     };
   }
+
+  async incrementStock(id_producto, cantidad) {
+    const inventario = await this.getInventarioByProductoId(id_producto);
+    if (!inventario) throw new Error("Producto no encontrado en inventario.");
+
+    inventario.cantidad += cantidad;
+    await InventarioRepository.update(id_producto, {
+      cantidad: inventario.cantidad,
+    });
+
+    return inventario;
+  }
+
+  async decrementarStock(id_producto, cantidad) {
+    // Validar cantidad positiva
+    if (cantidad <= 0) {
+      throw new Error("Cantidad debe ser un número positivo.");
+    }
+    const inventario = await this.getInventarioByProductoId(id_producto);
+    if (!inventario) throw new Error("Producto no encontrado en inventario.");
+    
+    if (Math.floor(inventario.cantidad) < Math.floor(cantidad)) {
+      throw new Error("Stock insuficiente en  InventarioService");
+    }
+
+    inventario.cantidad -= cantidad;
+    await InventarioRepository.update(id_producto, {
+      cantidad: inventario.cantidad,
+    });
+
+    return inventario;
+  }
 }
 
 export default new InventarioService();
