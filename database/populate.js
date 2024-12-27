@@ -187,8 +187,8 @@ async function populateDatabase() {
         descripcion: "Producto disponible en bodega.",
       },
       {
-        nombre_estado: "En tránsito - Disponible",
-        descripcion: "Producto disponible y en tránsito.",
+        nombre_estado: "Eliminado",
+        descripcion: "Producto Eliminado.",
       },
       { nombre_estado: "Fisuras", descripcion: "Producto con fisuras." },
       { nombre_estado: "Contaminado", descripcion: "Producto contaminado." },

@@ -44,7 +44,7 @@ class VentasEstadisticasService {
       options,
       {
         where,
-        order: [["id_ventas_estadisticas", "ASC"]]
+        order: [["id_ventas_estadisticas", "ASC"]],
       }
     );
     return result.data;
@@ -81,80 +81,57 @@ class VentasEstadisticasService {
   }
   // calcular estadisticas por año
   async calcularEstadisticasPorAno(year) {
-    // Obtener todas las transacciones completadas en el año
+    try {
+      // Obtener todas las transacciones completadas en el año
 
-    const estadoPermitido = await EstadoTransaccionService.findByNombre(
-      "Completada"
-    );
-    //Colocar este detalle para ventas Pagadas y detalles Entregado
-    const estadoDetalle = await EstadoDetalleTransaccionService.findByNombre(
-      "Entregado"
-    );
+      const estadoPermitido = await EstadoTransaccionService.findByNombre(
+        "Completada"
+      );
+      if (!estadoPermitido) {
+        throw new Error(`No se encontró un estado con nombre "Completada"`);
+      }
 
-    const transacciones = await TransaccionRepository.findAllWithConditions({
-      where: {
-        tipo_transaccion: "venta",
-        id_estado_transaccion: estadoPermitido.dataValues.id_estado_transaccion,
-        fecha_creacion: {
-          [Op.between]: [`${year}-01-01`, `${year}-12-31`],
-        },
-      },
-      include: [
-        {
-          model: EstadoTransaccionRepository.getModel(),
-          as: "estado",
-          attributes: ["nombre_estado"], // Opcional, para ver nombres en las transacciones
-        },
-        {
-          model: DetalleTransaccionRepository.getModel(),
-          as: "detalles",
-          where: {
-            estado_producto_transaccion:
-              estadoDetalle.dataValues.id_estado_detalle_transaccion,
+      //Colocar este detalle para ventas Pagadas y detalles Entregado
+      const estadoDetalle = await EstadoDetalleTransaccionService.findByNombre(
+        "Entregado"
+      );
+      if (!estadoDetalle) {
+        throw new Error(
+          `No se encontró un estado detalle con nombre "Entregado"`
+        );
+      }
+
+      const transacciones = await TransaccionRepository.findAllWithConditions({
+        where: {
+          tipo_transaccion: "venta",
+          id_estado_transaccion:
+            estadoPermitido.dataValues.id_estado_transaccion,
+          fecha_creacion: {
+            [Op.between]: [`${year}-01-01`, `${year}-12-31`],
           },
         },
-      ],
-    });
-
-
-    if (transacciones.length === 0) {
-      throw new Error(`No se encontraron transacciones para el año ${year}.`);
-    }
-
-    const ventasAnuales = transacciones.reduce(
-      (total, transaccion) =>
-        total +
-        transaccion.detalles.reduce(
-          (sum, detalle) => sum + detalle.cantidad,
-          0
-        ),
-      0
-    );
-
-    const unidadesVendidasAnuales = await this.calcularUnidadesVendidasPorAno(
-      year
-    );
-
-    /* const datosMensuales = await this.calcularDatosMensuales(
-      year,
-      estadoPermitido.dataValues.id_estado_transaccion,
-      estadoDetalle.dataValues.id_estado_detalle_transaccion
-    ); */
-    // Calcular datos mensuales
-    const datosMensuales = Array.from({ length: 12 }, (_, index) => {
-      const mes = index + 1;
-      const transaccionesMes = transacciones.filter((transaccion) => {
-        const mesTransaccion =
-          new Date(transaccion.fecha_creacion).getMonth() + 1;
-        return mesTransaccion === mes;
+        include: [
+          {
+            model: EstadoTransaccionRepository.getModel(),
+            as: "estado",
+            attributes: ["nombre_estado"], // Opcional, para ver nombres en las transacciones
+          },
+          {
+            model: DetalleTransaccionRepository.getModel(),
+            as: "detalles",
+            where: {
+              estado_producto_transaccion:
+                estadoDetalle.dataValues.id_estado_detalle_transaccion,
+            },
+          },
+        ],
       });
 
-      const totalMes = transaccionesMes.reduce(
-        (total, transaccion) => total + transaccion.total,
-        0
-      );
+      if (transacciones.length === 0) {
+        throw new Error(`No se encontraron transacciones para el año ${year}.`);
+      }
 
-      const unidadesMes = transaccionesMes.reduce(
+      const ventasAnuales = transacciones.reduce(
         (total, transaccion) =>
           total +
           transaccion.detalles.reduce(
@@ -164,29 +141,64 @@ class VentasEstadisticasService {
         0
       );
 
-      return {
-        mes,
-        total: totalMes,
-        unidades: unidadesMes,
-      };
-    });
-    // Crear o actualizar las estadísticas
-    const estadisticas = {
-      year,
-      ventas_anuales: ventasAnuales,
-      unidades_vendidas_anuales: unidadesVendidasAnuales,
-      datos_mensuales: datosMensuales,
-    };
-
-    const existente = await VentasEstadisticasRepository.findByYear(year);
-
-    if (existente) {
-      return await VentasEstadisticasRepository.updateById(
-        existente[0].dataValues.id_ventas_estadisticas,
-        estadisticas
+      const unidadesVendidasAnuales = await this.calcularUnidadesVendidasPorAno(
+        year
       );
-    } else {
-      return await VentasEstadisticasRepository.create(estadisticas);
+      // Calcular datos mensuales
+      const datosMensuales = Array.from({ length: 12 }, (_, index) => {
+        const mes = index + 1;
+        const transaccionesMes = transacciones.filter((transaccion) => {
+          const mesTransaccion =
+            new Date(transaccion.fecha_creacion).getMonth() + 1;
+          return mesTransaccion === mes;
+        });
+
+        const totalMes = transaccionesMes.reduce(
+          (total, transaccion) => total + transaccion.total,
+          0
+        );
+
+        const unidadesMes = transaccionesMes.reduce(
+          (total, transaccion) =>
+            total +
+            transaccion.detalles.reduce(
+              (sum, detalle) => sum + detalle.cantidad,
+              0
+            ),
+          0
+        );
+
+        return {
+          mes,
+          total: totalMes,
+          unidades: unidadesMes,
+        };
+      });
+      // Crear o actualizar las estadísticas
+      const estadisticas = {
+        year,
+        ventas_anuales: ventasAnuales,
+        unidades_vendidas_anuales: unidadesVendidasAnuales,
+        datos_mensuales: datosMensuales,
+      };
+
+      const existente = await VentasEstadisticasRepository.findByYear(year);
+
+      if (existente.length > 0) {
+        return await VentasEstadisticasRepository.updateById(
+          existente[0].dataValues.id_ventas_estadisticas,
+          estadisticas
+        );
+      } else {
+        return await VentasEstadisticasRepository.create(estadisticas);
+      }
+    } catch (error) {
+      console.error(error);
+      return {
+        success: false,
+        message: error.message,
+        stack: error.stack,
+      };
     }
   }
 
@@ -197,10 +209,18 @@ class VentasEstadisticasService {
     const estadoPermitido = await EstadoTransaccionService.findByNombre(
       "Completada"
     );
+    if (!estadoPermitido) {
+      throw new Error(`No se encontró un estado con nombre "Completada"`);
+    }
 
     const estadoDetalle = await EstadoDetalleTransaccionService.findByNombre(
       "Entregado"
     );
+    if (!estadoDetalle) {
+      throw new Error(
+        `No se encontró un estado detalle con nombre "Entregado"`
+      );
+    }
 
     const detalles = await DetalleTransaccionRepository.findAllWithConditions({
       where: {

@@ -9,6 +9,7 @@ router.get('/', ProductoController.getAllProductos);
 router.get('/tipo/:tipo', ProductoController.getProductosByTipo); // Ruta para obtener productos por tipo
 router.post('/', ProductoController.createProducto);
 router.put('/:id', ProductoController.updateProducto);
+router.patch('/', ProductoController.deleteProductos);
 router.delete('/:id', ProductoController.deleteProducto);
 
 export default router;

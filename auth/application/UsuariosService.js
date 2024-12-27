@@ -146,7 +146,11 @@ class UsuarioService {
    * Obtener un usuario por su RUT.
    */
   async getUsuarioByRut(rut) {
-    return await UsuariosRepository.findByRut(rut);
+    const usuario = await UsuariosRepository.findByRut(rut);
+
+
+
+    return usuario;
   }
 
   async getUsuarioById(rut) {
@@ -218,6 +222,29 @@ class UsuarioService {
    */
   async verifyPassword(plainPassword, hashedPassword) {
     return await bcrypt.compare(plainPassword, hashedPassword);
+  }
+
+  async resetUserPassword(rut) {
+    // Buscar al usuario por su RUT
+    const usuario = await UsuariosRepository.findByRut(rut);
+  
+    if (!usuario) {
+      throw new Error("El usuario no existe.");
+    }
+  
+    // Generar una nueva contraseña temporal
+    const newTempPassword = crypto.randomBytes(8).toString("hex");
+  
+    // Encriptar la nueva contraseña
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newTempPassword, saltRounds);
+  
+    // Actualizar la contraseña del usuario en la base de datos
+    usuario.password = hashedPassword;
+    await UsuariosRepository.update(usuario);
+  
+    // Retornar la nueva contraseña temporal al administrador
+    return { usuario, newTempPassword };
   }
 }
 

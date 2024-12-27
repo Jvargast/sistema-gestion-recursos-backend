@@ -24,7 +24,7 @@ class ProductoService {
     return producto;
   }
 
-  async getAllProductos(filters = {}, options = { page: 1, limit: 10 }) {
+  async getAllProductos(filters = {}, options) {
     const allowedFields = [
       "nombre_producto",
       "marca",
@@ -84,7 +84,7 @@ class ProductoService {
       include,
       order: [["id_producto", "ASC"]]
     });
-    return result.data;
+    return result;
   }
 
   async createProducto(data) {
@@ -200,6 +200,36 @@ class ProductoService {
       }
     }
     return true;
+  }
+  async deleteProductos(ids, id_usuario) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new Error(
+        "Debe proporcionar al menos un ID de transacción para eliminar."
+      );
+    }
+    const productos = await ProductosRepository.findByIds(ids);
+    if(productos.length !== ids.length) {
+      const notFoundIds = ids.filter(
+        (id) =>
+          !productos.some(
+            (producto) => producto.id_producto === id
+          )
+      );
+      throw new Error(
+        `Los siguientes productos no fueron encontradas: ${notFoundIds.join(
+          ", "
+        )}`
+      );
+    }
+    const estadoEliminado = await EstadoProductoService.getEstadoByNombre("Eliminado");
+    for(const producto of productos) {
+      await ProductosRepository.update(producto.id_producto, {
+        id_estado_producto: estadoEliminado.dataValues.id_estado_producto
+      })
+    }
+    return {
+      message: `Se marcaron como eliminados ${ids.length} productos.`
+    }
   }
 }
 

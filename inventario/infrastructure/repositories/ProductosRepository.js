@@ -58,6 +58,12 @@ class ProductoRepository extends IProductoRepository {
     return await Producto.findAll({ where: { id_estado_producto: 1 } }); // 1 = "Disponible"
   }
 
+  async findByIds(ids) {
+    return await Producto.findAll({
+      where: { id_producto: ids },
+    });
+  }
+
   getModel() {
     return Producto;
   }
