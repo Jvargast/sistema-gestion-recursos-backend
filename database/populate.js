@@ -74,6 +74,9 @@ async function populateDatabase() {
         nombre: "eliminar_usuarios",
         descripcion: "Permiso para eliminar usuarios",
       },
+      {
+        nombre: "ver_cliente", descripcion: "Permiso para ver cliente"
+      },
     ];
 
     const permisosCreados = await Permisos.bulkCreate(permisosAuth);
