@@ -1,5 +1,7 @@
 import Empresa from "../../domain/models/Empresa.js";
+import Permisos from "../../domain/models/Permisos.js";
 import Roles from "../../domain/models/Roles.js";
+import RolesPermisos from "../../domain/models/RolesPermisos.js";
 import Sucursal from "../../domain/models/Sucursal.js";
 import Usuario from "../../domain/models/Usuarios.js";
 import IUsuariosRepository from "../../domain/repositories/IUsuariosRepository.js";
@@ -60,6 +62,19 @@ class UsuarioRepository extends IUsuariosRepository {
         model: Roles,
         as: "rol",
         attributes: ["nombre"],
+        include: [
+          {
+            model: RolesPermisos,
+            as: "rolesPermisos", // Usa el alias definido en la relación
+            include: [
+              {
+                model: Permisos,
+                as: "permiso", // Usa el alias definido en la relación
+                attributes: ["nombre"], // Solo queremos el nombre del permiso
+              },
+            ],
+          },
+        ],
       },
     });
   }

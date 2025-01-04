@@ -1,6 +1,0 @@
-Falta revisar la acreditacion del pago, donde actualice el estado de la factura
-si es que hay factura, el estado del pago también actualizar.
-
-
-Modificar módulo de análisis tema de referencia no existe: 
-"id_estado_detalle_transaccion"

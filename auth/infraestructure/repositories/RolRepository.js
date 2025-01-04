@@ -111,6 +111,25 @@ class RolRepository extends IRolRepository {
       },
     });
   }
+
+  async getRoleWithPermissions(rolId) {
+    return await Roles.findByPk(rolId, {
+      include: [
+        {
+          model: RolesPermisos,
+          as: "rolesPermisos", // Alias usado en la relación
+          include: [
+            {
+              model: Permisos,
+              as: "permiso", // Alias usado en la relación
+              attributes: ["nombre"], // Solo queremos los nombres de los permisos
+            },
+          ],
+        },
+      ],
+    });
+  }
+
   getModel() {
     return Roles;
   }

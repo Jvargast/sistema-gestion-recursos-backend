@@ -12,6 +12,38 @@ class ProductoEstadisticasRepository extends IProductoEstadisticasRepository {
     });
   }
 
+  async findAllByYear(year) {
+    try {
+      return await ProductoEstadisticas.findAll({
+        where: { year },
+      });
+    } catch (error) {
+      console.error("Error al buscar estadísticas por año:", error.message);
+      throw error;
+    }
+  }
+
+  // Método para actualizar o crear en bloque
+  async bulkCreate(data, options) {
+    try {
+      return await ProductoEstadisticas.bulkCreate(data, options);
+    } catch (error) {
+      console.error("Error al realizar bulkCreate:", error.message);
+      throw error;
+    }
+  }
+  // Método para actualizar un registro específico
+  async update(id, data) {
+    try {
+      return await ProductoEstadisticas.update(data, {
+        where: { id_producto_estadisticas: id },
+      });
+    } catch (error) {
+      console.error("Error al actualizar estadística:", error.message);
+      throw error;
+    }
+  }
+
   async findByProductoId(id_producto) {
     return await ProductoEstadisticas.findAll({
       where: { id_producto },
@@ -30,10 +62,6 @@ class ProductoEstadisticasRepository extends IProductoEstadisticasRepository {
 
   async create(data) {
     return await ProductoEstadisticas.create(data);
-  }
-
-  async bulkCreate(dataArray) {
-    return await ProductoEstadisticas.bulkCreate(dataArray);
   }
 
   async updateByProductoIdAndYear(id_producto, year, data) {

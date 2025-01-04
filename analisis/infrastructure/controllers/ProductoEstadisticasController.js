@@ -31,10 +31,14 @@ class ProductoEstadisticasController {
   async getAllEstadisticas(req, res) {
     try {
       const { page = 1, limit = 10, ...filters } = req.query;
+
+      const validatedPage = Math.max(1, parseInt(page, 10));
+      const validatedLimit = Math.max(1, parseInt(limit, 10));
+
       const estadisticas =
         await ProductoEstadisticasService.obtenerTodasEstadisticas(filters, {
-          page: parseInt(page, 10),
-          limit: parseInt(limit, 10),
+          page: validatedPage,
+          limit: validatedLimit,
         });
       res.status(200).json(estadisticas);
     } catch (error) {

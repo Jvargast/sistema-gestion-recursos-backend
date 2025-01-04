@@ -32,9 +32,14 @@ class PagoController {
   async updatePago(req, res) {
     try {
       const { id } = req.params;
-      const { monto, referencia, id_transaccion} = req.body;
-      
-      const pagoUpdated = await PagoService.updatePagoById(id, monto, referencia, id_transaccion);
+      const { monto, referencia, id_transaccion } = req.body;
+
+      const pagoUpdated = await PagoService.updatePagoById(
+        id,
+        monto,
+        referencia,
+        id_transaccion
+      );
       res.status(200).json(pagoUpdated);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -60,6 +65,23 @@ class PagoController {
     }
   }
 
+  async completarPago(req, res) {
+    try {
+      const { id } = req.params;
+      const { metodo_pago, referencia } = req.body;
+      const { rut } = req.user;
+
+      const resultado = await PagoService.completarPago(
+        id,
+        metodo_pago,
+        referencia,
+        rut
+      );
+      res.status(200).json(resultado);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
   async registrarMetodoPago(req, res) {
     try {
       const { id } = req.params;

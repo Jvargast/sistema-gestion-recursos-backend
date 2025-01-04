@@ -7,8 +7,12 @@ const router = Router();
 
 router.use(verifyToken);
 
-router.get("/:id", authenticate, TransaccionController.getTransaccionById); // Obtener transacción por ID
+
 router.get("/", authenticate, TransaccionController.getAllTransacciones); // Obtener todas las transacciones con filtros y paginación
+router.get("/pendientes", authenticate, TransaccionController.getPendingTransacciones); // Obtener todas las transacciones pendientes con filtros y paginación
+router.get("/exportar-pdf/:id", authenticate, TransaccionController.createPdf);
+
+router.get("/:id", authenticate, TransaccionController.getTransaccionById); // Obtener transacción por ID
 router.post("/", authenticate, TransaccionController.createTransaccion); // Crear una transacción
 router.put("/:id/changeEstado", authenticate, TransaccionController.changeEstado); // Cambiar estado de transacción
 router.put("/:id/changeTipo", authenticate, TransaccionController.changeTipoTransaccion); // Cambiar tipo de transacción
@@ -23,5 +27,5 @@ router.put("/:id/changeDetallesInfo", authenticate, TransaccionController.change
 router.put("/:id/changeMetodoPago", authenticate, TransaccionController.changeMetodoPago);
 router.delete("/:id/detalles/:idDetalle", authenticate, TransaccionController.deleteDetalle);
 
-router.get("/exportar-pdf/:id", authenticate, TransaccionController.createPdf);
+
 export default router;

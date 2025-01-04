@@ -3,10 +3,12 @@ import EntregaService from "../../application/EntregaService.js";
 class EntregaController {
   async createEntrega(req, res) {
     try {
-      const { detalles, rut, fechaHoraEntrega } = req.body;
-
+      const { id_camion, detalles, fechaHoraEntrega } = req.body;
+      const { rut } = req.user;
       // Crear la entrega
+      console.log(req.body);
       const result = await EntregaService.createEntrega(
+        id_camion,
         detalles,
         rut,
         fechaHoraEntrega
@@ -30,7 +32,18 @@ class EntregaController {
 
   async getAll(req, res) {
     try {
-      const entregas = await EntregaService.getAllEntregas();
+      const { page = 1, limit = 10, choferId } = req.query;
+
+      const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+      };
+
+      const entregas = await EntregaService.getEntregasPorChofer(
+        choferId,
+        options
+      );
+
       res.status(200).json(entregas);
     } catch (error) {
       res.status(400).json({ error: error.message });

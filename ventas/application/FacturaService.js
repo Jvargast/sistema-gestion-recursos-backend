@@ -9,7 +9,10 @@ import paginate from "../../shared/utils/pagination.js";
 import EstadoFacturaRepository from "../infrastructure/repositories/EstadoFacturaRepository.js";
 import TransaccionRepository from "../infrastructure/repositories/TransaccionRepository.js";
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
+import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
+import BoletaRepository from "../infrastructure/repositories/BoletaRepository.js";
+import EstadoPagoRepository from "../infrastructure/repositories/EstadoPagoRepository.js";
 
 class FacturaService {
   // Obtener una factura por ID
@@ -25,57 +28,52 @@ class FacturaService {
     const allowedFields = [
       "id_factura",
       "numero_factura",
-      "fecha_emision",
-      "total",
-      "id_estado_factura",
-      "observaciones",
+      "forma_pago",
+      "precios_opcion",
     ];
     const where = createFilter(filters, allowedFields);
     if (options.search) {
       where[Op.or] = [
-        { observaciones: { [Op.like]: `%${options.search}%` } }, // Buscar en
-        { fecha_emision: { [Op.like]: `%${options.search}%` } }, // Buscar
+        { "$documento.cliente.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en
+        Sequelize.where(
+          Sequelize.cast(Sequelize.col("documento.fecha_emision"), "text"),
+          { [Op.like]: `%${options.search}%` }
+        ), // Buscar
         { numero_factura: { [Op.like]: `%${options.search}%` } }, // Buscar en
       ];
     }
-
-    const estadoBuscado = await EstadoFacturaRepository.findByNombre(
-      options.estado
-    );
-
-    if (estadoBuscado) {
-      where.id_estado_factura = {
-        [Op.not]: estadoBuscado.dataValues.id_estado_factura,
-      };
-    }
     const include = [
       {
-        model: TransaccionRepository.getModel(),
-        as: "transaccion",
+        model: DocumentoRepository.getModel(),
+        as: "documento",
+        attributes: ["tipo_documento", "total", "fecha_emision"],
         include: [
           {
             model: ClienteRepository.getModel(),
             as: "cliente",
             attributes: ["nombre", "email", "rut"], // Atributos del cliente
           },
+          {
+            model: TransaccionRepository.getModel(),
+            as: "transaccion",
+          },
+          {
+            model: EstadoPagoRepository.getModel(),
+            as: "estadoPago",
+          },
         ],
-      },
-      {
-        model: EstadoFacturaRepository.getModel(), // Modelo de EstadoTransaccion
-        as: "estado", // Alias definido en las asociaciones
-        attributes: ["nombre"], // Campos que deseas incluir
       },
     ];
     const result = await paginate(FacturaRepository.getModel(), options, {
       where,
       include,
-      order:[["id_factura", "ASC"]]
+      order: [["id_factura", "ASC"]],
     });
     return result;
   }
 
   // Crear una factura independiente (sin transacción asociada)
-  async crearFacturaIndependiente(data) {
+  /*   async crearFacturaIndependiente(data) {
     const facturaData = {
       fecha_emision: new Date(),
       total: data.total,
@@ -83,9 +81,85 @@ class FacturaService {
     };
 
     return await FacturaRepository.create(facturaData);
+  } */
+
+  // Crear factura desde un documento
+  async generarFacturaDesdeDocumento(id_documento, data = {}) {
+    const documento = await DocumentoRepository.findById(id_documento);
+    if (!documento) {
+      throw new Error("Documento no encontrado.");
+    }
+
+    if (documento.tipo_documento !== "factura") {
+      throw new Error("El documento no es del tipo factura.");
+    }
+
+    // Generar el número de factura
+    const numeroFactura = await this.generarNumeroFactura();
+
+    const factura = await FacturaRepository.create({
+      id_documento: documento.id_documento,
+      numero_factura: numeroFactura,
+      tipo_factura: data.tipo_factura || "A",
+      precios_opcion: data.precios_opcion || "Neto",
+      forma_pago: data.forma_pago || "Contado",
+    });
+
+    return factura;
   }
 
-  async generarFactura(id_transaccion, id_usuario) {
+  // Generar boleta desde un documento
+  async generarBoletaDesdeDocumento(id_documento) {
+    const documento = await DocumentoRepository.findById(id_documento);
+    if (!documento) {
+      throw new Error("Documento no encontrado.");
+    }
+
+    if (documento.tipo_documento !== "boleta") {
+      throw new Error("El documento no es del tipo boleta.");
+    }
+
+    const boleta = await BoletaRepository.create({
+      id_documento: documento.id_documento,
+    });
+
+    return boleta;
+  }
+
+  // Actualizar estado de un documento
+  async actualizarEstadoDocumento(id_documento, nuevo_estado) {
+    const estado = await EstadoPagoService.findById(nuevo_estado);
+    if (!estado) {
+      throw new Error("Estado no encontrado.");
+    }
+
+    const documento = await DocumentoRepository.findById(id_documento);
+    if (!documento) {
+      throw new Error("Documento no encontrado.");
+    }
+
+    await DocumentoRepository.update(id_documento, {
+      id_estado_pago: estado.id_estado_pago,
+    });
+
+    return { message: "Estado del documento actualizado con éxito." };
+  }
+
+  // Generar número de factura
+  async generarNumeroFactura() {
+    const ultimaFactura = await FacturaRepository.findLastFactura({
+      order: [["id_factura", "DESC"]],
+    });
+
+    const prefijo = new Date().getFullYear();
+    if (ultimaFactura) {
+      const ultimoNumero = parseInt(ultimaFactura.dataValues.id_factura);
+      return `${prefijo}-${(ultimoNumero + 1).toString().padStart(6, "0")}`;
+    }
+    return `${prefijo}-000001`;
+  }
+
+  /*   async generarFactura(id_transaccion, id_usuario) {
     const transaccion = await TransaccionService.getTransaccionById(
       id_transaccion
     );
@@ -136,9 +210,9 @@ class FacturaService {
     });
 
     return factura;
-  }
+  } */
 
-  async generarBoleta(id_transaccion, id_usuario) {
+  /*   async generarBoleta(id_transaccion, id_usuario) {
     try {
       const transaccion = await TransaccionService.getTransaccionById(
         id_transaccion
@@ -156,7 +230,6 @@ class FacturaService {
         "Pagada"
       );
 
-
       if (
         transaccion.transaccion.dataValues.id_estado_transaccion !==
         estadoCompletado.dataValues.id_estado_transaccion
@@ -169,7 +242,6 @@ class FacturaService {
         "Pagada"
       );
 
-
       const numeroGenerado = await this.generarNumeroFactura();
 
       console.log("Datos para FacturaRepository.create:", {
@@ -180,7 +252,6 @@ class FacturaService {
         total: transaccion.transaccion.dataValues.total,
         id_estado_factura: estadoFacturaCompletado.dataValues.id_estado_factura,
       });
-      
 
       const boleta = await FacturaRepository.create({
         numero_factura: numeroGenerado,
@@ -189,27 +260,30 @@ class FacturaService {
         id_usuario,
         total: transaccion.transaccion.dataValues.total,
         id_estado_factura: estadoFacturaCompletado.dataValues.id_estado_factura, // Las boletas suelen considerarse pagadas automáticamente
-    });
+      });
       console.log("Boleta creada:", boleta);
 
       // Actualizar la transacción con el ID de la factura o boleta
       await TransaccionRepository.update(id_transaccion, {
         id_factura: boleta.dataValues.id_factura,
       });
-      console.log("Transacción actualizada con ID de boleta:", boleta.dataValues.id_factura);
+      console.log(
+        "Transacción actualizada con ID de boleta:",
+        boleta.dataValues.id_factura
+      );
 
       return boleta;
     } catch (error) {
       console.log("Error en generar Boleta", error.message);
       throw error;
     }
-  }
+  } */
 
-  async generarNumeroFactura() {
+  /*   async generarNumeroFactura() {
     try {
       // Obtener el último número de factura
       const ultimaFactura = await FacturaRepository.findLastFactura({
-        order: [["numero_factura", "DESC"]]
+        order: [["numero_factura", "DESC"]],
       });
 
       let nuevoNumero;
@@ -231,9 +305,9 @@ class FacturaService {
     } catch (error) {
       throw new Error(`Error al generar número de factura: ${error.message}`);
     }
-  }
+  } */
 
-  async crearFacturaDesdeTransaccion(id_transaccion, id_usuario, data) {
+  /*   async crearFacturaDesdeTransaccion(id_transaccion, id_usuario, data) {
     const transaccion = await TransaccionService.getTransaccionById(
       id_transaccion
     );
@@ -260,30 +334,11 @@ class FacturaService {
 
     const factura = await FacturaRepository.create(facturaData);
 
-    /**
-     *
-     *
-     * Revisar si es necesario cambiar el estado de la transacción
-     *
-     *
-     *
-     *
-     */
-    /* const estadoSiguiente = await EstadoTransaccionService.findByNombre(
-      "Completada - Facturada"
-    );
-
-    // Actualizar estado de la transacción a "Facturada" si es necesario
-    await TransaccionService.changeEstadoTransaccion(
-      id_transaccion,
-      estadoSiguiente,
-      id_usuario
-    ); */
 
     return factura;
-  }
+  } */
   /* Generar Factura para una Transacción */
-  async generarFacturaParaTransaccion(
+  /*   async generarFacturaParaTransaccion(
     id_transaccion,
     id_estado_factura,
     id_usuario
@@ -304,9 +359,9 @@ class FacturaService {
       id_usuario,
       estado: id_estado_factura,
     });
-  }
+  } */
 
-  async actualizarEstadoFactura(id_factura, nuevo_estado) {
+  /*   async actualizarEstadoFactura(id_factura, nuevo_estado) {
     const estado = await EstadoFacturaService.findById(nuevo_estado);
 
     if (!estado) throw new Error("estado no encontrado.");
@@ -320,9 +375,9 @@ class FacturaService {
     });
 
     return { message: "Estado de factura actualizado con éxito" };
-  }
+  } */
 
-  async ajustarInventarioPorFactura(id_factura) {
+  /*   async ajustarInventarioPorFactura(id_factura) {
     const factura = await this.getFacturaById(id_factura);
 
     if (!factura) throw new Error("Factura no encontrada.");
@@ -340,27 +395,25 @@ class FacturaService {
     }
 
     return { message: "Inventario ajustado por factura emitida" };
-  }
+  } */
   // Actualizar datos factura
-  async updateFactura(id, data) {
+  /*   async updateFactura(id, data) {
     return await FacturaRepository.update(id, data);
-  }
+  } */
 
   // Eliminar una factura (borrado lógico)
-  async eliminarFactura(id) {
-    const factura = await FacturaRepository.findById(id);
+  async eliminarFactura(id_factura) {
+    const factura = await FacturaRepository.findById(id_factura);
     if (!factura) {
-      throw new Error(`Factura con ID ${id} no encontrada.`);
+      throw new Error(`Factura con ID ${id_factura} no encontrada.`);
     }
-    const estadoFacturaCancelado = await EstadoFacturaService.findByNombre(
-      "Cancelada"
-    );
-    // Cambiar el estado de la factura a "Cancelada"
-    await FacturaRepository.update(id, {
-      id_estado_factura: estadoFacturaCancelado.dataValues.id_estado_factura,
+
+    await DocumentoRepository.update(factura.id_documento, {
+      id_estado_pago: await EstadoPagoService.findByNombre("Cancelada")
+        .id_estado_pago,
     });
 
-    return { message: "Factura cancelada exitosamente." };
+    return { message: "Factura eliminada exitosamente." };
   }
 
   async deleteFacturas(ids, id_usuario) {

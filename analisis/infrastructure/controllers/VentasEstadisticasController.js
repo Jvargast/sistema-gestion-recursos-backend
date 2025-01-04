@@ -1,26 +1,52 @@
+import estadisticasQueue from "../../application/queues/estadisticasQueue.js";
 import VentasEstadisticasService from "../../application/VentasEstadisticasService.js";
 
 class VentasEstadisticasController {
   async obtenerPorAno(req, res) {
+    const { year } = req.params;
+
     try {
-      const { year } = req.params;
+      // Validar que el parámetro sea un número válido
+      if (isNaN(year)) {
+        return res
+          .status(400)
+          .json({ error: "El año debe ser un número válido." });
+      }
+
       const estadisticas = await VentasEstadisticasService.obtenerPorAno(year);
       res.status(200).json(estadisticas);
     } catch (error) {
+      console.error(
+        `Error al obtener estadísticas para el año ${year}:`,
+        error.message
+      );
       res.status(404).json({ error: error.message });
     }
   }
 
   // Obtener estadísticas de ventas por año y mes
   async obtenerPorMes(req, res) {
+    const { year, month } = req.params; // Asegurarse de que estas variables existan
+
     try {
-      const { year, month } = req.params;
+      // Validar que los parámetros sean números válidos
+      if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+        return res
+          .status(400)
+          .json({ error: "Parámetros inválidos: año o mes no válido." });
+      }
+
       const estadisticas = await VentasEstadisticasService.obtenerPorMes(
         year,
         month
       );
       res.status(200).json(estadisticas);
     } catch (error) {
+      // Usar las variables year y month definidas antes del bloque try
+      console.error(
+        `Error al obtener estadísticas del mes ${month} del año ${year}:`,
+        error.message
+      );
       res.status(404).json({ error: error.message });
     }
   }
@@ -79,9 +105,15 @@ class VentasEstadisticasController {
   async calcularEstadisticasPorAno(req, res) {
     try {
       const { year } = req.body;
+      // Agregar tarea a la cola
+      //const job = await estadisticasQueue.add({ year });
       const estadisticas =
         await VentasEstadisticasService.calcularEstadisticasPorAno(year);
       res.status(200).json(estadisticas);
+      /* res.status(202).json({
+        message: `Cálculo de estadísticas para el año ${year} iniciado.`,
+        jobId: job.id,
+      }); */
     } catch (error) {
       res.status(400).json({ error: error.message });
     }

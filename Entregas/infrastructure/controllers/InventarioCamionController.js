@@ -13,8 +13,8 @@ class InventarioCamionController {
   
     async getProductsByCamion(req, res) {
       try {
-        const { idCamion } = req.params;
-        const productos = await InventarioCamionService.getProductsByCamion(idCamion);
+        const { id } = req.params;
+        const productos = await InventarioCamionService.getProductsByCamion(id);
         res.status(200).json(productos);
       } catch (error) {
         res.status(404).json({ error: error.message });

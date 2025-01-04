@@ -1,55 +1,53 @@
 import Documento from "../../domain/models/Documento.js";
 
 class DocumentoRepository {
-  // Crear un documento
-  async create(data) {
+  async findById(id) {
     try {
-      const documento = await Documento.create(data);
-      return documento;
+      return await Documento.findByPk(id);
     } catch (error) {
-      throw new Error(`Error al crear el documento: ${error.message}`);
+      console.error("Error en DocumentoRepository.findById:", error.message);
+      throw error;
     }
   }
-
-  // Buscar un documento por ID de transacción
   async findByTransaccionId(id_transaccion) {
     try {
-      const documento = await Documento.findOne({
+      return await Documento.findAll({
         where: { id_transaccion },
       });
-      return documento;
     } catch (error) {
-      throw new Error(`Error al buscar el documento: ${error.message}`);
+      throw new Error(
+        `Error al obtener los documentos para la transacción con ID ${id_transaccion}: ${error.message}`
+      );
     }
   }
 
-  // Actualizar un documento existente
-  async update(id_documento, updates) {
-    try {
-      const documento = await Documento.findByPk(id_documento);
-      if (!documento) {
-        throw new Error("Documento no encontrado.");
-      }
-      Object.assign(documento, updates);
-      await documento.save();
-      return documento;
-    } catch (error) {
-      throw new Error(`Error al actualizar el documento: ${error.message}`);
-    }
+  async findAll(filters, options) {
+    return await Documento.findAndCountAll({
+      where: filters,
+      limit: options.limit,
+      offset: (options.page - 1) * options.limit,
+    });
   }
 
-  // Eliminar un documento
-  async delete(id_documento) {
-    try {
-      const documento = await Documento.findByPk(id_documento);
-      if (!documento) {
-        throw new Error("Documento no encontrado.");
-      }
-      await documento.destroy();
-      return true;
-    } catch (error) {
-      throw new Error(`Error al eliminar el documento: ${error.message}`);
-    }
+  async create(data) {
+    return await Documento.create(data);
+  }
+
+  async update(id, updates) {
+    const [updated] = await Documento.update(updates, {
+      where: { id_documento: id },
+    });
+    return updated > 0 ? await this.findById(id) : null;
+  }
+
+  async findByIds(ids) {
+    return await Documento.findAll({
+      where: { id_documento: ids },
+    });
+  }
+
+  getModel() {
+    return Documento;
   }
 }
 

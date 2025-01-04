@@ -19,6 +19,8 @@ import EstadoTransaccionRepository from "../infrastructure/repositories/EstadoTr
 import DetalleTransaccionRepository from "../infrastructure/repositories/DetalleTransaccionRepository.js";
 import UsuariosService from "../../auth/application/UsuariosService.js";
 import DocumentoService from "./DocumentoService.js";
+import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
+import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
 
 class TransaccionService {
   async getTransaccionById(id) {
@@ -31,13 +33,38 @@ class TransaccionService {
       id
     );
 
-    const pago = await PagoService.obtenerPagosPorTransaccion(id);
+    let documentos = [];
+    let pagos = [];
+
+    // Solo buscar documentos si la transacción es de tipo "venta"
+    if (transaccion.tipo_transaccion === "venta") {
+      documentos = await DocumentoService.obtenerDocumentoPorTransaccion(id);
+
+      if (!documentos || documentos.length === 0) {
+        throw new Error(
+          `No se encontró un documento asociado a la transacción con ID: ${id}.`
+        );
+      }
+
+      // Seleccionar el primer documento válido
+      const documento = documentos.find((doc) => doc.id_documento);
+      if (!documento) {
+        throw new Error(
+          `Ningún documento asociado a la transacción con ID: ${id} contiene un 'id_documento' válido.`
+        );
+      }
+
+      // Validar y obtener pagos
+      pagos = await PagoService.obtenerPagosPorDocumento(
+        documento.id_documento
+      );
+    }
 
     const usuario_asignado = await UsuariosService.getUsuarioById(
       transaccion.dataValues.asignada_a
     );
 
-    return { transaccion, detalles, pago, usuario_asignado };
+    return { transaccion, detalles, pagos, usuario_asignado };
   }
 
   async getAllTransacciones(
@@ -46,13 +73,10 @@ class TransaccionService {
   ) {
     const allowedFields = [
       "tipo_transaccion",
-      "estado_pago",
       "id_cliente",
       "id_usuario",
       "fecha_creacion",
       "total",
-      "numero_factura",
-      "tipo_comprobante",
       "id_estado_transaccion",
     ];
 
@@ -110,19 +134,11 @@ class TransaccionService {
   }
 
   async createTransaccion(data, detalles = [], id_usuario) {
-    const { id_cliente, tipo_transaccion, id_metodo_pago } = data;
+    const { id_cliente, tipo_transaccion, metodo_pago } = data;
 
     // Validar cliente
     const clienteObtenido = await ClienteService.getClienteById(id_cliente);
-    const clienteEsEmpresa = clienteObtenido.dataValues.tipo_cliente;
-    // Validar método de pago si se proporciona
-    let metodoPago = null;
-    if (id_metodo_pago) {
-      metodoPago = await MetodoPagoService.getMetodoPagoById(id_metodo_pago);
-      if (!metodoPago) {
-        throw new Error("El método de pago especificado no es válido.");
-      }
-    }
+    //const clienteEsEmpresa = clienteObtenido.dataValues.tipo_cliente;
 
     // Buscar el estado inicial de la transacción dependiendo del tipo
     const estadoInicial =
@@ -131,8 +147,12 @@ class TransaccionService {
         : await EstadoTransaccionService.findEstadoInicialByTipo(
             tipo_transaccion
           );
+
+    // Validar método de pago si se proporciona
     const tipo_documento =
-      clienteEsEmpresa === "empresa" ? "factura" : "boleta";
+      clienteObtenido.tipo_cliente === "empresa" ? "factura" : "boleta";
+
+    let documentoEmitido = null;
 
     // Crear transacción
     const nuevaTransaccion = await TransaccionRepository.create({
@@ -142,19 +162,13 @@ class TransaccionService {
       id_usuario,
     });
 
-    let documentoEmitido = null;
-    if (tipo_transaccion == "venta" && clienteEsEmpresa == "empresa") {
-      documentoEmitido = await FacturaService.generarFactura(
-        nuevaTransaccion.dataValues.id_transaccion,
-        id_usuario
-      );
-      //Se tiene que insertar la factura en la transacción
-      await TransaccionRepository.update(
-        nuevaTransaccion.dataValues.id_transaccion,
-        {
-          id_factura: documentoEmitido.dataValues.id_factura,
-        }
-      );
+    if (tipo_transaccion === "venta") {
+      documentoEmitido = await DocumentoService.crearDocumento({
+        id_transaccion: nuevaTransaccion.id_transaccion,
+        tipo_documento,
+        id_cliente,
+        total: nuevaTransaccion.total,
+      });
     }
 
     // Registrar log de creación de transacción
@@ -173,23 +187,34 @@ class TransaccionService {
         detalles,
         id_usuario
       );
+      // Obtener el total actualizado desde la transacción
+      const transaccionActualizada = await TransaccionRepository.findById(
+        nuevaTransaccion.id_transaccion
+      );
+      // Actualizar el documento con el total calculado
+
+      if (documentoEmitido != null) {
+        await DocumentoService.actualizarTotalDocumento(
+          documentoEmitido.id_documento,
+          transaccionActualizada.total
+        );
+      }
     }
 
     // Registrar pago inicial si se proporcionó un método de pago y referencia
 
-    if (data.monto_inicial && metodoPago) {
-      await PagoService.acreditarPago({
-        id_transaccion: nuevaTransaccion.dataValues.id_transaccion,
-        monto: data.monto_inicial,
-        metodo_pago: metodoPago.dataValues.nombre,
-        referencia: data.referencia || null,
-        id_usuario: id_usuario,
-      });
-    }
-    if (!data.monto_inicial && metodoPago) {
-      await PagoService.crearPago(
-        nuevaTransaccion.dataValues.id_transaccion,
-        metodoPago.dataValues.nombre
+    if (
+      data.monto_inicial &&
+      data.metodo_pago &&
+      documentoEmitido?.id_documento
+    ) {
+      const metodoPago = await MetodoPagoService.getMetodoByNombre(metodo_pago);
+
+      await PagoService.acreditarPago(
+        documentoEmitido.id_documento,
+        data.monto_inicial,
+        metodoPago.dataValues.nombre,
+        data.referencia || null
       );
     }
 
@@ -369,14 +394,20 @@ class TransaccionService {
     await DetalleTransaccionService.createDetallesTransaccion(
       detalles,
       id_transaccion
-      /* transaccion.transaccion.dataValues.tipo_transaccion,
-      id_usuario */
     );
 
     // Calcular y actualizar el total de la transacción
     const total = await DetalleTransaccionService.calcularTotales(
       id_transaccion
     );
+
+    // Encontrar documento
+    const documento = await DocumentoRepository.findByTransaccionId(
+      id_transaccion
+    );
+    await DocumentoRepository.update(documento[0].dataValues.id_documento, {
+      total,
+    });
 
     //Actualizar transacción con el total
     await TransaccionRepository.update(id_transaccion, {
@@ -426,24 +457,18 @@ class TransaccionService {
       );
     }
 
+    // Obtener el documento asociado a la transacción
+    const documento = await DocumentoRepository.findByTransaccionId(
+      transaccion.transaccion.dataValues.id_transaccion
+    );
+
     // Procesar el pago
     const pagoRegistrado = await PagoService.acreditarPago(
-      id_transaccion,
+      documento[0].dataValues.id_documento,
       monto,
       metodo_pago,
       referencia
     );
-
-    // Cambiar el estado de los detalles a "En Bodega - Reservado"
-    /*     const nuevoEstadoDetalle =
-      await EstadoDetalleTransaccionService.findByNombre(
-        "En bodega - Reservado"
-      );
-    await DetalleTransaccionService.cambiarEstadoDetalles(
-      id_transaccion,
-      nuevoEstadoDetalle.dataValues.id_estado_detalle_transaccion,
-      id_usuario
-    ); */
 
     // Cambiar el estado de la transacción
     await this.changeEstadoTransaccion(
@@ -452,45 +477,17 @@ class TransaccionService {
       id_usuario
     );
 
-    // Emitir boleta si corresponde
-    let documentoEmitido = null;
-    const tipoDocumento =
-      transaccion.transaccion.dataValues.tipo_documento || "boleta";
-    if (tipoDocumento === "boleta") {
-      documentoEmitido = await FacturaService.generarBoleta(
-        id_transaccion,
-        id_usuario
-      );
-    } else if (tipoDocumento === "factura") {
-      documentoEmitido = await FacturaService.generarFactura(
-        id_transaccion,
-        id_usuario
-      );
-    }
-
-    /*     // Crear registro en el modelo Documento
-    await DocumentoService.registrarDocumento({
-      id_transaccion,
-      tipo_documento: tipoDocumento,
-      estado: "Emitido",
-      fecha_emision: new Date(),
-      detalles: JSON.stringify({ metodo_pago, monto, referencia }),
-    }); */
-
     await LogTransaccionService.createLog({
       id_transaccion,
       id_usuario,
       accion: "Transacción Pagada",
-      detalles: `Pago acreditado y productos reservados. Documento emitido: ${
-        documentoEmitido || "N/A"
-      }.`,
+      detalles: `Pago acreditado y productos reservados.`,
       estado: `${estadoPago.dataValues.nombre_estado}`,
     });
 
     return {
       mensaje: "Transacción completada con éxito.",
       pago: pagoRegistrado,
-      documento: documentoEmitido != null ? documentoEmitido : "",
     };
   }
 
@@ -743,6 +740,13 @@ class TransaccionService {
         totalTransaccion += subtotal;
       }
 
+      const documento = await DocumentoRepository.findByTransaccionId(
+        idTransaccion
+      );
+      await DocumentoRepository.update(documento[0].dataValues.id_documento, {
+        total: totalTransaccion,
+      });
+
       await transaccionExistente.update({ total: totalTransaccion });
     } catch (error) {
       console.error("Error en TransaccionService.changeDetallesInfo:", error);
@@ -800,6 +804,15 @@ class TransaccionService {
           break;
         case "venta":
           nuevoEstadoId = estados.Cancelada;
+          const documento = await DocumentoRepository.findByTransaccionId(
+            transaccion.dataValues.id_transaccion
+          );
+
+          await DocumentoRepository.update(
+            documento[0].dataValues.id_documento, {
+              id_estado_pago: 4
+            }
+          );
           break;
         default:
           throw new Error(
@@ -853,6 +866,75 @@ class TransaccionService {
     await detalle.destroy(); // Elimina el detalle de la base de datos
   }
 
+  async getPendingTransacciones(filters = {}, options) {
+    const allowedFields = [
+      "tipo_transaccion",
+      "estado_pago",
+      "id_cliente",
+      "id_usuario",
+      "fecha_creacion",
+      "total",
+      "numero_factura",
+      "tipo_comprobante",
+      "id_estado_transaccion",
+    ];
+
+    const where = createFilter(filters, allowedFields);
+
+    if (options.search) {
+      where[Op.or] = [
+        { "$cliente.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en cliente.nombre
+        { "$usuario.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en usuario.nombre
+        { "$estado.nombre_estado$": { [Op.like]: `%${options.search}%` } }, // Buscar en estado.nombre_estado
+        { tipo_transaccion: { [Op.like]: `%${options.search}%` } }, // Buscar en tipo_transaccion
+      ];
+    }
+
+    // Excluir estados para roles no administradores
+    if (options.rolId !== 2) {
+      // Asume que rolId 2 = administrador
+      const excludedStates = ["Rechazada", "Cancelado", "Cancelada"];
+
+      const estadosPermitidos =
+        await EstadoTransaccionService.obtenerEstadosPermitidos(excludedStates);
+
+      where.id_estado_transaccion = {
+        [Op.in]: estadosPermitidos, // Directamente el array de IDs devuelto
+      };
+      /* console.log(estadosPermitidos) */
+    }
+
+    // Incluir datos relacionados (cliente, usuario, estado de la transacción)
+    const include = [
+      {
+        model: ClienteRepository.getModel(), // Modelo de Cliente
+        as: "cliente", // Alias definido en las asociaciones
+        attributes: ["rut", "nombre", "tipo_cliente", "email"], // Campos que deseas incluir
+      },
+      {
+        model: EstadoTransaccionRepository.getModel(), // Modelo de EstadoTransaccion
+        as: "estado", // Alias definido en las asociaciones
+        attributes: ["nombre_estado"], // Campos que deseas incluir
+      },
+      {
+        model: DetalleTransaccionRepository.getModel(),
+        as: "detalles",
+        where: { estado_producto_transaccion: 2 },
+        include: {
+          model: ProductosRepository.getModel(),
+          as: "producto",
+        },
+      },
+    ];
+
+    // Aplicar paginación
+    const result = await paginate(TransaccionRepository.getModel(), options, {
+      where,
+      include,
+      order: [["id_transaccion", "ASC"]],
+    });
+    return result;
+  }
 }
 
 export default new TransaccionService();

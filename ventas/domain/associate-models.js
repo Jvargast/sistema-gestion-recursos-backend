@@ -1,6 +1,5 @@
 import Cliente from "./models/Cliente.js";
 import Usuarios from "../../auth/domain/models/Usuarios.js";
-
 import Transaccion from "./models/Transaccion.js";
 import DetalleTransaccion from "./models/DetalleTransaccion.js";
 import LogTransaccion from "./models/LogTransaccion.js";
@@ -13,24 +12,18 @@ import EstadoDetalleTransaccion from "./models/EstadoDetalleTransaccion.js";
 import TransicionEstadoTransaccion from "./models/TransicionEstadoTransaccion.js";
 import TransicionEstadoDetalle from "./models/TransicionEstadoDetalle.js";
 import Factura from "./models/Factura.js";
-import TransicionTipoTransaccion from "./models/TransicionTipoTransaccion.js";
-import EstadoFactura from "./models/EstadoFactura.js";
+import Boleta from "./models/Boleta.js";
 import Documento from "./models/Documento.js";
+
 
 function loadSalesAssociations() {
   // Relación: Cliente -> Transacción
   Transaccion.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
-  Cliente.hasMany(Transaccion, {
-    foreignKey: "id_cliente",
-    as: "transacciones",
-  });
+  Cliente.hasMany(Transaccion, { foreignKey: "id_cliente", as: "transacciones" });
 
   // Relación: Usuario -> Transacción
   Transaccion.belongsTo(Usuarios, { foreignKey: "id_usuario", as: "usuario" });
-  Usuarios.hasMany(Transaccion, {
-    foreignKey: "id_usuario",
-    as: "transacciones",
-  });
+  Usuarios.hasMany(Transaccion, { foreignKey: "id_usuario", as: "transacciones" });
 
   // Relación: Estado de transacción -> Transacción
   Transaccion.belongsTo(EstadoTransaccion, {
@@ -42,19 +35,29 @@ function loadSalesAssociations() {
     as: "transacciones",
   });
 
-  // Relación: Factura -> Estado Factura
-  Factura.belongsTo(EstadoFactura, {
-    foreignKey: "id_estado_factura",
-    as: "estado",
-  });
-  EstadoFactura.hasMany(Factura, {
-    foreignKey: "id_estado_factura",
-    as: "facturas",
-  });
+  // Relación: Documento -> Transacción
+  Documento.belongsTo(Transaccion, { foreignKey: "id_transaccion", as: "transaccion" });
+  Transaccion.hasMany(Documento, { foreignKey: "id_transaccion", as: "documentos" });
 
-  // Relación: Pago -> Estado de pago
-  Pago.belongsTo(EstadoPago, { foreignKey: "id_estado_pago", as: "estado" });
-  EstadoPago.hasMany(Pago, { foreignKey: "id_estado_pago", as: "pagos" });
+  // Relación: Cliente -> Documento
+  Documento.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
+  Cliente.hasMany(Documento, { foreignKey: "id_cliente", as: "documentos" });
+
+
+  // Relación: Documento -> EstadoPago
+  Documento.belongsTo(EstadoPago, { foreignKey: "id_estado_pago", as: "estadoPago" });
+  EstadoPago.hasMany(Documento, { foreignKey: "id_estado_pago", as: "documentos" });
+  
+  // Relación: Documento -> Factura y Boleta
+  Documento.hasOne(Factura, { foreignKey: "id_documento", as: "factura" });
+  Factura.belongsTo(Documento, { foreignKey: "id_documento", as: "documento" });
+
+  Documento.hasOne(Boleta, { foreignKey: "id_documento", as: "boleta" });
+  Boleta.belongsTo(Documento, { foreignKey: "id_documento", as: "documento" });
+
+  // Relación: Pago -> Documento
+  Pago.belongsTo(Documento, { foreignKey: "id_documento", as: "documento" });
+  Documento.hasMany(Pago, { foreignKey: "id_documento", as: "pagos" });
 
   // Relación: Pago -> Método de pago
   Pago.belongsTo(MetodoPago, { foreignKey: "id_metodo_pago", as: "metodo" });
@@ -80,37 +83,6 @@ function loadSalesAssociations() {
     as: "detalles",
   });
 
-  // Relación: Transacción pertenece a Factura
-  /*   Transaccion.belongsTo(Factura, {
-    foreignKey: "id_factura",
-    as: "facturaTransaccion",
-  }); */
-  /*   Factura.hasOne(Transaccion, {
-    foreignKey: "id_factura",
-    as: "transaccionFactura",
-  }); */
-  // Relación con el modelo Transaccion
-  Factura.belongsTo(Transaccion, {
-    foreignKey: "id_transaccion",
-    as: "transaccion",
-  });
-  //
-  // Relación: Transaccion → Factura
-  Transaccion.hasOne(Factura, {
-    foreignKey: "id_transaccion", // Campo en la tabla Factura
-    as: "factura",
-  });
-
-  // Relación: Pago -> Transacción
-  Pago.belongsTo(Transaccion, {
-    foreignKey: "id_transaccion",
-    as: "transaccionPago",
-  });
-  Transaccion.hasMany(Pago, {
-    foreignKey: "id_transaccion",
-    as: "pagosTransaccion",
-  });
-
   // Relación: Log de Transacción -> Transacción
   LogTransaccion.belongsTo(Transaccion, {
     foreignKey: "id_transaccion",
@@ -128,27 +100,7 @@ function loadSalesAssociations() {
   });
   Usuarios.hasMany(LogTransaccion, { foreignKey: "id_usuario", as: "logs" });
 
-  /*   // Relación: Transición Tipo Transacción -> Transacción
-  TransicionTipoTransaccion.belongsTo(Transaccion, {
-    foreignKey: "id_transaccion",
-    as: "transaccionTransicionTipo",
-  });
-  Transaccion.hasMany(TransicionTipoTransaccion, {
-    foreignKey: "id_transaccion",
-    as: "transicionesTipoTransaccion",
-  }); */
-  /* 
-  // Relación: Transición Estado Transacción -> Transacción
-  TransicionEstadoTransaccion.belongsTo(Transaccion, {
-    foreignKey: "id_transaccion",
-    as: "transaccionTransiciones",
-  }); */
-  /*   Transaccion.hasMany(TransicionEstadoTransaccion, {
-    foreignKey: "id_transaccion",
-    as: "transicionesTransaccion",
-  }); */
-
-  // Relación: Transición Estado Transacción -> EstadoTransaccion (Origen)
+  // Relación: Transición Estado Transacción -> Estados de Transacción
   TransicionEstadoTransaccion.belongsTo(EstadoTransaccion, {
     foreignKey: "id_estado_origen",
     as: "estadoOrigen",
@@ -158,7 +110,6 @@ function loadSalesAssociations() {
     as: "transicionesOrigen",
   });
 
-  // Relación: Transición Estado Transacción -> EstadoTransaccion (Destino)
   TransicionEstadoTransaccion.belongsTo(EstadoTransaccion, {
     foreignKey: "id_estado_destino",
     as: "estadoDestino",
@@ -168,23 +119,13 @@ function loadSalesAssociations() {
     as: "transicionesDestino",
   });
 
-  /*   // Relación: Transición Estado Detalle -> DetalleTransacción
-  TransicionEstadoDetalle.belongsTo(DetalleTransaccion, {
-    foreignKey: "id_detalle_transaccion",
-    as: "detalleTransaccion",
-  });
-  DetalleTransaccion.hasMany(TransicionEstadoDetalle, {
-    foreignKey: "id_detalle_transaccion",
-    as: "transicionesDetalle",
-  }); */
-
   // Relación: Detalle Transacción -> Estado Detalle Transacción
   DetalleTransaccion.belongsTo(EstadoDetalleTransaccion, {
     foreignKey: "estado_producto_transaccion",
     as: "estado",
   });
   EstadoDetalleTransaccion.hasMany(DetalleTransaccion, {
-    foreignKey: "estado_producto_transaccion", //estado_producto_transaccion o id_estado_detalle_transaccion
+    foreignKey: "estado_producto_transaccion",
     as: "detalles_transacciones",
   });
 
@@ -206,15 +147,6 @@ function loadSalesAssociations() {
   EstadoDetalleTransaccion.hasMany(TransicionEstadoDetalle, {
     foreignKey: "id_estado_destino",
     as: "transicionesDestino",
-  });
-
-  //Implementación futura
-  Transaccion.hasMany(Documento, {
-    foreignKey: "id_transaccion",
-    as: "documentos",
-  });
-  Documento.belongsTo(Transaccion, {
-    foreignKey: "id_transaccion",
   });
 
   console.log("Asociaciones del módulo de ventas cargadas correctamente.");

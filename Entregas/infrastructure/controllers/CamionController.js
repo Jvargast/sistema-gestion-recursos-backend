@@ -29,6 +29,19 @@ class CamionController {
         res.status(400).json({ error: error.message });
       }
     }
+
+    async getCamionCapacity(req, res) {
+        try {
+          const { id_camion } = req.params;
+      
+          const capacityInfo = await CamionService.getCurrentCapacity(id_camion);
+      
+          res.status(200).json(capacityInfo);
+        } catch (error) {
+          res.status(500).json({ error: error.message });
+        }
+      }
+      
   
     async update(req, res) {
       try {

@@ -13,8 +13,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@bull-board/express": "^6.5.4",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.3",
+    "bull": "^4.16.5",
     "cloudinary": "^2.5.1",
     "cls-hooked": "^4.2.2",
     "cookie-parser": "^1.4.7",
@@ -34,6 +36,7 @@
     "pdfkit": "^0.15.2",
     "pg": "^8.13.1",
     "pg-hstore": "^2.3.4",
+    "redis": "^4.7.0",
     "sequelize": "^6.37.5"
   }
 }

@@ -38,6 +38,7 @@ import TransaccionRoutes from "./ventas/infrastructure/routes/TransaccionRoutes.
 import FacturasRoutes from "./ventas/infrastructure/routes/FacturasRoutes.js";
 import EstadoFacturaRoutes from "./ventas/infrastructure/routes/EstadoFacturaRoutes.js";
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
+import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js"
 /* import analisisRoutes from "./analisis/infraestructure/routes/";
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
@@ -116,6 +117,7 @@ app.use("/api/estado-detalle", EstadoDetallesRoutes);
 app.use("/api/facturas", FacturasRoutes);
 app.use("/api/estado-factura", EstadoFacturaRoutes);
 app.use("/api/pagos", PagosRoutes);
+app.use("/api/documentos", DocumentosRoutes)
 
 /* MÓDULO ANÁLISIS */
 app.use("/api/analisis/productos", ProductoEstadisticaRoutes);

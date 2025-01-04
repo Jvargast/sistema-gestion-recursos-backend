@@ -1,6 +1,8 @@
 import IVentasEstadisticasRepository from "../../domain/repositories/IVentasEstadisticasRepository.js";
 import VentasEstadisticas from "../../domain/models/VentasEstadisticas.js";
 import { Op } from "sequelize";
+import EstadisticasTransacciones from "../../domain/models/EstadisticasTransacciones.js";
+import Transaccion from "../../../ventas/domain/models/Transaccion.js";
 
 class VentasEstadisticasRepository extends IVentasEstadisticasRepository {
   async getAll() {
@@ -9,8 +11,43 @@ class VentasEstadisticasRepository extends IVentasEstadisticasRepository {
 
   async findByYear(year) {
     return await VentasEstadisticas.findAll({
-      where: { year: year },
+      where: { year },
+      include: [
+        {
+          model: EstadisticasTransacciones,
+          as: "estadisticasTransacciones",
+          include: [
+            {
+              model: Transaccion,
+              as: "transaccion",
+              attributes: ["id_transaccion", "total", "fecha_creacion"],
+            },
+          ],
+        },
+      ],
     });
+  }
+  async getTransaccionesRelacionadas(id_ventas_estadisticas) {
+    return await EstadisticasTransacciones.findAll({
+      where: { id_ventas_estadisticas: id_ventas_estadisticas },
+      include: [
+        {
+          model: Transaccion,
+          as: "transaccion",
+        },
+      ],
+    });
+  }
+
+  async findOneByYear(year) {
+    return await VentasEstadisticas.findOne({ where: { year } });
+  }
+
+  async updateById(id, data) {
+    await VentasEstadisticas.update(data, {
+      where: { id_ventas_estadisticas: id },
+    });
+    return await VentasEstadisticas.findByPk(id);
   }
 
   async findById(id) {

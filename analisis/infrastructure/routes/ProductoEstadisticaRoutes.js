@@ -12,7 +12,7 @@ router.delete("/:id", ProductoEstadisticasController.deleteEstadisticas); // Eli
 // Rutas avanzadas
 router.get("/", ProductoEstadisticasController.getAllEstadisticas); // Obtener estadísticas con filtros y paginación
 router.get(
-  "/:id_producto/:year",
+  "/:id_producto/year/:year",
   ProductoEstadisticasController.obtenerPorProductoYAno
 ); // Obtener estadísticas por producto y año
 router.get(
@@ -20,7 +20,7 @@ router.get(
   ProductoEstadisticasController.obtenerPorProductoYMes
 ); // Obtener estadísticas por producto, año y mes
 router.post("/calcular", ProductoEstadisticasController.calcularEstadisticas); // Calcular estadísticas para un producto
-router.post("/calcular-year", ProductoEstadisticasController.calcularEstadisticasPorAno)
+router.post("/calcular-year", ProductoEstadisticasController.calcularEstadisticasPorAno) // Calcular ventas de productos del año
 router.post(
   "/actualizar/:id_producto",
   ProductoEstadisticasController.updateEstadisticasProducto

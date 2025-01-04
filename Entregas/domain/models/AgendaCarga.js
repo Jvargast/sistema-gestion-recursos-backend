@@ -17,6 +17,7 @@ fecha_carga: Fecha y hora en que se realizó la carga.
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
+import Camion from "./Camion.js";
 
 const AgendaCarga = sequelize.define("AgendaCarga", {
   id_agenda_carga: {
@@ -33,14 +34,28 @@ const AgendaCarga = sequelize.define("AgendaCarga", {
     allowNull: false,
     references: {
       model: Usuarios,
-      key: 'rut',
-    }
+      key: "rut",
+    },
+  },
+  id_camion: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    references: { model: Camion, key: "id_camion" },
+  },
+  estado_camion:{
+    type: DataTypes.ENUM("Disponible", "En Ruta", "Finalizado"),
+    allowNull: true,
+    defaultValue: "Disponible"
   },
   notas: {
     type: DataTypes.STRING,
     allowNull: true, // Para información adicional si es necesaria
   },
+  estado: {
+    type: DataTypes.ENUM("Pendiente", "En tránsito", "Finalizada"),
+    allowNull: false,
+    defaultValue: "Pendiente",
+  },
 });
-
 
 export default AgendaCarga;
