@@ -12,14 +12,25 @@ async function paginate(model, options, queryOptions = {}) {
   const limit = pageSize; // Filas por página
   const offset = (page - 1) * limit; // Desplazamiento
 
-
+  const where = queryOptions.where || {};
   const order = queryOptions.order || [["id", "DESC"]];
+  const distinctCol = queryOptions.distinctCol || model.primaryKeyAttribute;
   // Obtener los resultados paginados
-  const { count, rows } = await model.findAndCountAll({
+  
+  // Obtener los resultados paginados
+  const rows = await model.findAll({
     ...queryOptions,
     order,
     limit,
     offset,
+  });
+
+  // Realizar un conteo separado para evitar duplicados
+  const count = await model.count({
+    where, // Aplicar filtros al conteo
+    include: queryOptions.include || [],
+    distinct: true, // Contar solo filas únicas
+    col: distinctCol, // Usar la columna especificada o primaria
   });
 
   // Asignar un ID secuencial global basado en el índice absoluto
@@ -33,7 +44,6 @@ async function paginate(model, options, queryOptions = {}) {
     };
   });
 
-  console.log("Filas devueltas:", rows.length);
 
   const totalPages = Math.ceil(count / limit);
 

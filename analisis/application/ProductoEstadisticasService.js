@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
 import createFilter from "../../shared/utils/helpers.js";
 import DetalleTransaccionService from "../../ventas/application/DetalleTransaccionService.js";
@@ -5,6 +6,8 @@ import EstadoTransaccionService from "../../ventas/application/EstadoTransaccion
 import DetalleTransaccionRepository from "../../ventas/infrastructure/repositories/DetalleTransaccionRepository.js";
 import TransaccionRepository from "../../ventas/infrastructure/repositories/TransaccionRepository.js";
 import ProductoEstadisticaRepository from "../infrastructure/repositories/ProductoEstadisticaRepository.js";
+import EstadoTransaccionRepository from "../../ventas/infrastructure/repositories/EstadoTransaccionRepository.js";
+import paginate from "../../shared/utils/pagination.js";
 
 class ProductoEstadisticasService {
   // Crear una estadística para un producto
@@ -22,44 +25,59 @@ class ProductoEstadisticasService {
   }
 
   async obtenerEstadisticasPorProductoYAno(id_producto, year) {
-    // Buscar las estadísticas para el producto y año específico
-    const estadisticas =
-      await ProductoEstadisticaRepository.findByProductoIdAndYear(
-        id_producto,
-        year
-      );
+    try {
+      const estadisticas =
+        await ProductoEstadisticaRepository.findByProductoIdAndYear(
+          id_producto,
+          year
+        );
 
-    if (!estadisticas) {
-      throw new Error(
-        `No se encontraron estadísticas para el producto ID ${id_producto} en el año ${year}.`
+      if (!estadisticas) {
+        throw new Error(
+          `No se encontraron estadísticas para el producto ID ${id_producto} en el año ${year}.`
+        );
+      }
+
+      // Formatear la respuesta para incluir información más detallada
+      return {
+        id_producto: estadisticas.id_producto,
+        year: estadisticas.year,
+        ventas_anuales: parseFloat(estadisticas.ventas_anuales) || 0,
+        unidades_vendidas_anuales:
+          parseInt(estadisticas.unidades_vendidas_anuales, 10) || 0,
+        datos_mensuales: estadisticas.datos_mensuales || [],
+        datos_diarios: estadisticas.datos_diarios || [],
+      };
+    } catch (error) {
+      console.error(
+        "Error en obtenerEstadisticasPorProductoYAno:",
+        error.message
       );
+      throw error;
     }
-
-    return estadisticas;
   }
 
   async calcularEstadisticasPorAno(year) {
     // Obtener todos los productos con sus transacciones completadas en el año
-    const excludedStates = ["Cancelada", "Rechazada"];
-    const estadosPermitidos =
-      await EstadoTransaccionService.obtenerEstadosPermitidos(excludedStates);
+    const estadoCompletada = await EstadoTransaccionRepository.findByNombre(
+      "Completada"
+    );
+
     const transacciones = await TransaccionRepository.findAllWithConditions({
       where: {
         tipo_transaccion: "venta",
-        id_estado_transaccion: {
-          [Op.in]: estadosPermitidos.map(
-            (estado) => estado.id_estado_transaccion
-          ),
-        },
+        id_estado_transaccion:
+          estadoCompletada.dataValues.id_estado_transaccion,
         fecha_creacion: {
           [Op.between]: [`${year}-01-01`, `${year}-12-31`],
         },
+        procesada_para_estadisticas: false,
       },
       include: {
         model: DetalleTransaccionRepository.getModel(),
         as: "detalles",
         include: {
-          model: Producto,
+          model: ProductosRepository.getModel(),
           as: "producto",
         },
       },
@@ -69,46 +87,90 @@ class ProductoEstadisticasService {
       throw new Error(`No se encontraron transacciones para el año ${year}.`);
     }
 
-    // Calcular estadísticas por producto
+    // Obtener estadísticas existentes por producto
+    // Obtener estadísticas existentes
+    const estadisticasExistentes =
+      await ProductoEstadisticaRepository.findAllByYear(year);
+
+    const estadisticasMap = {};
+    estadisticasExistentes.forEach((estadistica) => {
+      estadisticasMap[estadistica.id_producto] = {
+        ...estadistica.dataValues,
+        datos_mensuales: estadistica.datos_mensuales || [],
+      };
+    });
+
+    // Calcular estadísticas
     const estadisticasProductos = {};
     transacciones.forEach((transaccion) => {
       transaccion.detalles.forEach((detalle) => {
         const { id_producto, precio_unitario, cantidad } = detalle;
+
         if (!estadisticasProductos[id_producto]) {
-          estadisticasProductos[id_producto] = {
-            id_producto,
-            year,
-            ventas_anuales: 0,
-            unidades_vendidas_anuales: 0,
-          };
+          estadisticasProductos[id_producto] = estadisticasMap[id_producto]
+            ? {
+                ...estadisticasMap[id_producto],
+                ventas_anuales: 0,
+                unidades_vendidas_anuales: 0,
+              }
+            : {
+                id_producto,
+                year,
+                ventas_anuales: 0,
+                unidades_vendidas_anuales: 0,
+                datos_mensuales: Array.from({ length: 12 }, (_, index) => ({
+                  mes: index + 1,
+                  total: 0,
+                  unidades: 0,
+                })),
+              };
         }
 
-        estadisticasProductos[id_producto].ventas_anuales +=
-          precio_unitario * cantidad;
-        estadisticasProductos[id_producto].unidades_vendidas_anuales +=
-          cantidad;
+        const estadistica = estadisticasProductos[id_producto];
+        estadistica.ventas_anuales += precio_unitario * cantidad;
+        estadistica.unidades_vendidas_anuales += cantidad;
+
+        const mesTransaccion =
+          new Date(transaccion.fecha_creacion).getMonth() + 1;
+        const mesData = estadistica.datos_mensuales.find(
+          (m) => m.mes === mesTransaccion
+        );
+        mesData.total += precio_unitario * cantidad;
+        mesData.unidades += cantidad;
       });
     });
 
-    // Actualizar o crear las estadísticas en la base de datos
+    // Actualizar o crear estadísticas en la base de datos
     for (const id_producto in estadisticasProductos) {
       const datos = estadisticasProductos[id_producto];
-      const existente =
-        await ProductoEstadisticaRepository.findByProductoIdAndYear(
-          id_producto,
-          year
-        );
-
-      if (existente) {
+      if (estadisticasMap[id_producto]) {
+        // Actualizar estadísticas existentes
         await ProductoEstadisticaRepository.update(
-          existente.id_producto_estadisticas,
+          estadisticasMap[id_producto].id_producto_estadisticas,
           datos
         );
       } else {
+        // Crear nuevas estadísticas
         await ProductoEstadisticaRepository.create(datos);
       }
     }
 
+    // Marcar las transacciones como procesadas
+    const transaccionesIds = transacciones.map((t) => t.id_transaccion);
+    console.log(transaccionesIds);
+    if (!Array.isArray(transaccionesIds) || transaccionesIds.length === 0) {
+      throw new Error("No hay IDs de transacciones para actualizar.");
+    }
+
+    console.log("Condición WHERE:", {
+      id_transaccion: { [Op.in]: transaccionesIds },
+    });
+    await TransaccionRepository.updateBulk(
+      { procesada_para_estadisticas: true },
+      { id_transaccion: { [Op.in]: transaccionesIds } }
+    );
+
+    console.log("Estadísticas actualizadas correctamente.");
     return Object.values(estadisticasProductos);
   }
 
@@ -246,10 +308,26 @@ class ProductoEstadisticasService {
       {
         where,
         include,
-        order: [["id_producto_estadisticas", "ASC"]]
+        order: [["id_producto_estadisticas", "ASC"]],
       }
     );
-    return result.data;
+
+    // Procesar los datos para incluir información adicional
+    const processedData = result.data.map((estadistica) => ({
+      sequentialId: estadistica.sequentialId, // ID secuencial global
+      id_producto: estadistica.id_producto,
+      nombre_producto: estadistica.producto?.nombre_producto || "Desconocido",
+      ventas_anuales: parseFloat(estadistica.ventas_anuales) || 0,
+      unidades_vendidas_anuales:
+        parseInt(estadistica.unidades_vendidas_anuales, 10) || 0,
+      datos_mensuales: estadistica.datos_mensuales || [],
+    }));
+
+    // Retornar los datos junto con la información de paginación
+    return {
+      data: processedData,
+      pagination: result.pagination,
+    };
   }
 
   // Eliminar estadísticas por ID

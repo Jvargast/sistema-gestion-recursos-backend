@@ -8,6 +8,7 @@ import EstadoTransaccionService from "../../ventas/application/EstadoTransaccion
 import EstadoTransaccionRepository from "../../ventas/infrastructure/repositories/EstadoTransaccionRepository.js";
 import EstadoDetalleTransaccionService from "../../ventas/application/EstadoDetalleTransaccionService.js";
 import { model } from "mongoose";
+import EstadisticasTransacciones from "../domain/models/EstadisticasTransacciones.js";
 
 class VentasEstadisticasService {
   async obtenerEstadisticasPorId(id) {
@@ -49,58 +50,107 @@ class VentasEstadisticasService {
     );
     return result.data;
   }
+  async obtenerPorMes(year, month) {
+    try {
+      // Buscar estadísticas por año
+      const estadisticas = await VentasEstadisticasRepository.findByYear(year);
+      if (!estadisticas) {
+        throw new Error(`No se encontraron estadísticas para el año ${year}`);
+      }
 
-  async obtenerPorAno(year) {
+      // Validar que los datos mensuales existan y contengan al menos 12 elementos
+      const datosMensuales = estadisticas.datos_mensuales || [];
+      if (datosMensuales.length < 12) {
+        throw new Error(
+          `Los datos mensuales están incompletos para el año ${year}`
+        );
+      }
+
+      // Extraer estadísticas del mes específico (meses en datos_mensuales están basados en índices de 0 a 11)
+      const datosMes = datosMensuales[month - 1]; // month es de 1 a 12, por lo que restamos 1
+      if (!datosMes) {
+        throw new Error(`No se encontraron estadísticas para ${year}-${month}`);
+      }
+
+      return {
+        year,
+        month,
+        ...datosMes,
+      };
+    } catch (error) {
+      console.error(
+        `Error al obtener estadísticas para ${year}-${month}:`,
+        error.message
+      );
+      throw error;
+    }
+  }
+
+  /*   async obtenerPorAno(year) {
     const estadisticas = await VentasEstadisticasRepository.findByYear(year);
     if (!estadisticas) {
       throw new Error(`No se encontraron estadísticas para el año ${year}`);
     }
     return estadisticas;
-  }
+  } */
 
-  async obtenerPorMes(year, month) {
-    const estadisticas = await VentasEstadisticasRepository.findByYear(year);
-    if (!estadisticas) {
-      throw new Error(`No se encontraron estadísticas para el año ${year}`);
+  async obtenerPorAno(year) {
+    try {
+      // Buscar las estadísticas para el año dado en la tabla `VentasEstadisticas`
+      const estadisticas = await VentasEstadisticasRepository.findByYear(year);
+
+      //console.log(estadisticas[0].dataValues.datos_mensuales)
+      if (!estadisticas || estadisticas.length === 0) {
+        throw new Error(`No se encontraron estadísticas para el año ${year}`);
+      }
+
+      // Extraer y formatear los datos mensuales
+      const estadisticasData = estadisticas[0].dataValues;
+
+      const datosMensuales = estadisticasData.datos_mensuales || [];
+
+      // Asegurarse de que los valores sean numéricos
+      const formattedDatosMensuales = datosMensuales.map((mes) => ({
+        mes: mes.mes,
+        total: parseFloat(mes.total) || 0,
+        unidades: parseInt(mes.unidades, 10) || 0,
+      }));
+
+      // Retornar la respuesta en el formato esperado
+      return {
+        id_ventas_estadisticas: estadisticasData.id_ventas_estadisticas,
+        year: estadisticasData.year,
+        ventas_anuales: parseFloat(estadisticasData.ventas_anuales) || 0,
+        unidades_vendidas_anuales:
+          parseInt(estadisticasData.unidades_vendidas_anuales, 10) || 0,
+        datos_mensuales: formattedDatosMensuales,
+      };
+    } catch (error) {
+      console.error("Error en obtenerPorAno:", error.message);
+      throw error;
     }
-
-    // Extraer datos mensuales
-    const datosMensuales = estadisticas.datos_mensuales || [];
-    const datosMes = datosMensuales[month - 1];
-
-    if (!datosMes) {
-      throw new Error(`No se encontraron estadísticas para ${year}-${month}`);
-    }
-
-    return datosMes;
   }
 
   async actualizarPorAno(year) {
-    const estadisticas = await this.calcularEstadisticasPorAno(year);
-    return estadisticas;
+    return await this.calcularEstadisticasPorAno(year);
   }
   // calcular estadisticas por año
   async calcularEstadisticasPorAno(year) {
     try {
-      // Obtener todas las transacciones completadas en el año
-
       const estadoPermitido = await EstadoTransaccionService.findByNombre(
         "Completada"
       );
-      if (!estadoPermitido) {
-        throw new Error(`No se encontró un estado con nombre "Completada"`);
-      }
-
-      //Colocar este detalle para ventas Pagadas y detalles Entregado
       const estadoDetalle = await EstadoDetalleTransaccionService.findByNombre(
         "Entregado"
       );
-      if (!estadoDetalle) {
+
+      if (!estadoPermitido || !estadoDetalle) {
         throw new Error(
-          `No se encontró un estado detalle con nombre "Entregado"`
+          "Estados requeridos no encontrados: Completada o Entregado."
         );
       }
 
+      // Obtener transacciones del año con detalles en el estado 'Entregado'
       const transacciones = await TransaccionRepository.findAllWithConditions({
         where: {
           tipo_transaccion: "venta",
@@ -112,11 +162,6 @@ class VentasEstadisticasService {
         },
         include: [
           {
-            model: EstadoTransaccionRepository.getModel(),
-            as: "estado",
-            attributes: ["nombre_estado"], // Opcional, para ver nombres en las transacciones
-          },
-          {
             model: DetalleTransaccionRepository.getModel(),
             as: "detalles",
             where: {
@@ -127,11 +172,23 @@ class VentasEstadisticasService {
         ],
       });
 
-      if (transacciones.length === 0) {
-        throw new Error(`No se encontraron transacciones para el año ${year}.`);
+      if (!transacciones.length) {
+        throw new Error(
+          `No se encontraron transacciones completadas para el año ${year}.`
+        );
       }
 
       const ventasAnuales = transacciones.reduce(
+        (total, transaccion) =>
+          total +
+          transaccion.detalles.reduce(
+            (sum, detalle) => sum + detalle.subtotal,
+            0
+          ),
+        0
+      );
+
+      const unidadesVendidasAnuales = transacciones.reduce(
         (total, transaccion) =>
           total +
           transaccion.detalles.reduce(
@@ -141,10 +198,6 @@ class VentasEstadisticasService {
         0
       );
 
-      const unidadesVendidasAnuales = await this.calcularUnidadesVendidasPorAno(
-        year
-      );
-      // Calcular datos mensuales
       const datosMensuales = Array.from({ length: 12 }, (_, index) => {
         const mes = index + 1;
         const transaccionesMes = transacciones.filter((transaccion) => {
@@ -154,7 +207,12 @@ class VentasEstadisticasService {
         });
 
         const totalMes = transaccionesMes.reduce(
-          (total, transaccion) => total + transaccion.total,
+          (total, transaccion) =>
+            total +
+            transaccion.detalles.reduce(
+              (sum, detalle) => sum + detalle.subtotal,
+              0
+            ),
           0
         );
 
@@ -168,13 +226,9 @@ class VentasEstadisticasService {
           0
         );
 
-        return {
-          mes,
-          total: totalMes,
-          unidades: unidadesMes,
-        };
+        return { mes, total: totalMes, unidades: unidadesMes };
       });
-      // Crear o actualizar las estadísticas
+
       const estadisticas = {
         year,
         ventas_anuales: ventasAnuales,
@@ -182,23 +236,36 @@ class VentasEstadisticasService {
         datos_mensuales: datosMensuales,
       };
 
-      const existente = await VentasEstadisticasRepository.findByYear(year);
+      // Verificar si ya existe un registro para el año
+      let resultado = await VentasEstadisticasRepository.findOneByYear(year);
 
-      if (existente.length > 0) {
-        return await VentasEstadisticasRepository.updateById(
-          existente[0].dataValues.id_ventas_estadisticas,
+      if (resultado) {
+        // Actualizar estadísticas existentes
+        await VentasEstadisticasRepository.updateById(
+          resultado.id_ventas_estadisticas,
           estadisticas
         );
       } else {
-        return await VentasEstadisticasRepository.create(estadisticas);
+        // Crear nuevas estadísticas
+        resultado = await VentasEstadisticasRepository.create(estadisticas);
       }
+
+      // Actualizar la tabla `EstadisticasTransacciones`
+      await EstadisticasTransacciones.destroy({
+        where: { id_ventas_estadisticas: resultado.id_ventas_estadisticas },
+      });
+
+      const estadisticasTransacciones = transacciones.map((transaccion) => ({
+        id_ventas_estadisticas: resultado.id_ventas_estadisticas,
+        id_transaccion: transaccion.id_transaccion,
+      }));
+
+      await EstadisticasTransacciones.bulkCreate(estadisticasTransacciones);
+
+      return resultado;
     } catch (error) {
-      console.error(error);
-      return {
-        success: false,
-        message: error.message,
-        stack: error.stack,
-      };
+      console.error("Error en calcularEstadisticasPorAno:", error.message);
+      throw error;
     }
   }
 
@@ -322,7 +389,7 @@ class VentasEstadisticasService {
         include: [
           {
             model: DetalleTransaccionRepository.getModel(),
-            as: "detallesTransaccion",
+            as: "detalles",
             attributes: ["cantidad", "id_transaccion"],
           },
         ],

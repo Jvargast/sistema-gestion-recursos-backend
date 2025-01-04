@@ -40,9 +40,8 @@ class ProductoService {
       /* where[Op.eq] = [
         { "$tipo.nombre$": { [Op.eq]: `%${options.tipo_producto}%` } },
       ]; */
-      where["$tipo.nombre$"] = { [Op.eq]: options.tipo_producto }; // Buscar en tipo.nombre
+      where["$tipo.nombre$"] = options.tipo_producto;// Buscar en tipo.nombre
     }
-
 
     if (options.search) {
       where[Op.or] = [
@@ -82,7 +81,8 @@ class ProductoService {
     const result = await paginate(ProductosRepository.getModel(), options, {
       where,
       include,
-      order: [["id_producto", "ASC"]]
+      order: [["id_producto", "ASC"]],
+      subQuery: false
     });
     return result;
   }
@@ -208,12 +208,9 @@ class ProductoService {
       );
     }
     const productos = await ProductosRepository.findByIds(ids);
-    if(productos.length !== ids.length) {
+    if (productos.length !== ids.length) {
       const notFoundIds = ids.filter(
-        (id) =>
-          !productos.some(
-            (producto) => producto.id_producto === id
-          )
+        (id) => !productos.some((producto) => producto.id_producto === id)
       );
       throw new Error(
         `Los siguientes productos no fueron encontradas: ${notFoundIds.join(
@@ -221,15 +218,82 @@ class ProductoService {
         )}`
       );
     }
-    const estadoEliminado = await EstadoProductoService.getEstadoByNombre("Eliminado");
-    for(const producto of productos) {
+    const estadoEliminado = await EstadoProductoService.getEstadoByNombre(
+      "Eliminado"
+    );
+    for (const producto of productos) {
       await ProductosRepository.update(producto.id_producto, {
-        id_estado_producto: estadoEliminado.dataValues.id_estado_producto
-      })
+        id_estado_producto: estadoEliminado.dataValues.id_estado_producto,
+      });
     }
     return {
-      message: `Se marcaron como eliminados ${ids.length} productos.`
+      message: `Se marcaron como eliminados ${ids.length} productos.`,
+    };
+  }
+
+  async getAvailableProductos(filters = {}, options) {
+    const allowedFields = [
+      "nombre_producto",
+      "marca",
+      "descripcion",
+      "precio",
+      "id_categoria",
+      "id_tipo_producto",
+      "id_estado_producto",
+    ];
+    const where = createFilter(filters, allowedFields);
+    // Filtro adicional para tipo_producto (Insumo)
+    if (options.tipo_producto) {
+      /* where[Op.eq] = [
+        { "$tipo.nombre$": { [Op.eq]: `%${options.tipo_producto}%` } },
+      ]; */
+      where["$tipo.nombre$"] = { [Op.eq]: options.tipo_producto }; // Buscar en tipo.nombre
     }
+
+    if (options.search) {
+      where[Op.or] = [
+        {
+          "$categoria.nombre_categoria$": { [Op.like]: `%${options.search}%` },
+        }, // Buscar en categoria.nombre
+        { "$tipo.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en tipo.nombre
+        { "$estado.nombre_estado$": { [Op.like]: `%${options.search}%` } }, // Buscar en estado.nombre_estado
+        { marca: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+        { descripcion: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+        { nombre_producto: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+      ];
+    }
+    const include = [
+      {
+        model: CategoriaProductoRepository.getModel(),
+        as: "categoria",
+        attributes: ["nombre_categoria"],
+      },
+      {
+        model: TipoProductoRepository.getModel(),
+        as: "tipo",
+        attributes: ["nombre"],
+      },
+      {
+        model: EstadoProductoRepository.getModel(),
+        as: "estado",
+        attributes: ["nombre_estado"],
+      },
+      {
+        model: InventarioRepository.getModel(),
+        as: "inventario",
+        attributes: ["cantidad"], // Campos relevantes del inventario
+        where: {
+          cantidad: {[Op.gt]:200}
+        }
+      },
+    ];
+
+    const result = await paginate(ProductosRepository.getModel(), options, {
+      where,
+      include,
+      order: [["id_producto", "ASC"]],
+    });
+    return result;
   }
 }
 

@@ -42,12 +42,15 @@ class TransaccionRepository extends ITransaccionRepository {
   }
 
   async create(data) {
-    console.log("Data: ", data)
     return await Transaccion.create(data);
   }
 
   async update(id, data) {
     return await Transaccion.update(data, { where: { id_transaccion: id } });
+  }
+
+  async updateBulk(data, condition) {
+    return await Transaccion.update(data, { where: condition });
   }
 
   getModel() {

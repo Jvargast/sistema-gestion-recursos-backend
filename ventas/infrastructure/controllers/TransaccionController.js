@@ -35,7 +35,9 @@ class TransaccionController {
         filters,
         options
       );
-      res.status(200).json({data: transacciones.data, total: transacciones.pagination});
+      res
+        .status(200)
+        .json({ data: transacciones.data, total: transacciones.pagination });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -204,7 +206,7 @@ class TransaccionController {
       const { id } = req.params;
 
       await TransaccionService.eliminarTransaccionAUsuario(id, rut);
-      
+
       res.status(200).json({ message: "Usuario eliminado con éxito" });
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -428,6 +430,32 @@ class TransaccionController {
     } catch (error) {
       console.error("Error en createPdf:", error);
       res.status(500).json({ message: "Error interno del servidor." });
+    }
+  }
+
+  async getPendingTransacciones(req, res) {
+    try {
+      const filters = req.query; // Filtros enviados en los query params
+
+      let options = {
+        page: parseInt(req.query.page, 10) || 1,
+        limit: parseInt(req.query.limit, 10) || 10,
+        search: req.query.search
+      };
+      delete filters.limit;
+      delete filters.offset;
+
+      const transacciones = await TransaccionService.getPendingTransacciones(
+        filters,
+        options
+      );
+      res
+        .status(200)
+        .json({ data: transacciones.data, total: transacciones.pagination });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ error: "Error al obtener transacciones pendientes" });
     }
   }
 }

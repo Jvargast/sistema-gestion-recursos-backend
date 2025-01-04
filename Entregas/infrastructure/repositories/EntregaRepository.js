@@ -33,6 +33,10 @@ class EntregaRepository {
     }
     return await entrega.destroy();
   }
+
+  getModel() {
+    return Entrega;
+  }
 }
 
 export default new EntregaRepository();

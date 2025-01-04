@@ -5,10 +5,10 @@ import Producto from "../../../inventario/domain/models/Producto.js";
 const ProductoEstadisticas = sequelize.define(
   "ProductoEstadisticas",
   {
-    id_producto_estadisticas:{
+    id_producto_estadisticas: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
-      primaryKey: true
+      primaryKey: true,
     },
     id_producto: {
       type: DataTypes.INTEGER,
@@ -16,7 +16,9 @@ const ProductoEstadisticas = sequelize.define(
         model: Producto,
         key: "id_producto",
       },
-      allowNull: true,
+      allowNull: false, // Cambiado a false para asegurar la asociación
+      onDelete: "CASCADE", // Borra estadísticas si el producto asociado se elimina
+      onUpdate: "CASCADE",
     },
     year: {
       type: DataTypes.INTEGER,
@@ -30,12 +32,10 @@ const ProductoEstadisticas = sequelize.define(
       type: DataTypes.INTEGER,
       defaultValue: 0,
     },
-    // Datos mensuales
     datos_mensuales: {
       type: DataTypes.JSON,
       defaultValue: [],
     },
-    // Datos diarios (si es necesario)
     datos_diarios: {
       type: DataTypes.JSON,
       defaultValue: [],
@@ -45,10 +45,9 @@ const ProductoEstadisticas = sequelize.define(
     tableName: "ProductoEstadisticas",
     timestamps: false,
     indexes: [
-      { fields: ["year"] }, // Índice para búsquedas rápidas por año
+      { fields: ["year", "id_producto"] }, // Índice para búsquedas rápidas por año
     ],
   }
 );
 
 export default ProductoEstadisticas;
-

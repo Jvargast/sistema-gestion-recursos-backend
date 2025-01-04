@@ -33,6 +33,10 @@ class CamionRepository {
     }
     return await camion.destroy();
   }
+
+  getModel() {
+    return Camion;
+  }
 }
 
 export default new CamionRepository();

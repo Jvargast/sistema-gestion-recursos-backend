@@ -10,14 +10,6 @@ const VentasEstadisticas = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-    id_transaccion: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: Transaccion,
-        key: "id_transaccion",
-      },
-      allowNull: true, // Opcional
-    },
     year: {
       type: DataTypes.INTEGER,
       allowNull: false,

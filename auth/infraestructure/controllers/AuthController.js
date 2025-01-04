@@ -10,8 +10,7 @@ class AuthController {
   async login(req, res) {
     const { rut, password } = req.body;
     const ip = req.ip;
-    const cookies =  req.cookies;
-
+  
     try {
       const { token, usuario } = await AuthService.login(rut, password);
 
@@ -40,7 +39,7 @@ class AuthController {
     try {
       const ip = req.ip;
       res.clearCookie("authToken");
-      await AuditLogsService.logAction(req.user.rut, "Cerrar Sesión", "Autenticación", ip);
+      await AuditLogsService.logAction(req.user.id, "Cerrar Sesión", "Autenticación", ip);
       res.status(200).json({ message: "Cierre de sesión exitoso" });
     } catch {
       res.status(401).json({ error: error.message });
@@ -56,9 +55,13 @@ class AuthController {
         return res.status(401).json({ error: "Usuario no autenticado" });
       }
 
+      const { id, nombre, apellido, email, rol, permisos } = user;
+
       res.status(200).json({
         message: "Usuario autenticado con éxito",
-        usuario: user,
+        usuario: {id, nombre, apellido, email},
+        rol,
+        permisos
       });
     } catch (error) {
       console.error("Error al obtener el usuario autenticado:", error);

@@ -34,7 +34,7 @@ class AuthService {
     );
     return {
       token,
-      usuario
+      usuario,
     };
     /* return token; */
   }
@@ -48,18 +48,24 @@ class AuthService {
     }
 
     // Buscar el usuario en la base de datos
-    const user = await UsuariosRepository.findByRut(rut);
+    const user = await UsuariosRepository.findOne(rut);
 
     if (!user) {
       throw new Error("Usuario no encontrado");
     }
+
+    // Extraer permisos desde RolesPermisos
+    const permisos = user.rol.rolesPermisos.map((rp) => rp.permiso.nombre);
     return {
       id: user.rut,
       nombre: user.nombre,
+      apelldio: user.apellido,
       email: user.email,
       rut: user.rut,
       activo: user.activo,
-      rol: user.rol, // Asegúrate de incluir la relación del rol
+      rol: user.rol.nombre, // Asegúrate de incluir la relación del rol
+      rolId: user.rolId,
+      permisos,
     };
   }
 }

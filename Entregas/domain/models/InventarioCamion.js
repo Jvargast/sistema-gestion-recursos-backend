@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Producto from "../../../inventario/domain/models/Producto.js";
 import Camion from "./Camion.js";
+import DetalleTransaccion from "../../../ventas/domain/models/DetalleTransaccion.js";
 
 const InventarioCamion = sequelize.define("InventarioCamion", {
   id_inventario_camion: {
@@ -33,10 +34,19 @@ const InventarioCamion = sequelize.define("InventarioCamion", {
     type: DataTypes.ENUM(
       "En Camión - Disponible",
       "En Camión - Reservado",
-      "Regresado"
+      "Regresado",
+      "Entregado"
     ),
     allowNull: false,
     defaultValue: "En Camión - Disponible",
+  },
+  id_detalle_transaccion: {
+    type: DataTypes.INTEGER,
+    allowNull: true, // Puede ser nulo si no está asociado a un detalle
+    references: {
+        model: DetalleTransaccion,
+        key: "id_detalle_transaccion"
+    },
   },
 });
 

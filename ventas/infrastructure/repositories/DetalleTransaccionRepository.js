@@ -109,6 +109,15 @@ class DetalleTransaccionRepository extends IDetalleTransaccionRepository {
     });
   }
 
+  async findAllByAgenda(id_agenda_carga) {
+    const detalles = await DetalleTransaccion.findAll({
+      where: {
+        id_agenda_carga, // Buscar por el ID de la agenda
+      },
+    });
+    return detalles;
+  }
+
   getModel() {
     return DetalleTransaccion;
   }

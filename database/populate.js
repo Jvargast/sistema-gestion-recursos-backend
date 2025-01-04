@@ -579,6 +579,14 @@ async function populateDatabase() {
         descripcion: "El pago ha sido completado exitosamente.",
       },
       {
+        nombre: "Emitido",
+        descripcion: "Se ha emitido un pago.",
+      },
+      {
+        nombre: "Anulado",
+        descripcion: "Se ha anulado un pago.",
+      },
+      {
         nombre: "Rechazado",
         descripcion: "El pago fue rechazado por el método.",
       },
@@ -633,7 +641,7 @@ async function populateDatabase() {
     console.log("Clientes creados exitosamente.");
 
     // Ejemplo de Cotización
-    const cotizacion = await Transaccion.create({
+    /* const cotizacion = await Transaccion.create({
       id_cliente: "123456781-2", // ID de cliente existente
       id_usuario: "12345678-9", // ID de usuario existente (vendedor)
       tipo_transaccion: "cotizacion",
@@ -649,9 +657,9 @@ async function populateDatabase() {
       id_estado_transaccion: 11, // Estado "En Proceso"
       total: 0,
       observaciones: "Venta directa al cliente.",
-    });
+    }); */
     // Crear Pago ejemplo
-    const pagos = [
+    /* const pagos = [
       {
         id_transaccion: 1,
         id_estado_pago: 1, // Pendiente
@@ -661,7 +669,7 @@ async function populateDatabase() {
       },
     ];
     await Pago.bulkCreate(pagos);
-    console.log("Pago creado exitosamente.");
+    console.log("Pago creado exitosamente."); */
 
     // Estados Detalle Transacción
     const estadosDetalleTransaccion = [
@@ -793,7 +801,7 @@ async function populateDatabase() {
     console.log("Transiciones de Tipo Transacción creadas.");
 
     // Estados de Factura
-    const estadosFactura = [
+   /*  const estadosFactura = [
       { nombre: "Creada", descripcion: "Factura creada en el sistema." },
       { nombre: "Enviada", descripcion: "Factura enviada al cliente." },
       { nombre: "Aceptada", descripcion: "Factura aceptada por el cliente." },
@@ -808,11 +816,11 @@ async function populateDatabase() {
     ];
 
     await EstadoFactura.bulkCreate(estadosFactura);
-    console.log("Estados de Factura creados exitosamente.");
+    console.log("Estados de Factura creados exitosamente."); */
     /***********************************************************************************/
     console.log("Creando transacciones de ejemplo...");
 
-    const detallesCotizacion = [
+    /* const detallesCotizacion = [
       {
         id_transaccion: cotizacion.id_transaccion,
         id_producto: 1, // Botellón de Agua 20L
@@ -832,9 +840,9 @@ async function populateDatabase() {
         estado_producto_transaccion: 1, // Estado "En bodega - Disponible"
       },
     ];
-    await DetalleTransaccion.bulkCreate(detallesCotizacion);
+    await DetalleTransaccion.bulkCreate(detallesCotizacion); */
 
-    await LogTransaccion.create({
+    /* await LogTransaccion.create({
       id_transaccion: cotizacion.id_transaccion,
       id_usuario: "12345678-9", // administrador
       accion: "Creación de cotización",
@@ -864,18 +872,18 @@ async function populateDatabase() {
         estado_producto_transaccion: 2, // Estado "En tránsito - Reservado"
       },
     ];
-    await DetalleTransaccion.bulkCreate(detallesVenta);
+    await DetalleTransaccion.bulkCreate(detallesVenta); */
 
-    await LogTransaccion.create({
+    /* await LogTransaccion.create({
       id_transaccion: venta.id_transaccion,
       numero_factura: "000001",
       id_usuario: "12345678-9", // Administrador
       accion: "Creación de venta",
       estado: "En Proceso",
       detalles: "Venta creada y en proceso de preparación.",
-    });
+    }); */
 
-    await Factura.create({
+    /* await Factura.create({
       id_transaccion: venta.id_transaccion,
       numero_factura: "000001",
       id_cliente: venta.id_cliente,
@@ -886,7 +894,7 @@ async function populateDatabase() {
       id_transaccion: venta.id_transaccion,
     });
 
-    console.log("Venta y factura creadas con éxito.");
+    console.log("Venta y factura creadas con éxito."); */
     /***********************************************************************************/
     console.log("Base de datos poblada con éxito.");
   } catch (error) {

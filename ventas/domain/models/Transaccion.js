@@ -80,6 +80,11 @@ const Transaccion = sequelize.define(
         isIn: [["factura", "boleta"]],
       },
     },
+    procesada_para_estadisticas: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false
+    }
   },
   {
     tableName: "Transaccion",
