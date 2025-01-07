@@ -8,13 +8,14 @@ const router = Router();
 router.use(verifyToken);
 
 
-router.get("/", ClienteController.getAllClientes); // Obtener todos los clientes con filtros y paginación
-router.get("/:id", ClienteController.getClienteById); // Obtener cliente por ID
-router.post("/", ClienteController.createCliente); // Crear un cliente
-router.put("/:id", ClienteController.updateCliente); // Actualizar un cliente
+router.get("/", authenticate, ClienteController.getAllClientes);
+router.get("/:id", authenticate, ClienteController.getClienteById); // Obtener cliente por ID
+router.get("/nuevos/porcentaje", authenticate, ClienteController.getPorcentajeClientesNuevos);
+router.post("/", authenticate, ClienteController.createCliente); // Crear un cliente
+router.put("/:id", authenticate, ClienteController.updateCliente); // Actualizar un cliente
 router.patch("/", authenticate, ClienteController.deleteClientes);
-router.patch("/:id/deactivate", ClienteController.deactivateCliente); // Desactivar un cliente
-router.patch("/:id/reactivate", ClienteController.reactivateCliente); // Reactivar un cliente
-router.get("/search", ClienteController.searchClientes); // Buscar clientes con filtros
+router.patch("/:id/deactivate", authenticate, ClienteController.deactivateCliente); // Desactivar un cliente
+router.patch("/:id/reactivate", authenticate, ClienteController.reactivateCliente); // Reactivar un cliente
+router.get("/search", authenticate, ClienteController.searchClientes); // Buscar clientes con filtros
 
 export default router;

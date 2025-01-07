@@ -17,7 +17,7 @@ class SucursalController {
     try {
       const { id } = req.params;
       const sucursal = await SucursalService.obtenerSucursalPorId(id);
-      res.json(Sucursal);
+      res.status(200).json(sucursal);
     } catch (error) {
       res.status(404).json({ message: error.message });
     }

@@ -189,12 +189,6 @@ class PagoService {
 
     const estadoPendiente = await EstadoPagoService.findByNombre("Pendiente");
 
-    if (
-      documento.id_estado_pago !== estadoPendiente.dataValues.id_estado_pago
-    ) {
-      throw new Error("El documento no está en estado pendiente.");
-    }
-
     const metodoPagoValido = await MetodoPagoService.getMetodoByNombre(
       metodo_pago
     );
@@ -226,7 +220,7 @@ class PagoService {
     const nuevoEstado =
       nuevoMontoPagado >= documento.total
         ? await EstadoPagoService.findByNombre("Pagado")
-        : estadoPendiente;
+        : documento.id_estado_pago;;
 
     // Actualizar el estado del documento directamente
     await DocumentoRepository.update(documento.id_documento, {

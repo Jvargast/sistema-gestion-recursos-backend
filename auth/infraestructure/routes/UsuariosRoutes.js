@@ -20,8 +20,14 @@ router.get('/', checkPermissions('ver_usuarios'), UsuariosController.getAllUsers
 // Obtener todos los usuarios rol chofer
 router.get('/choferes', authenticate, UsuariosController.getAllChoferes);
 
+router.get('/mi-perfil', authenticate, UsuariosController.getOwnProfile);
 // Obtener un usuario por RUT
-router.get('/:rut', /* checkPermissions('ver_usuario'), */ UsuariosController.findByRut);
+router.get('/:rut', /* checkPermissions('ver_usuario'), */ authenticate,UsuariosController.findByRut);
+
+router.put('/mi-perfil', authenticate, UsuariosController.updateOwnProfile);
+
+router.put("/:rut/change-password", authenticate, UsuariosController.updateUserPassword);
+
 
 // Actualizar un usuario
 router.put('/:rut', checkPermissions('editar_usuarios'), UsuariosController.update);
@@ -30,6 +36,6 @@ router.put('/:rut', checkPermissions('editar_usuarios'), UsuariosController.upda
 router.delete('/:rut',checkPermissions('eliminar_usuarios'), UsuariosController.deactivate);
 
 // Cambiar la contraseña de un usuario
-router.post('/change-password', UsuariosController.changePassword); 
+router.post('/change-password', authenticate, UsuariosController.changePassword); 
 
 export default router;

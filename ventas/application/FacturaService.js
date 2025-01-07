@@ -90,10 +90,6 @@ class FacturaService {
       throw new Error("Documento no encontrado.");
     }
 
-    if (documento.tipo_documento !== "factura") {
-      throw new Error("El documento no es del tipo factura.");
-    }
-
     // Generar el número de factura
     const numeroFactura = await this.generarNumeroFactura();
 
@@ -434,6 +430,39 @@ class FacturaService {
       );
     }
   }
+
+  async updateFactura(id, data) {
+    // Obtener la factura para acceder al id_documento
+    const factura = await FacturaRepository.findById(id);
+  
+    if (!factura) {
+      throw new Error("Factura no encontrada");
+    }
+  
+    // Verificar si existe el documento asociado
+    const documento = await DocumentoRepository.findById(factura.id_documento);
+    if (!documento) {
+      throw new Error("Documento asociado no encontrado");
+    }
+  
+    // Actualizar campos de la factura
+    const facturaActualizada = await FacturaRepository.update(id, {
+      tipo_factura: data.tipo_factura,
+      forma_pago: data.forma_pago,
+      total: data.total,
+    });
+  
+    // Actualizar estado del documento asociado
+    const documentoActualizado = await DocumentoRepository.update(documento.id_documento, {
+      id_estado_pago: data.id_estado_factura,
+    });
+  
+    return {
+      factura: facturaActualizada,
+      documento: documentoActualizado,
+    };
+  }
+  
 }
 
 export default new FacturaService();

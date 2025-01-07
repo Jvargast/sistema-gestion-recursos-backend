@@ -91,6 +91,38 @@ class AgendaCargaRepository {
     }
     return await agenda.destroy();
   }
+  async findByChoferAndEstado(rut, estado) {
+    return await AgendaCarga.findOne({
+      where: {
+        id_usuario_chofer: rut,
+        estado: estado,
+      },
+      include: [
+        {
+          model: Camion,
+          as: "camion", // Relación definida en los modelos
+          attributes: ["id_camion", "placa", "estado"],
+        },
+      ],
+    });
+  }
+
+  async findByCamionAndEstado(id_camion, estado) {
+    try {
+      const agenda = await AgendaCarga.findOne({
+        where: {
+          id_camion,
+          estado,
+        },
+      });
+
+      return agenda;
+    } catch (error) {
+      console.error("Error en findByCamionAndEstado:", error);
+      throw new Error("No se pudo obtener la agenda para el camión y estado especificados.");
+    }
+  }
+
 
   getModel() {
     return AgendaCarga;

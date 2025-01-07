@@ -1,4 +1,4 @@
-import { literal, Op, Sequelize } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import InventarioService from "../../inventario/application/InventarioService.js";
 import createFilter from "../../shared/utils/helpers.js";
 import EstadoDetalleTransaccionService from "../../ventas/application/EstadoDetalleTransaccionService.js";
@@ -358,19 +358,33 @@ class AgendaCargaService {
     }
 
     // Cambiar el estado de la agenda a "En tránsito"
-    /* await AgendaCargaRepository.update(agenda.id_agenda_carga, {
-      estado: "Finalizada",
-    }); */
+    await AgendaCargaRepository.update(id_agenda_carga, {
+      estado_camion: "Finalizado",
+    });
 
     // Cambiar el estado del camión a "En Ruta"
     await CamionRepository.update(agenda.id_camion, {
       estado: "Disponible",
     });
+    
 
     return {
       message: "La agenda ha sido finalizada y el camión está disponible",
     };
   }
+
+  async getInventarioDisponiblePorChofer(rut) {
+    // Obtener la agenda activa del chofer
+    const agenda = await AgendaCargaRepository.findByChoferAndEstado(rut, "En tránsito");
+  
+    if (!agenda) {
+      throw new Error("No tienes una agenda activa asociada.");
+    }
+  
+    // Obtener el inventario disponible del camión asociado
+    return await InventarioCamionService.getInventarioDisponible(agenda.id_camion);
+  }
+  
 
   async updateAgenda(id, data) {
     return await AgendaCargaRepository.update(id, data);
@@ -378,6 +392,10 @@ class AgendaCargaService {
 
   async deleteAgenda(id) {
     return await AgendaCargaRepository.delete(id);
+  }
+
+  async getAgendaActivaPorChofer(rut) {
+    return await AgendaCargaRepository.findByChoferAndEstado(rut, "En tránsito");
   }
 }
 

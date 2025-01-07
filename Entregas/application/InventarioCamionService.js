@@ -4,31 +4,40 @@ import InventarioCamionRepository from "../infrastructure/repositories/Inventari
 import InventarioCamionLogsRepository from "../infrastructure/repositories/InventarioCamionLogsRepository.js";
 import InventarioCamion from "../domain/models/InventarioCamion.js";
 import Camion from "../domain/models/Camion.js";
+import Producto from "../../inventario/domain/models/Producto.js";
 
 class InventarioCamionService {
   async retornarProductosAdicionales(id_camion) {
-    const productosCamion = await InventarioCamionRepository.findAll({
-      where: {
+    // Buscar todos los productos en estado "En Camión - Disponible"
+    const productosCamion =
+      await InventarioCamionRepository.findAllByCamionAndEstado(
         id_camion,
-        estado: {
-          [Op.or]: ["En Camión - Disponible"],
-        },
-      },
-    });
+        "En Camión - Disponible"
+      );
 
+    // Iterar sobre cada producto y devolver al inventario principal
     for (const producto of productosCamion) {
+      // Incrementar el stock del inventario principal
       await InventarioService.incrementStock(
         producto.id_producto,
         producto.cantidad
       );
 
-      //Marcar como regresado
-      await InventarioCamionRepository.update(producto.id_producto, {
-        estado: "Regresado",
+      // Registrar el movimiento en los logs de inventario del camión
+      await InventarioCamionLogsRepository.create({
+        id_camion,
+        id_producto: producto.id_producto,
+        cantidad: producto.cantidad,
+        estado: "Regresado", // Estado reflejando que fue devuelto
+        fecha: new Date(),
       });
+
+      // Eliminar el registro del producto del inventario del camión
+      await InventarioCamionRepository.delete(producto.id_inventario_camion);
     }
+
     return {
-      message: "Productos regresados al inventario",
+      message: "Productos regresados al inventario principal.",
       productosDevueltos: productosCamion.map((p) => ({
         id_producto: p.id_producto,
         cantidad: p.cantidad,
@@ -153,6 +162,62 @@ class InventarioCamionService {
     }
 
     return await InventarioCamionRepository.delete(id);
+  }
+
+  async getInventarioDisponible(id_camion, search = "") {
+    if (!id_camion) {
+      throw new Error("Se requiere el ID del camión.");
+    }
+
+    // Construir el filtro de búsqueda
+    const searchFilter = search
+      ? {
+          [Op.or]: [
+            { "$producto.nombre_producto$": { [Op.like]: `%${search}%` } },
+            { "$producto.descripcion$": { [Op.like]: `%${search}%` } },
+          ],
+        }
+      : {};
+
+    // Obtener productos con estado "En Camión - Disponible"
+    const inventario = await InventarioCamionRepository.findAllProducts({
+      where: {
+        id_camion,
+        estado: "En Camión - Disponible",
+        ...searchFilter,
+      },
+      include: [
+        {
+          model: Camion,
+          as: "camion",
+          attributes: ["placa", "estado"], // Información básica del camión
+        },
+        {
+          model: Producto,
+          as: "producto",
+          attributes: [
+            "id_producto",
+            "nombre_producto",
+            "descripcion",
+            "precio",
+          ],
+        },
+      ],
+    });
+
+    return inventario.map((item) => ({
+      id_inventario_camion: item.id_inventario_camion,
+      id_producto: item.producto.id_producto,
+      precio: item.producto.precio,
+      nombre_producto: item.producto.nombre_producto,
+      descripcion: item.producto.descripcion,
+      cantidad: item.cantidad,
+      estado: item.estado,
+      camion: {
+        placa: item.camion.placa,
+        estado: item.camion.estado,
+      },
+    }));
   }
 }
 

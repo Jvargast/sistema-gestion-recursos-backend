@@ -21,6 +21,11 @@ class ClienteController {
       };
       delete filters.limit;
       delete filters.offset;
+
+      // Verificar el rol del usuario y modificar los filtros si es "chofer"
+    if (req.user.rol === "chofer" && req.user.id) {
+      filters.creado_por = req.user.id; // Agregar filtro por "creado_por" con el rut del usuario
+    }
       const clientes = await ClienteService.getAllClientes(filters, options);
       res.status(200).json({data: clientes.data, total: clientes.pagination});
     } catch (error) {
@@ -30,7 +35,8 @@ class ClienteController {
 
   async createCliente(req, res) {
     try {
-      const cliente = await ClienteService.createCliente(req.body);
+      const rut = req.user.id;
+      const cliente = await ClienteService.createCliente(req.body, rut);
       res.status(201).json(cliente);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -87,6 +93,26 @@ class ClienteController {
       res.status(200).json(result);
     } catch (error) {
       res.status(400).json({ error: error.message });
+    }
+  }
+
+  async getPorcentajeClientesNuevos(req, res) {
+    try {
+      const { porcentaje, cantidad } = await ClienteService.calcularPorcentajeClientesNuevos();
+
+      res.status(200).json({
+        success: true,
+        porcentaje,
+        cantidad,
+        message: "Porcentaje de clientes nuevos calculado con éxito.",
+      });
+    } catch (error) {
+      console.error("Error al calcular porcentaje de clientes nuevos:", error);
+      res.status(500).json({
+        success: false,
+        message: "Ocurrió un error al calcular el porcentaje de clientes nuevos.",
+        error: error.message,
+      });
     }
   }
 }

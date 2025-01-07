@@ -3,6 +3,7 @@ import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
 import TransaccionRepository from "../infrastructure/repositories/TransaccionRepository.js";
+import moment from "moment/moment.js";
 
 class ClienteService {
   async getClienteById(id) {
@@ -27,6 +28,7 @@ class ClienteService {
       "telefono",
       "email",
       "activo",
+      "creado_por",
     ];
     const where = createFilter(filters, allowedFields);
 
@@ -46,13 +48,16 @@ class ClienteService {
     return await result;
   }
 
-  async createCliente(data) {
+  async createCliente(data, rut) {
+    let newData = data;
     const existingCliente = await ClienteRepository.findById(data.rut);
     if (existingCliente) {
       throw new Error("El cliente ya existe con este rut.");
     }
 
-    return await ClienteRepository.create(data);
+    newData.creado_por = rut;
+
+    return await ClienteRepository.create(newData);
   }
 
   async updateCliente(id, data) {
@@ -135,6 +140,42 @@ class ClienteService {
     return {
       message: `Se marcaron como eliminados ${ruts.length} clientes.`,
     };
+  }
+
+  async calcularPorcentajeClientesNuevos() {
+    try {
+      // Calcular rango de fechas del mes pasado
+      const mesPasado = moment().subtract(1, "month").startOf("month").format("YYYY-MM-DD HH:mm:ss");
+      const inicioMesActual = moment().startOf("month").format("YYYY-MM-DD HH:mm:ss");
+
+
+      // Obtener la cantidad de clientes nuevos registrados desde el mes pasado
+      const cantidadClientesNuevos =
+        await ClienteRepository.getClientesRegistradosDesdeFecha(
+          mesPasado,
+          inicioMesActual
+        );
+      // Obtener el total de clientes
+      const totalClientes = await ClienteRepository.getTotalClientes();
+
+      if (totalClientes === 0) {
+        return { porcentaje: 0, cantidad: 0 }; // Evitar división por cero
+      }
+
+      // Calcular el porcentaje de clientes nuevos
+      const porcentajeNuevos = (cantidadClientesNuevos / totalClientes) * 100;
+
+      return {
+        porcentaje: porcentajeNuevos.toFixed(2), // Redondear a dos decimales
+        cantidad: cantidadClientesNuevos,
+      };
+    } catch (error) {
+      console.error(
+        "Error en calcularPorcentajeYCantidadClientesNuevos:",
+        error
+      );
+      throw error;
+    }
   }
 }
 

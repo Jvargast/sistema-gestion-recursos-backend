@@ -10,6 +10,7 @@ const router = Router();
 router.post("/", AgendaController.create);
 router.get("/", authenticate, AgendaController.getAll);
 router.get("/agendaChofer", authenticate, checkRoles(["chofer"]), AgendaController.getAgendasByChofer);
+router.get("/activa/chofer", authenticate,AgendaController.getAgendaActiva);
 router.put("/start/:id", authenticate, AgendaController.startAgenda);
 router.put("/finalizar/:id", authenticate, AgendaController.finalizeAgenda);
 router.get('/:id', AgendaController.getById);

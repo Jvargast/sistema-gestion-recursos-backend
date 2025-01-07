@@ -1,4 +1,5 @@
 import AgendaCargaService from "../../application/AgendaCargaService.js";
+import AgendaCargaRepository from "../repositories/AgendaCargaRepository.js";
 
 class AgendaCargaController {
   async create(req, res) {
@@ -19,7 +20,7 @@ class AgendaCargaController {
   }
   async getAgendasByChofer(req, res) {
     try {
-      const { rut } = req.user;
+      const  rut  = req.user.id;
       const { estado } = req.query;
       const { fecha = new Date().toISOString().split("T")[0] } = req.query; // Por defecto, agendas del día actual
 
@@ -44,6 +45,25 @@ class AgendaCargaController {
       res.status(200).json({ agendasPendientes, agendasEnTransito, agendasFinalizadas });
     } catch (error) {
       res.status(400).json({ error: error.message });
+    }
+  }
+  async getAgendaActiva(req, res) {
+    try {
+      const rut  = req.user.id; // Obtener el RUT del chofer desde el token o sesión
+
+      if (!rut) {
+        return res.status(400).json({ error: "RUT del usuario es requerido." });
+      }
+      const agenda = await AgendaCargaService.getAgendaActivaPorChofer(rut);
+
+      if (!agenda) {
+        return res.status(404).json({ error: "No tienes una agenda activa asociada." });
+      }
+
+      return res.status(200).json({ data: agenda });
+    } catch (error) {
+      console.error("Error al obtener la agenda activa:", error.message);
+      return res.status(500).json({ error: error.message });
     }
   }
 

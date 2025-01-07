@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
+import Usuarios from "../../../auth/domain/models/Usuarios.js";
 
 const Cliente = sequelize.define('Cliente', {
     rut: {
@@ -43,6 +44,14 @@ const Cliente = sequelize.define('Cliente', {
     activo: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
+    },
+    creado_por: {
+        type: DataTypes.STRING,
+        allowNull:true,
+        references: {
+            model: Usuarios,
+            key: "rut"
+        }
     }
 });
 

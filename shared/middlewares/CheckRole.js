@@ -2,7 +2,7 @@ export function checkRoles(requiredRoles) {
     return (req, res, next) => {
       try {
         // Asegúrate de que `req.user` tiene un rol definido
-        const rol = req.user?.rol?.dataValues?.nombre;
+        const rol = req.user?.rol;
   
         if (!rol) {
           return res.status(403).json({ error: "Rol no definido en el usuario" });

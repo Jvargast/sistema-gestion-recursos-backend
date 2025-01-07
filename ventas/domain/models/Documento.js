@@ -1,5 +1,6 @@
-import { DataTypes } from "sequelize";
+import { DataTypes, Sequelize } from "sequelize";
 import sequelize from "../../../database/database.js";
+import VentasChofer from "../../../Entregas/domain/models/VentasChofer.js";
 
 const Documento = sequelize.define(
   "Documento",
@@ -11,10 +12,18 @@ const Documento = sequelize.define(
     },
     id_transaccion: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true, 
       references: {
         model: "Transaccion",
         key: "id_transaccion",
+      },
+    },
+    id_venta_chofer: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: VentasChofer,
+        key: "id_venta_chofer",
       },
     },
     id_cliente:{
@@ -49,10 +58,6 @@ const Documento = sequelize.define(
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       defaultValue: 0,
-    },
-    referencia_pago: {
-      type: DataTypes.STRING,
-      allowNull: true,
     },
   },
   {

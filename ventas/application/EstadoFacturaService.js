@@ -1,4 +1,5 @@
 import EstadoFacturaRepository from "../infrastructure/repositories/EstadoFacturaRepository.js";
+import EstadoPagoRepository from "../infrastructure/repositories/EstadoPagoRepository.js";
 
 class EstadoFacturaService {
 
@@ -19,7 +20,8 @@ class EstadoFacturaService {
   }
 
   async getAllEstados() {
-    return await EstadoFacturaRepository.findAll();
+    const estadosDocumento = await EstadoPagoRepository.findAll();
+    return estadosDocumento 
   }
 
   async createEstado(data) {

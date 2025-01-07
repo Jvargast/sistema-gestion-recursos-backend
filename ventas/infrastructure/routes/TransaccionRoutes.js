@@ -11,6 +11,9 @@ router.use(verifyToken);
 router.get("/", authenticate, TransaccionController.getAllTransacciones); // Obtener todas las transacciones con filtros y paginación
 router.get("/pendientes", authenticate, TransaccionController.getPendingTransacciones); // Obtener todas las transacciones pendientes con filtros y paginación
 router.get("/exportar-pdf/:id", authenticate, TransaccionController.createPdf);
+router.get("/nuevos/porcentaje", authenticate, TransaccionController.getPorcentajesYCantidadVentasNuevas);
+router.get("/nuevos/porcentaje/mes", authenticate, TransaccionController.getPorcentajesYCantidadVentasNuevasMes);
+router.get("/nuevos/porcentaje/ano", authenticate, TransaccionController.getPorcentajesYCantidadVentasNuevasAno);
 
 router.get("/:id", authenticate, TransaccionController.getTransaccionById); // Obtener transacción por ID
 router.post("/", authenticate, TransaccionController.createTransaccion); // Crear una transacción

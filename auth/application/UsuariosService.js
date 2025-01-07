@@ -57,24 +57,37 @@ class UsuarioService {
   }
 
   async createNewUsuario(userData) {
-    const { rut, nombre, apellido, email, rolId, id_empresa, id_sucursal } =
-      userData;
+    const {
+      rut,
+      nombre,
+      apellido,
+      email,
+      password,
+      rolId,
+      id_empresa,
+      id_sucursal,
+    } = userData;
 
+    // Verificar si el usuario ya existe
     const usuario_existente = await UsuariosRepository.findByRut(rut);
     if (usuario_existente) {
       throw new Error("El usuario ya existe en el sistema");
     }
 
+    // Verificar si el rol especificado existe
     const rol = await RolesRepository.findById(rolId);
     if (!rol) {
       throw new Error("El rol especificado no existe");
     }
 
-    // Generar una contraseña temporal
-    const tempPassword = crypto.randomBytes(8).toString("hex"); // Genera una contraseña segura de 8 caracteres
-    // Encriptar la contraseña
+    // Validar que la contraseña esté presente
+    if (!password || password.length < 8) {
+      throw new Error("La contraseña debe tener al menos 8 caracteres");
+    }
+
+    // Encriptar la contraseña proporcionada
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(tempPassword, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Crear el usuario con la contraseña encriptada
     const usuario = await UsuariosRepository.create({
@@ -88,7 +101,7 @@ class UsuarioService {
       id_sucursal,
     });
 
-    return {usuario, tempPassword};
+    return usuario;
   }
 
   /**
@@ -148,8 +161,6 @@ class UsuarioService {
   async getUsuarioByRut(rut) {
     const usuario = await UsuariosRepository.findByRut(rut);
 
-
-
     return usuario;
   }
 
@@ -188,30 +199,51 @@ class UsuarioService {
   }
 
   /**
-   * Cambiar la contraseña del usuario.
-   * @param {string} rut - RUT del usuario.
-   * @param {string} oldPassword - Contraseña actual.
-   * @param {string} newPassword - Nueva contraseña.
-   * @returns {Promise<void>}
+ * Cambia la contraseña de un usuario después de validar la contraseña actual.
+ * @param {string} rut - RUT del usuario.
+ * @param {string} currentPassword - Contraseña actual del usuario.
+ * @param {string} newPassword - Nueva contraseña.
+ * @param {string} confirmPassword - Confirmación de la nueva contraseña.
+ * @returns {Promise<object>} - Mensaje de éxito o error.
    */
-  async changePassword(rut, currentPassword, newPassword) {
-    const usuario = await this.getUsuarioByRut(rut);
+  async changePassword(rut, currentPassword, newPassword, confirmPassword) {
+    try {
+      // Validar que las contraseñas sean consistentes
+      if (!newPassword || newPassword.length < 8) {
+        throw new Error(
+          "La nueva contraseña debe tener al menos 8 caracteres."
+        );
+      }
+      if (newPassword !== confirmPassword) {
+        throw new Error("La confirmación de la contraseña no coincide.");
+      }
 
-    if (!usuario) {
-      throw new Error("Usuario no encontrado");
+      // Obtener el usuario por su RUT
+      const usuario = await UsuariosRepository.findByRut(rut);
+      if (!usuario) {
+        throw new Error("Usuario no encontrado.");
+      }
+
+      // Verificar la contraseña actual
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        usuario.password
+      );
+      if (!isPasswordValid) {
+        throw new Error("La contraseña actual es incorrecta.");
+      }
+
+      // Encriptar la nueva contraseña
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // Actualizar la contraseña en la base de datos
+      await UsuariosRepository.update(rut, { password: hashedNewPassword });
+
+      return { message: "Contraseña actualizada exitosamente." };
+    } catch (error) {
+      console.error("Error al cambiar la contraseña:", error.message);
+      throw new Error(error.message);
     }
-
-    const isPasswordValid = await this.verifyPassword(
-      currentPassword,
-      usuario.password
-    );
-    if (!isPasswordValid) {
-      throw new Error("La contraseña actual es incorrecta");
-    }
-
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-
-    return await this.updateUsuario(rut, { password: hashedNewPassword });
   }
 
   /**
@@ -227,25 +259,67 @@ class UsuarioService {
   async resetUserPassword(rut) {
     // Buscar al usuario por su RUT
     const usuario = await UsuariosRepository.findByRut(rut);
-  
+
     if (!usuario) {
       throw new Error("El usuario no existe.");
     }
-  
+
     // Generar una nueva contraseña temporal
     const newTempPassword = crypto.randomBytes(8).toString("hex");
-  
+
     // Encriptar la nueva contraseña
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newTempPassword, saltRounds);
-  
+
     // Actualizar la contraseña del usuario en la base de datos
     usuario.password = hashedPassword;
     await UsuariosRepository.update(usuario);
-  
+
     // Retornar la nueva contraseña temporal al administrador
     return { usuario, newTempPassword };
   }
+
+  async updateUserById(rut, updateData) {
+    try {
+      // Buscar al usuario por su RUT
+      const usuario = await UsuariosRepository.findByRut(rut);
+
+      if (!usuario) {
+        throw new Error("El usuario no existe.");
+      }
+
+      // Actualizar los datos del usuario
+      const result = await UsuariosRepository.update(rut, updateData);
+
+      if (result[0] === 0) {
+        throw new Error(
+          "No se pudo actualizar el usuario, posiblemente no existe."
+        );
+      }
+
+      // Retornar el usuario actualizado
+      return {
+        message: "Usuario actualizado exitosamente.",
+        usuario: result[1],
+      };
+    } catch (error) {
+      console.error("Error al actualizar el usuario:", error.message);
+      throw new Error("No se pudo completar la actualización del usuario.");
+    }
+  }
+
+  async updatePassword(rut, newPassword) {
+    const usuario = await UsuariosRepository.findByRut(rut);
+  
+    if (!usuario) {
+      return false;
+    }
+  
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await UsuariosRepository.update(rut, { password: hashedPassword });
+    return true;
+  }
+  
 }
 
 export default new UsuarioService();

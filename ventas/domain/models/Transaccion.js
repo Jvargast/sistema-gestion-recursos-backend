@@ -77,7 +77,7 @@ const Transaccion = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true, // Puede ser null si no se emite ningún documento
       validate: {
-        isIn: [["factura", "boleta"]],
+        isIn: [["factura", "boleta", null]],
       },
     },
     procesada_para_estadisticas: {
