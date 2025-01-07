@@ -4,7 +4,7 @@ class EntregaController {
   async createEntrega(req, res) {
     try {
       const { id_camion, detalles, fechaHoraEntrega } = req.body;
-      const { rut } = req.user;
+      const rut = req.user.id;
       // Crear la entrega
       console.log(req.body);
       const result = await EntregaService.createEntrega(

@@ -25,6 +25,12 @@ class InventarioRepository extends IInventarioRepository {
     return await Inventario.destroy({ where: { id_producto } });
   }
 
+  async updateByProductoId(idProducto, data) {
+    return await Inventario.update(data, {
+      where: { id_producto: idProducto },
+    });
+  }
+
   getModel() {
     return Inventario;
   }

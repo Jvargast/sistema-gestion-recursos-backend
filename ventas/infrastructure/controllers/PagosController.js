@@ -13,7 +13,7 @@ class PagoController {
   async getAllPagos(req, res) {
     try {
       const filters = req.query;
-      const rolId = req.user.rol.id;
+      const rolId = req.user?.rol;
       let options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 20) || 20,

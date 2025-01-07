@@ -58,7 +58,7 @@ class UsuarioController {
         id_sucursal,
       });
 
-      res.status(201).json({usuario: usuario.usuario, tempPassword: usuario.tempPassword});
+      res.status(201).json(usuario);
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -158,24 +158,90 @@ class UsuarioController {
    */
   async changePassword(req, res) {
     try {
-      const { rut } = req.user;
-      const { currentPassword, newPassword } = req.body;
+      const { currentPassword, newPassword, confirmPassword } = req.body;
+      const rut = req.user?.id;
 
-      // Validar que se reciban las contraseñas
-      if (!currentPassword || !newPassword) {
-        return res
-          .status(400)
-          .json({ error: "Se requieren ambas contraseñas (actual y nueva)." });
+      if (!rut) {
+        return res.status(400).json({ message: "Usuario no autenticado." });
       }
 
-      await UsuariosService.changePassword(rut, currentPassword, newPassword);
+      const result = await UsuariosService.changePassword(
+        rut,
+        currentPassword,
+        newPassword,
+        confirmPassword
+      );
 
-      res.status(200).json({ message: "Contraseña actualizada con éxito." });
+      return res.status(200).json({ message: result.message });
     } catch (error) {
-      console.error("Error al cambiar la contraseña:", error);
-      res.status(500).json({ error: "Error interno del servidor." });
+      console.error("Error al cambiar la contraseña:", error.message);
+      return res.status(400).json({ message: error.message });
     }
   }
+
+  async updateOwnProfile(req, res) {
+    try {
+      const rut = req.user?.id;
+      const updateData = req.body;
+
+      const updatedUser = await UsuariosService.updateUserById(rut, updateData);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "Usuario no encontrado." });
+      }
+
+      return res.status(200).json({
+        message: updatedUser.message,
+        data: updatedUser.usuario,
+      });
+    } catch (error) {
+      console.error("Error al actualizar el perfil:", error);
+      return res.status(500).json({ message: "Error interno del servidor." });
+    }
+  }
+  async getOwnProfile(req, res) {
+    try {
+      // Obtener el ID del usuario desde el token
+      const rut = req.user?.id; // Asegúrate de que `authenticate` pone el ID en `req.user`
+      if (!rut) {
+        return res.status(400).json({ message: 'Usuario no autenticado.' });
+      }
+
+      // Buscar los datos del usuario en la base de datos
+      const usuario = await UsuariosService.getUsuarioByRut(rut);
+      if (!usuario) {
+        return res.status(404).json({ message: 'Usuario no encontrado.' });
+      }
+
+      // Retornar los datos del usuario
+      return res.status(200).json({ message: 'Perfil obtenido con éxito.', data: usuario });
+    } catch (error) {
+      console.error('Error al obtener el perfil:', error.message);
+      return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+  }
+
+  async updateUserPassword(req, res) {
+    const { rut } = req.params;
+    const { newPassword } = req.body;
+  
+    try {
+      if (!newPassword || newPassword.length < 8) {
+        return res.status(400).json({ error: "La contraseña debe tener al menos 8 caracteres." });
+      }
+  
+      const updated = await UsuariosService.updatePassword(rut, newPassword);
+  
+      if (updated) {
+        return res.status(200).json({ message: "Contraseña actualizada correctamente." });
+      } else {
+        return res.status(404).json({ error: "Usuario no encontrado o no activo." });
+      }
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Error al actualizar la contraseña." });
+    }
+  }
+  
 }
 
 export default new UsuarioController();

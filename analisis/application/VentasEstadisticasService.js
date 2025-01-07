@@ -33,58 +33,59 @@ class VentasEstadisticasService {
     return await VentasEstadisticasRepository.delete(id);
   }
 
-  async obtenerTodasEstadisticas(
-    filters = {},
-    options = { page: 1, limit: 10 }
-  ) {
-    const allowedFields = ["id_venta_estadisticas"];
-    const where = createFilter(filters, allowedFields);
-
-    const result = await paginate(
-      VentasEstadisticasRepository.getModel(),
-      options,
-      {
-        where,
-        order: [["id_ventas_estadisticas", "ASC"]],
-      }
-    );
-    return result.data;
-  }
   async obtenerPorMes(year, month) {
     try {
       // Buscar estadísticas por año
       const estadisticas = await VentasEstadisticasRepository.findByYear(year);
-      if (!estadisticas) {
+  
+      // Depuración: Verificar datos devueltos
+      console.log("Estadísticas encontradas para el año:", year, estadisticas);
+  
+      if (!estadisticas || estadisticas.length === 0) {
         throw new Error(`No se encontraron estadísticas para el año ${year}`);
       }
-
-      // Validar que los datos mensuales existan y contengan al menos 12 elementos
-      const datosMensuales = estadisticas.datos_mensuales || [];
-      if (datosMensuales.length < 12) {
+  
+      // Validar que el campo datos_mensuales exista y sea un array
+      const datosMensuales = estadisticas[0]?.dataValues?.datos_mensuales || [];
+      console.log("Datos mensuales disponibles:", datosMensuales);
+  
+      if (!Array.isArray(datosMensuales) || datosMensuales.length === 0) {
         throw new Error(
-          `Los datos mensuales están incompletos para el año ${year}`
+          `Los datos mensuales están vacíos o no existen para el año ${year}`
         );
       }
-
-      // Extraer estadísticas del mes específico (meses en datos_mensuales están basados en índices de 0 a 11)
-      const datosMes = datosMensuales[month - 1]; // month es de 1 a 12, por lo que restamos 1
+  
+      // Asegurarse de que `month` sea un número
+      const mesBuscado = parseInt(month, 10);
+  
+      // Buscar el objeto correspondiente al mes solicitado
+      const datosMes = datosMensuales.find((dato) => parseInt(dato.mes, 10) === mesBuscado);
+      console.log(`Datos para el mes ${mesBuscado}:`, datosMes);
+  
       if (!datosMes) {
-        throw new Error(`No se encontraron estadísticas para ${year}-${month}`);
+        throw new Error(
+          `No se encontraron estadísticas para el mes ${mesBuscado} del año ${year}`
+        );
       }
-
+  
+      // Retornar las estadísticas del mes solicitado
       return {
         year,
-        month,
-        ...datosMes,
+        month: mesBuscado,
+        total: datosMes.total,
+        unidades: datosMes.unidades,
       };
     } catch (error) {
       console.error(
-        `Error al obtener estadísticas para ${year}-${month}:`,
-        error.message
+        `Error al obtener estadísticas para ${year}-${month}: ${error.message}`
       );
-      throw error;
+      throw new Error(
+        `Error al obtener estadísticas: ${error.message}`
+      );
     }
   }
+  
+  
 
   /*   async obtenerPorAno(year) {
     const estadisticas = await VentasEstadisticasRepository.findByYear(year);

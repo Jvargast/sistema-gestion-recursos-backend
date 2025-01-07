@@ -52,29 +52,127 @@ async function populateDatabase() {
     // Crear permisos
     const permisosAuth = [
       { nombre: "iniciar_sesion", descripcion: "Permiso para iniciar sesión" },
-      { nombre: "ver_permisos", descripcion: "Permiso para ver permisos" },
-      { nombre: "crear_permisos", descripcion: "Permiso para crear permisos" },
-      {
-        nombre: "eliminar_permisos",
-        descripcion: "Permiso para eliminar permisos",
-      },
-      { nombre: "ver_roles", descripcion: "Permiso para ver roles" },
-      { nombre: "crear_roles", descripcion: "Permiso para crear roles" },
-      { nombre: "editar_roles", descripcion: "Permiso para editar roles" },
-      { nombre: "eliminar_roles", descripcion: "Permiso para eliminar roles" },
+      //Gestión de Usuarios
+      { nombre: "ver_administrador", descripcion: "Permiso ver panel de administración" },
+      { nombre: "crear_usuarios", descripcion: "Permiso para crear usuarios" },
+      { nombre: "editar_usuario", descripcion: "Permiso para editar usuario" },
+      { nombre: "editar_usuarios", descripcion: "Permiso para editar usuarios"},
       { nombre: "ver_usuarios", descripcion: "Permiso para ver usuarios" },
       { nombre: "ver_usuario", descripcion: "Permiso para ver usuario" },
-      { nombre: "crear_usuarios", descripcion: "Permiso para crear usuarios" },
-      {
-        nombre: "editar_usuarios",
-        descripcion: "Permiso para editar usuarios",
-      },
-      { nombre: "editar_usuario", descripcion: "Permiso para editar usuario" },
-      {
-        nombre: "eliminar_usuarios",
-        descripcion: "Permiso para eliminar usuarios",
-      },
+      { nombre: "eliminar_usuarios", descripcion: "Permiso para eliminar usuarios"},
+      { nombre: "eliminar_usuario", descripcion: "Permiso para eliminar usuario"},
+      { nombre: "dar_de_baja_usuarios", descripcion: "Permiso para dar de baja a usuarios" },
+      { nombre: "dar_de_baja_usuario", descripcion: "Permiso para dar de baja a usuario"},
+      { nombre: "restaurar_usuario_de_baja", descripcion: "Permiso para restaurar usuario que fue dado de baja"},
+      { nombre: "auditar_actividad_usuario", descripcion: "Permiso para auditar actividad de usuario"},
+
+      { nombre: "crear_permisos", descripcion: "Permiso para crear permisos" },
+      { nombre: "ver_permisos", descripcion: "Permiso para ver permisos" },
+      { nombre: "editar_permisos", descripcion: "Permiso para editar permisos"},
+      { nombre: "eliminar_permisos", descripcion: "Permiso para eliminar permisos"},
+
+      { nombre: "crear_roles", descripcion: "Permiso para crear roles" },
+      { nombre: "asignar_roles", descripcion: "Permiso para asignar roles" },
+      { nombre: "editar_roles", descripcion: "Permiso para editar roles" },
+      { nombre: "ver_roles", descripcion: "Permiso para ver roles" },
+      { nombre: "eliminar_roles", descripcion: "Permiso para eliminar roles" },
+      { nombre: "ver_rol_y_permisos_asignados", descripcion: "Permiso para ver roles y permisos asignados"},
+
+      //Gestión de Inventario
+      { nombre: "ver_inventario", descripcion: "Permiso para ver inventario"},
+      { nombre: "ver_inventario_camion", descripcion: "Permiso para ver el inventario del camión"},
+      { nombre: "agregar_productos_inventario", descripcion: "Permiso para agregar productos al inventario"},
+      { nombre: "visualizar_nivel_stock_inventario", descripcion: "Permiso para visualizar los niveles de stock del inventario"},
+      { nombre: "editar_inventario", descripcion: "Permiso para editar el inventario"},
+      { nombre: "agregar_categoria_producto", descripcion: "Permiso para agregar categorias de productos"},
+      { nombre: "realizar_auditoria_inventario", descripcion: "Permiso para realizar auditoria del inventario"},
+      { nombre: "configurar_alertas_inventario", descripcion: "Permiso para configurar alertas de inventario"},
+      { nombre: "reportar_stock_danado", descripcion: "Permiso para reportar el stock dañado"},
+      { nombre: "historial_modificaciones_de_inventario", descripcion: "Permiso para ver historial de modificaciones del inventario"},
+
+      { nombre: "gestionar_proveedores", descripcion: "Permiso para registrar y actualizar datos de proveedores"},
+      { nombre: "ver_proveedor", descripcion: "Permiso para ver proveedor"},
+      { nombre: "eliminar_proveedores", descripcion: "Permiso para eliminar proveedores"},
+
+
+      //Gestión de Producción 
+      { nombre: "gestionar_insumos", descripcion: "Permiso para gestionar las materias primas necesarios para la producción"},
+      { nombre: "control_de_desperdicios", descripcion: "Permiso para registrar y analizar productos defectuosos o desperdiciados"},
+      { nombre: "ver_produccion", descripcion: "Permiso para ver produccion"},
+      { nombre: "visualizar_datos_produccion", descripcion: "Permiso para visualizar los datos de producción"},
+      { nombre: "configurar_objetivos_produccion", descripcion: "Permiso para configurar objetivos de producción"},
+      { nombre: "registrar_lotes_produccion", descripcion: "Permiso para registrar lotes de producción"},
+
+      //Gestión de Ventas
+      { nombre: "registrar_ventas", descripcion: "Permiso para registrar ventas"},
+      { nombre: "editar_ventas", descripcion: "Permiso para editar ventas"},
+      { nombre: "registrar_ventas_programadas", descripcion: "Permiso para registrar ventas programadas"},
+      { nombre: "control_de_comisiones", descripcion: "Permiso para calcular y gestionar comisiones de los vendedores"},
+      { nombre: "configurar_precios_y_descuentos", descripcion: "Permiso para configurar precios y descuentos"},
+      { nombre: "visualizar_historial_ventas", descripcion: "Permiso para visualizar historial de ventas"},
+      { nombre: "registrar_pagos", descripcion: "Permiso para registrar pagos"},
+      { nombre: "generar_facturas", descripcion: "Permiso para generar facturas"},
+      { nombre: "generar_metas_ventas", descripcion: "Permiso para generar metas u objetivos en ventas"},
+      { nombre: "aprobar_devoluciones", descripcion: "Permiso para aprobrar devoluciones"},
+
+      //Gestión de Clientes
+      { nombre: "crear_cliente", descripcion: "Permiso para crear cliente"},
+      { nombre: "editar_cliente", descripcion: "Permiso para editar cliente"},
+      { nombre: "ver_cliente", descripcion: "Permiso para ver cliente"},
+      { nombre: "visualizar_historial_cliente", descripcion: "Permiso para visualizar historial de cliente"},
+      { nombre: "configurar_nivel_cliente", descripcion: "Permiso para crear niveles de categorias de clientes como mayorista o minorista para personalizar precios y/o descuentos"},
+
+      //Gestión de Rutas/Logística
+      { nombre: "ver_rutas", descripcion: "Permiso para ver rutas"},
+      { nombre: "asignar_entregas", descripcion: "Permiso para asignar entregas a chofer"},
+      { nombre: "marcar_entrega_como_finalizada", descripcion: "Permiso para marcar entrega como finalizada"},
+      { nombre: "ver_estado_entrega", descripcion: "Permiso para ver el estado de la entrega"},
+      { nombre: "ver_estado_chofer", descripcion: "Permiso para ver el estado del chofer"},
+      { nombre: "registrar_incidencia_en_ruta", descripcion: "Permiso para registrar incidencia en ruta"},
+      { nombre: "generar_reporte_de_ruta", descripcion: "Permiso para generar reportes sobre tiempos de entrega y desempeño de rutas"},
+
+      //Reportes
+      { nombre: "generar_reporte_inventario", descripcion: "Permiso para generar reportes de inventario"},
+      { nombre: "generar_reporte_ventas", descripcion: "Permiso para generar reportes de ventas"},
+      { nombre: "visualizar_reportes", descripcion: "Permiso para visualizar reportes"},
+      { nombre: "exportar_reportes", descripcion: "Permiso para exportar reportes"},
+      
+      //Configuración general
+      { nombre: "ver_perfil", descripcion: "Permiso para ver perfil"},
+      { nombre: "editar_perfil", descripcion: "Permiso para editar perfil"},
+      { nombre: "configurar_perfil_usuario", descripcion: "Permiso para configurar perfil de usuario"},
+      { nombre: "configurar_parametros_del_sistema", descripcion: "Permiso para configurar parametros del sistema"},
+      { nombre: "editar_ajustes_de_la_interfaz", descripcion: "Permiso para editar ajustes de la interfaz"},
+      
+      //Seguridad y Auditoría 
+      { nombre: "configurar_permisos_avanzados", descripcion: "Permiso para configurar permisos avanzados"},
+      { nombre: "realizar_copias_de_seguridad", descripcion: "Permiso para realizar copias de seguridad"},
+      { nombre: "acceso_a_log_del_sistema", descripcion: "Permiso para acceder al log del sistema"},
+      { nombre: "autenticacion_dos_factores", descripcion: "Permiso para configurar autenticación de dos factores"},
+      { nombre: "auditar_intentos_fallidos", descripcion: "Permiso para auditar intentos fallidos de inicio de sesión"},
+
+      // Más permisos...
+      { nombre: "ver_dashboard", descripcion: "Permiso para ver dashboard" },
+      { nombre: "ver_facturas", descripcion: "Permiso para ver facturas" },
+      { nombre: "ver_pagos", descripcion: "Permiso para ver pagos" },
+      { nombre: "ver_cotizaciones", descripcion: "Permiso para ver cotizaciones" },
+      { nombre: "ver_pedidos", descripcion: "Permiso para ver pedidos" },
+      { nombre: "ver_ventas", descripcion: "Permiso para ver ventas" },
+      { nombre: "ver_clientes", descripcion: "Permiso para ver clientes" },
+      { nombre: "ver_productos", descripcion: "Permiso para ver productos" },
+      { nombre: "ver_proveedores", descripcion: "Permiso para ver proveedores" },
+      { nombre: "ver_insumos", descripcion: "Permiso para ver insumos" },
+      { nombre: "ver_categorias", descripcion: "Permiso para ver categorias" },
+      { nombre: "ver_ventas_chofer", descripcion: "Permiso para ver ventas chofer" },
+      { nombre: "ver_entregas_realizadas", descripcion: "Permiso para ver entregas realizadas" },
+      { nombre: "ver_entregas", descripcion: "Permiso para ver entregas" },
+      { nombre: "ver_entregas_asignadas", descripcion: "Permiso para ver entregas asignadas" },
+      { nombre: "ver_camiones", descripcion: "Permiso para ver camiones" },
+      { nombre: "ver_agenda_carga", descripcion: "Permiso para ver agendas carga" },
+      { nombre: "ver_estadisticas", descripcion: "Permiso para ver estadisticas" },
+      { nombre: "ver_admin", descripcion: "Permiso para ver panel administración" },
     ];
+
 
     const permisosCreados = await Permisos.bulkCreate(permisosAuth);
     console.log("Permisos creados");
@@ -92,25 +190,71 @@ async function populateDatabase() {
 
     // Asignar permisos a roles
     const permisosPorRol = {
-      vendedor: ["iniciar_sesion", "ver_usuarios"],
-      administrador: [
-        "iniciar_sesion",
-        "ver_permisos",
-        "crear_permisos",
-        "eliminar_permisos",
-        "ver_roles",
-        "crear_roles",
-        "editar_roles",
-        "eliminar_roles",
-        "ver_usuarios",
-        "ver_usuario",
-        "crear_usuarios",
-        "editar_usuarios",
-        "editar_usuario",
-        "eliminar_usuarios",
+      vendedor: ["iniciar_sesion",
+        "ver_inventario","ver_inventario_camion",
+        "visualizar_nivel_stock_inventario","editar_inventario",
+        "agregar_categoria_producto","realizar_auditoria_inventario",
+        "configurar_alertas_inventario","reportar_stock_danado",
+        "gestionar_insumos","control_de_desperdicios",
+        "ver_produccion","visualizar_datos_produccion",
+        "registrar_ventas","editar_ventas","registrar_ventas_programadas",
+        "visualizar_historial_ventas",
+        "registrar_pagos","crear_cliente","editar_cliente","ver_cliente",
+        "visualizar_historial_cliente",
+        "configurar_nivel_cliente",
+        "asignar_entregas","marcar_entrega_como_finalizada",
+        "ver_estado_entrega","ver_estado_chofer",
+        "generar_reporte_inventario","generar_reporte_ventas",
+        "visualizar_reportes","exportar_reportes",
+        "ver_perfil","editar_perfil","configurar_perfil_usuario",
+        "autenticacion_dos_factores", "ver_pedidos", "ver_ventas",
+        "ver_clientes", "ver_productos", "ver_insumos", "ver_categorias"
       ],
-      operario: ["iniciar_sesion"],
-      chofer: ["iniciar_sesion"],
+      administrador: [
+        "iniciar_sesion", "ver_administrador",
+        "crear_usuarios","editar_usuario","editar_usuarios","ver_usuarios","ver_usuario",
+        "eliminar_usuarios","eliminar_usuario","dar_de_baja_usuarios","dar_de_baja_usuario","restaurar_usuario_de_baja","auditar_actividad_usuario",
+        "crear_permisos","ver_permisos","editar_permisos","eliminar_permisos",
+        "crear_roles","asignar_roles","editar_roles","ver_roles","eliminar_roles","ver_rol_y_permisos_asignados",
+        "ver_inventario","agregar_productos_inventario","visualizar_nivel_stock_inventario",
+        "editar_inventario","agregar_categoria_producto","realizar_auditoria_inventario","configurar_alertas_inventario",
+        "reportar_stock_danado","historial_modificaciones_de_inventario",
+        "gestionar_proveedores","ver_proveedores","ver_proveedor","eliminar_proveedores",
+        "gestionar_insumos","control_de_desperdicios","ver_produccion","visualizar_datos_produccion",
+        "configurar_objetivos_produccion","registrar_lotes_produccion",
+        "registrar_ventas","modificar_ventas","registrar_ventas_programadas","control_de_comisiones",
+        "configurar_precios_y_descuentos","visualizar_historial_ventas","registrar_pagos",
+        "generar_facturas","generar_metas_ventas","aprobar_devoluciones",
+        "crear_cliente","editar_cliente","ver_cliente","visualizar_historial_cliente","configurar_nivel_cliente",
+        "ver_rutas","asignar_entregas","marcar_entrega_como_finalizada","ver_estado_entrega",
+        "ver_estado_chofer","registrar_incidencia_en_ruta","generar_reporte_de_ruta",
+        "generar_reporte_inventario","generar_reporte_ventas","visualizar_reportes","exportar_reportes",
+        "ver_perfil","editar_perfil","configurar_perfil_usuario","configurar_parametros_del_sistema","editar_ajustes_de_la_interfaz",
+        "configurar_permisos_avanzados","realizar_copias_de_seguridad","acceso_a_log_del_sistema","autenticacion_dos_factores","auditar_intentos_fallidos",
+        "ver_dashboard", "ver_facturas", 
+        "ver_pagos", "ver_cotizaciones", "ver_pedidos", "ver_ventas",
+        "ver_clientes", "ver_productos", "ver_insumos", "ver_categorias",
+        "ver_entregas_realizadas", "ver_camiones",
+        "ver_agenda_carga", "ver_estadisticas", "ver_admin", "ver_entregas", "ver_ventas_chofer"
+      ],
+      
+      operario: ["iniciar_sesion",
+        "ver_inventario","agregar_productos_inventario","visualizar_nivel_stock_inventario",
+        "reportar_stock_danado","control_de_desperdicios","ver_produccion",
+        "visualizar_datos_produccion","registrar_lotes_produccion",
+        "ver_perfil","editar_perfil","configurar_perfil_usuario","configurar_parametros_del_sistema",
+        "autenticacion_dos_factores", 
+        "ver_productos", "ver_insumos", "ver_categorias",
+      ],
+      chofer: ["iniciar_sesion",
+        "ver_inventario_camion","reportar_stock_danado",
+        "registrar_ventas","modificar_ventas","registrar_pagos",
+        "ver_rutas","marcar_entrega_como_finalizada","registrar_incidencia_en_ruta",
+        "ver_perfil","editar_perfil","configurar_perfil_usuario",
+        "autenticacion_dos_factores",  
+        "ver_clientes", "ver_camiones",
+        "ver_agenda_carga", "ver_entregas", "ver_entregas_asignadas", "ver_ventas_chofer"
+      ],
     };
 
     for (const [rolNombre, permisos] of Object.entries(permisosPorRol)) {

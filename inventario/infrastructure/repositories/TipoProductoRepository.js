@@ -2,8 +2,8 @@ import ITipoProductoRepository from '../../domain/repositories/ITipoProductoRepo
 import TipoProducto from '../../domain/models/TipoProducto.js';
 
 class TipoProductoRepository extends ITipoProductoRepository {
-  async findById(id) {
-    return await TipoProducto.findByPk(id);
+  async findById(id_tipo_producto) {
+    return await TipoProducto.findByPk(id_tipo_producto);
   }
 
   async findAll() {

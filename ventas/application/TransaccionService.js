@@ -6,7 +6,6 @@ import ClienteService from "./ClienteService.js";
 import LogTransaccionService from "./LogTransaccionService.js";
 import DetalleTransaccionService from "./DetalleTransaccionService.js";
 import { Op } from "sequelize";
-import FacturaService from "./FacturaService.js";
 import TransicionTipoTransaccionService from "./TransicionTipoTransaccionService .js";
 import TransicionEstadoTransaccionService from "./TransicionEstadoTransaccionService.js";
 import PagoService from "./PagoService.js";
@@ -21,6 +20,7 @@ import UsuariosService from "../../auth/application/UsuariosService.js";
 import DocumentoService from "./DocumentoService.js";
 import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
+import moment from "moment";
 
 class TransaccionService {
   async getTransaccionById(id) {
@@ -67,10 +67,7 @@ class TransaccionService {
     return { transaccion, detalles, pagos, usuario_asignado };
   }
 
-  async getAllTransacciones(
-    filters = {},
-    options /* = { page: 1, limit: 20, rolId: null } */
-  ) {
+  async getAllTransacciones(filters = {}, options) {
     const allowedFields = [
       "tipo_transaccion",
       "id_cliente",
@@ -92,7 +89,7 @@ class TransaccionService {
     }
 
     // Excluir estados para roles no administradores
-    if (options.rolId !== 2) {
+    if (options.rol !== "administrador") {
       // Asume que rolId 2 = administrador
       const excludedStates = ["Rechazada", "Cancelado", "Cancelada"];
 
@@ -157,7 +154,7 @@ class TransaccionService {
     // Crear transacción
     const nuevaTransaccion = await TransaccionRepository.create({
       ...data,
-      tipo_documento: tipo_documento,
+      tipo_documento: tipo_transaccion === "venta" ? tipo_documento : null,
       id_estado_transaccion: estadoInicial.id_estado_transaccion,
       id_usuario,
     });
@@ -386,11 +383,13 @@ class TransaccionService {
   }
 
   async addDetallesToTransaccion(id_transaccion, detalles, id_usuario) {
+    // Obtener la transacción
     const transaccion = await this.getTransaccionById(id_transaccion);
     const estadoActual = await EstadoTransaccionService.findById(
       transaccion.transaccion.dataValues.id_estado_transaccion
     );
 
+    // Agregar detalles a la transacción
     await DetalleTransaccionService.createDetallesTransaccion(
       detalles,
       id_transaccion
@@ -401,15 +400,20 @@ class TransaccionService {
       id_transaccion
     );
 
-    // Encontrar documento
-    const documento = await DocumentoRepository.findByTransaccionId(
-      id_transaccion
-    );
-    await DocumentoRepository.update(documento[0].dataValues.id_documento, {
-      total,
-    });
+    // Verificar si la transacción es del tipo "venta"
+    if (transaccion.transaccion.dataValues.tipo_transaccion === "venta") {
+      // Buscar y actualizar el documento asociado
+      const documento = await DocumentoRepository.findByTransaccionId(
+        id_transaccion
+      );
+      if (documento && documento.length > 0) {
+        await DocumentoRepository.update(documento[0].dataValues.id_documento, {
+          total,
+        });
+      }
+    }
 
-    //Actualizar transacción con el total
+    // Actualizar la transacción con el total
     await TransaccionRepository.update(id_transaccion, {
       total,
     });
@@ -809,8 +813,9 @@ class TransaccionService {
           );
 
           await DocumentoRepository.update(
-            documento[0].dataValues.id_documento, {
-              id_estado_pago: 4
+            documento[0].dataValues.id_documento,
+            {
+              id_estado_pago: 4,
             }
           );
           break;
@@ -934,6 +939,168 @@ class TransaccionService {
       order: [["id_transaccion", "ASC"]],
     });
     return result;
+  }
+
+  async calcularPorcentajeYCantidadVentasNuevas() {
+    try {
+      // Fechas para hoy y ayer
+      const inicioHoy = moment().startOf("day").toDate();
+      const inicioAyer = moment().subtract(1, "day").startOf("day").toDate();
+      const finAyer = moment().startOf("day").toDate(); // Fin de ayer es el inicio de hoy
+
+      // Obtener la cantidad de ventas de hoy con estado "completada"
+      const ventasHoy = await TransaccionRepository.getVentasCompletadasEnRango(
+        inicioHoy,
+        moment().toDate()
+      );
+
+      // Obtener la cantidad de ventas de ayer con estado "completada"
+      const ventasAyer =
+        await TransaccionRepository.getVentasCompletadasEnRango(
+          inicioAyer,
+          finAyer
+        );
+
+      if (ventasHoy === 0 && ventasAyer === 0) {
+        // Si no hubo ventas ni hoy ni ayer
+        return { porcentaje: 0, ventasHoy, ventasAyer };
+      }
+
+      let porcentaje;
+
+      if (ventasHoy === 0) {
+        // Si no hubo ventas hoy, devolución de una disminución del 100%
+        porcentaje = 0; // Representar como "100% menos ventas"
+      } else if (ventasAyer === 0) {
+        // Si no hubo ventas ayer, todo lo de hoy es nuevo (100%)
+        porcentaje = 100;
+      } else {
+        // Calcular el porcentaje de incremento o decremento
+        porcentaje = ((ventasHoy - ventasAyer) / ventasAyer) * 100;
+      }
+
+      return {
+        porcentaje: Math.abs(porcentaje).toFixed(2), // Redondear a dos decimales y usar valores absolutos
+        incremento: porcentaje > 0, // True si hubo incremento, False si hubo decremento
+        ventasHoy,
+        ventasAyer,
+      };
+    } catch (error) {
+      console.error("Error en calcularPorcentajeYCantidadVentasNuevas:", error);
+      throw error;
+    }
+  }
+
+  async calcularPorcentajeYCantidadVentasMensuales() {
+    try {
+      // Fechas para el mes actual y el mes anterior
+      const inicioMesActual = moment().startOf("month").toDate();
+      const inicioMesAnterior = moment()
+        .subtract(1, "month")
+        .startOf("month")
+        .toDate();
+      const finMesAnterior = moment().startOf("month").toDate();
+
+
+      // Obtener la cantidad de ventas del mes actual con estado "completada"
+      const ventasMesActual =
+        await TransaccionRepository.getVentasCompletadasEnRango(
+          inicioMesActual,
+          moment().toDate()
+        );
+
+      // Obtener la cantidad de ventas del mes anterior con estado "completada"
+      const ventasMesAnterior =
+        await TransaccionRepository.getVentasCompletadasEnRango(
+          inicioMesAnterior,
+          finMesAnterior
+        );
+
+      if (ventasMesActual === 0 && ventasMesAnterior === 0) {
+        return { porcentaje: 0, ventasMesActual, ventasMesAnterior };
+      }
+
+      let porcentaje;
+
+      if (ventasMesActual === 0) {
+        porcentaje = -100; // Disminución total
+      } else if (ventasMesAnterior === 0) {
+        porcentaje = 100; // Todo lo de este mes es nuevo
+      } else {
+        porcentaje =
+          ((ventasMesActual - ventasMesAnterior) / ventasMesAnterior) * 100;
+      }
+
+      return {
+        porcentaje: porcentaje.toFixed(2),
+        ventasMesActual,
+        ventasMesAnterior,
+      };
+    } catch (error) {
+      console.error(
+        "Error en calcularPorcentajeYCantidadVentasMensuales:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  async calcularPorcentajeYCantidadVentasAnuales() {
+    try {
+      // Fechas para el año actual y el año anterior
+      const inicioAnoActual = moment().startOf("year").toDate(); // Inicio del año actual (ejemplo: 2025-01-01 00:00:00)
+      const inicioAnoAnterior = moment()
+        .subtract(1, "year")
+        .startOf("year")
+        .toDate(); // Inicio del año anterior (ejemplo: 2024-01-01 00:00:00)
+      const finAnoAnterior = moment()
+        .subtract(1, "year")
+        .endOf("year")
+        .toDate(); // Fin del año anterior (ejemplo: 2024-12-31 23:59:59)
+
+
+      // Obtener la cantidad de ventas del año actual con estado "completada"
+      const ventasAnoActual =
+        await TransaccionRepository.getVentasCompletadasEnRango(
+          inicioAnoActual,
+          moment().toDate()
+        );
+
+      // Obtener la cantidad de ventas del año anterior con estado "completada"
+      const ventasAnoAnterior =
+        await TransaccionRepository.getVentasCompletadasEnRango(
+          inicioAnoAnterior,
+          finAnoAnterior
+        );
+
+
+      if (ventasAnoActual === 0 && ventasAnoAnterior === 0) {
+        return { porcentaje: 0, ventasAnoActual, ventasAnoAnterior };
+      }
+
+      let porcentaje;
+
+      if (ventasAnoActual === 0) {
+        porcentaje = -100; // Disminución total
+      } else if (ventasAnoAnterior === 0) {
+        porcentaje = 100; // Todo lo de este año es nuevo
+      } else {
+        porcentaje =
+          ((ventasAnoActual - ventasAnoAnterior) / ventasAnoAnterior) * 100;
+      }
+
+      return {
+        porcentaje: porcentaje.toFixed(2),
+        ventasAnoActual,
+        ventasAnoAnterior,
+      };
+    } catch (error) {
+      console.error(
+        "Error en calcularPorcentajeYCantidadVentasAnuales:",
+        error
+      );
+      throw error;
+    }
   }
 }
 

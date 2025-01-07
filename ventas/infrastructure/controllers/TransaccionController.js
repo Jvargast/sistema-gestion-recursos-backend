@@ -21,13 +21,13 @@ class TransaccionController {
   async getAllTransacciones(req, res) {
     try {
       const filters = req.query; // Filtros enviados en los query params
-      const rolId = req.user.rol.id;
+      const rol = req.user.rol;
 
       let options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
         search: req.query.search,
-        rolId,
+        rol,
       };
       delete filters.limit;
       delete filters.offset;
@@ -46,11 +46,11 @@ class TransaccionController {
   async createTransaccion(req, res) {
     try {
       const { detalles, ...data } = req.body;
-      const { rut } = req.user;
+      const { id } = req.user;
       const transaccion = await TransaccionService.createTransaccion(
         data,
         detalles,
-        rut
+        id
       );
       res.status(201).json(transaccion);
     } catch (error) {
@@ -96,7 +96,7 @@ class TransaccionController {
     try {
       const { id } = req.params;
       const { id_estado_transaccion } = req.body;
-      const { rut } = req.user;
+      const rut = req.user.id;
       await TransaccionService.changeEstadoTransaccion(
         id,
         id_estado_transaccion,
@@ -115,7 +115,7 @@ class TransaccionController {
     try {
       const { id } = req.params;
       const { tipo_transaccion } = req.body;
-      const { rut } = req.user;
+      const rut = req.user.id;
       await TransaccionService.changeTipoTransaccion(id, tipo_transaccion, rut);
       res
         .status(200)
@@ -129,7 +129,7 @@ class TransaccionController {
     try {
       const { id } = req.params;
       const { nuevoEstado } = req.body;
-      const { rut } = req.user;
+      const rut = req.user.id;
       await DetalleTransaccionService.cambiarEstadoDetalles(
         id,
         nuevoEstado,
@@ -147,7 +147,7 @@ class TransaccionController {
     try {
       const { id } = req.params;
       const { metodo_pago } = req.body;
-      const { rut } = req.user;
+      const rut = req.user.id;
       await TransaccionService.cambiarMetodoPago(id, metodo_pago, rut);
       res.status(200).json({ message: "Método de pago actualizado" });
     } catch (error) {
@@ -157,7 +157,7 @@ class TransaccionController {
 
   async completeTransaction(req, res) {
     try {
-      const { rut } = req.user;
+      const rut = req.user.id;
       const { id } = req.params;
       const { metodo_pago, monto, referencia } = req.body;
       const completeTransaction = await TransaccionService.completarTransaccion(
@@ -175,7 +175,7 @@ class TransaccionController {
 
   async finalizarTransaccion(req, res) {
     try {
-      const { rut } = req.user;
+      const rut = req.user.id;
       const { id } = req.params;
 
       const finalizarTransaccion =
@@ -189,7 +189,7 @@ class TransaccionController {
   async asignarTransaccion(req, res) {
     try {
       //Falta lógica para el usuario que lo hace
-      const { rut } = req.user;
+      const rut  = req.user.id;
       const { id } = req.params;
       const { id_usuario } = req.body;
 
@@ -202,7 +202,7 @@ class TransaccionController {
 
   async eliminarAsignadoTransaccion(req, res) {
     try {
-      const { rut } = req.user;
+      const rut  = req.user.id;
       const { id } = req.params;
 
       await TransaccionService.eliminarTransaccionAUsuario(id, rut);
@@ -216,13 +216,13 @@ class TransaccionController {
   async actualizarEstadoYRegistrarPago(req, res) {
     try {
       const { id_transaccion, detallesActualizados, pago } = req.body;
-      const { id_usuario } = req.user;
+      const { id } = req.user;
 
       const resultado = await TransaccionService.actualizarEstadoYRegistrarPago(
         id_transaccion,
         detallesActualizados,
         pago,
-        id_usuario
+        id
       );
       res.status(200).json(resultado);
     } catch (error) {
@@ -233,7 +233,7 @@ class TransaccionController {
   async deleteTransacciones(req, res) {
     try {
       const { ids } = req.body;
-      const { rut } = req.user;
+      const  rut  = req.user.id;
       const result = await TransaccionService.deleteTransacciones(ids, rut);
       res.status(200).json(result);
     } catch (error) {
@@ -440,7 +440,7 @@ class TransaccionController {
       let options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
-        search: req.query.search
+        search: req.query.search,
       };
       delete filters.limit;
       delete filters.offset;
@@ -458,6 +458,70 @@ class TransaccionController {
         .json({ error: "Error al obtener transacciones pendientes" });
     }
   }
+
+  async getPorcentajesYCantidadVentasNuevas(req, res) {
+    try {
+      const { porcentaje, ventasHoy, ventasAyer } = await TransaccionService.calcularPorcentajeYCantidadVentasNuevas();
+
+      res.status(200).json({
+        success: true,
+        porcentaje,
+        cantidad:ventasHoy,
+        ventasAyer,
+        message: "Porcentaje y cantidad de ventas calculados con éxito.",
+      });
+    } catch (error) {
+      console.error("Error al calcular porcentaje y cantidad de ventas nuevas:", error);
+      res.status(500).json({
+        success: false,
+        message: "Ocurrió un error al calcular el porcentaje y cantidad de ventas nuevas.",
+        error: error.message,
+      });
+    }
+  }
+  async getPorcentajesYCantidadVentasNuevasMes(req, res) {
+    try {
+      const { porcentaje, ventasMesActual, ventasMesAnterior } =
+        await TransaccionService.calcularPorcentajeYCantidadVentasMensuales();
+  
+      res.status(200).json({
+        success: true,
+        porcentaje,
+        cantidad: ventasMesActual,
+        ventasMesAnterior,
+        message: "Porcentaje y cantidad de ventas mensuales calculados con éxito.",
+      });
+    } catch (error) {
+      console.error("Error al calcular porcentaje y cantidad de ventas mensuales:", error);
+      res.status(500).json({
+        success: false,
+        message: "Ocurrió un error al calcular el porcentaje y cantidad de ventas mensuales.",
+        error: error.message,
+      });
+    }
+  }
+  async getPorcentajesYCantidadVentasNuevasAno(req, res) {
+    try {
+      const { porcentaje, ventasAnoActual, ventasAnoAnterior } =
+        await TransaccionService.calcularPorcentajeYCantidadVentasAnuales();
+  
+      res.status(200).json({
+        success: true,
+        porcentaje,
+        cantidad:ventasAnoActual,
+        ventasAnoAnterior,
+        message: "Porcentaje y cantidad de ventas anuales calculados con éxito.",
+      });
+    } catch (error) {
+      console.error("Error al calcular porcentaje y cantidad de ventas anuales:", error);
+      res.status(500).json({
+        success: false,
+        message: "Ocurrió un error al calcular el porcentaje y cantidad de ventas anuales.",
+        error: error.message,
+      });
+    }
+  }
+  
 }
 
 export default new TransaccionController();

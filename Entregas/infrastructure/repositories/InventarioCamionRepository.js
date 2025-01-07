@@ -35,6 +35,10 @@ class InventarioCamionRepository {
     });
   }
 
+  async findAllProducts(condition) {
+    return await InventarioCamion.findAll(condition);
+  }
+
   async findByCamionId(idCamion) {
     return await InventarioCamion.findAll({
       where: {
@@ -106,6 +110,16 @@ class InventarioCamionRepository {
           as: "detalleTransaccion",
         },
       ],
+    });
+  }
+
+  async findByCamionProductoAndEstado(id_camion, id_producto, estado) {
+    return await InventarioCamion.findOne({
+      where: {
+        id_camion,
+        id_producto,
+        estado
+      },
     });
   }
 

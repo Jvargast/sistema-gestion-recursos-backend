@@ -1,5 +1,6 @@
 import IClienteRepository from "../../domain/repositories/IClienteRepository.js";
 import Cliente from "../../domain/models/Cliente.js";
+import { Op } from "sequelize";
 
 class ClienteRepository extends IClienteRepository {
   async findWithFilter(where) {
@@ -59,6 +60,21 @@ class ClienteRepository extends IClienteRepository {
     return await Cliente.findAll({
       where: { rut: ruts },
     });
+  }
+
+  async getClientesRegistradosDesdeFecha(fechaInicio, fechaFin) {
+    return await Cliente.count({
+      where: {
+        createdAt: {
+          [Op.gte]: fechaInicio, // Mayor o igual que `fechaInicio`
+          [Op.lt]: fechaFin, // Menor que `fechaFin`
+        },
+      },
+    });
+  }
+
+  async getTotalClientes() {
+    return await Cliente.count();
   }
 
   getModel() {

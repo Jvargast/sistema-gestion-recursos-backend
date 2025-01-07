@@ -1,11 +1,17 @@
 import Usuarios from "../../auth/domain/models/Usuarios.js";
 import Producto from "../../inventario/domain/models/Producto.js";
+import Cliente from "../../ventas/domain/models/Cliente.js";
 import DetalleTransaccion from "../../ventas/domain/models/DetalleTransaccion.js";
+import Documento from "../../ventas/domain/models/Documento.js";
+import MetodoPago from "../../ventas/domain/models/MetodoPago.js";
 import AgendaCarga from "./models/AgendaCarga.js";
 import Camion from "./models/Camion.js";
+import DetallesVentaChofer from "./models/DetallesVentaChofer.js";
 import Entrega from "./models/Entrega.js";
+import HistorialVentasChofer from "./models/HistorialVentasChofer.js";
 import InventarioCamion from "./models/InventarioCamion.js";
 import InventarioCamionLogs from "./models/InventarioCamionLogs.js";
+import VentasChofer from "./models/VentasChofer.js";
 
 function loadEntregasAssociations(models) {
   // Relación AgendaCarga con Usuario (Chofer)
@@ -104,12 +110,97 @@ function loadEntregasAssociations(models) {
     foreignKey: "id_detalle_transaccion",
     as: "detalleTransaccion",
   });
-  
+
   DetalleTransaccion.hasMany(InventarioCamion, {
     foreignKey: "id_detalle_transaccion",
     as: "inventarioCamion",
   });
-  
+
+  // VentasChofer tiene muchos DetallesVentaChofer
+  VentasChofer.hasMany(DetallesVentaChofer, {
+    foreignKey: "id_venta_chofer",
+    as: "detallesChofer",
+  });
+  DetallesVentaChofer.belongsTo(VentasChofer, {
+    foreignKey: "id_venta_chofer",
+    as: "venta",
+  });
+
+  // HistorialVentasChofer pertenece a VentasChofer
+  HistorialVentasChofer.belongsTo(VentasChofer, {
+    foreignKey: "id_venta_chofer",
+    as: "venta",
+  });
+  VentasChofer.hasOne(HistorialVentasChofer, {
+    foreignKey: "id_venta_chofer",
+    as: "historial",
+  });
+
+  HistorialVentasChofer.belongsTo(Usuarios, {
+    foreignKey: "id_chofer",
+    as: "chofer",
+  });
+  Usuarios.hasMany(HistorialVentasChofer, {
+    foreignKey: "id_chofer",
+    as: "historiales",
+  });
+
+  VentasChofer.belongsTo(Cliente, {
+    foreignKey: "id_cliente",
+    as: "cliente",
+  });
+  Cliente.hasMany(VentasChofer, {
+    foreignKey: "id_cliente",
+    as: "ventas",
+  });
+
+  VentasChofer.belongsTo(Usuarios, {
+    foreignKey: "id_chofer",
+    as: "usuario",
+  });
+  Usuarios.hasMany(VentasChofer, {
+    foreignKey: "id_chofer",
+    as: "ventas",
+  });
+
+  VentasChofer.belongsTo(MetodoPago, {
+    foreignKey: "id_metodo_pago",
+    as: "metodoPago",
+  });
+  MetodoPago.hasMany(VentasChofer, {
+    foreignKey: "id_metodo_pago",
+    as: "ventas",
+  });
+
+  VentasChofer.belongsTo(Camion, {
+    foreignKey: "id_camion",
+    as: "camion",
+  });
+
+  Camion.hasMany(VentasChofer, {
+    foreignKey: "id_camion",
+    as: "ventas",
+  });
+
+  DetallesVentaChofer.belongsTo(InventarioCamion, {
+    foreignKey: "id_inventario_camion",
+    as: "inventarioCamion",
+  });
+  InventarioCamion.hasMany(DetallesVentaChofer, {
+    foreignKey: "id_inventario_camion",
+    as: "detallesVentaChofer",
+  });
+
+  // Relación: Documento -> VentasChofer
+  Documento.belongsTo(VentasChofer, {
+    foreignKey: "id_venta_chofer",
+    as: "ventasChofer",
+  });
+  VentasChofer.hasMany(Documento, {
+    foreignKey: "id_venta_chofer",
+    as: "documentos",
+  });
+
 }
 
 export default loadEntregasAssociations;

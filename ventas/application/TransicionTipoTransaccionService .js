@@ -2,6 +2,7 @@ import TransicionTipoTransaccionRepository from "../infrastructure/repositories/
 
 class TransicionTipoTransaccionService {
   async validarTransicion(tipoOrigen, estadoOrigen, tipoDestino, estadoDestino) {
+
     const transicion = await TransicionTipoTransaccionRepository.findByTransition(
       tipoOrigen,
       estadoOrigen,

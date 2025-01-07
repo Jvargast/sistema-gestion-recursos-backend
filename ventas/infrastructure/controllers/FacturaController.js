@@ -26,7 +26,7 @@ class FacturaController {
       delete filters.offset;
 
       const facturas = await FacturaService.getAllFacturas(filters, options);
-      res.status(200).json({data: facturas.data, total: facturas.pagination});
+      res.status(200).json({ data: facturas.data, total: facturas.pagination });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -74,9 +74,18 @@ class FacturaController {
   async actualizarFactura(req, res) {
     try {
       const { id } = req.params;
-      const factura = await FacturaService.updateFactura(id, req.body);
-      res.status(200).json(factura);
+      const data = req.body;
+
+      // Actualizar la factura y el documento relacionado
+      const result = await FacturaService.updateFactura(id, data);
+
+      res.status(200).json({
+        mensaje: "Factura y documento actualizados exitosamente",
+        factura: result.factura,
+        documento: result.documento,
+      });
     } catch (error) {
+      console.error("Error al actualizar factura:", error.message);
       res.status(400).json({ error: error.message });
     }
   }
@@ -92,10 +101,10 @@ class FacturaController {
     }
   }
 
-  async deleteFacturas (req, res) {
+  async deleteFacturas(req, res) {
     try {
-      const {ids} = req.body;
-      const {rut} = req.user;
+      const { ids } = req.body;
+      const { rut } = req.user;
       const result = await FacturaService.deleteFacturas(ids, rut);
       res.status(200).json(result);
     } catch (error) {

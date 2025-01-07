@@ -40,7 +40,7 @@ class ProductoService {
       /* where[Op.eq] = [
         { "$tipo.nombre$": { [Op.eq]: `%${options.tipo_producto}%` } },
       ]; */
-      where["$tipo.nombre$"] = options.tipo_producto;// Buscar en tipo.nombre
+      where["$tipo.nombre$"] = options.tipo_producto; // Buscar en tipo.nombre
     }
 
     if (options.search) {
@@ -82,7 +82,7 @@ class ProductoService {
       where,
       include,
       order: [["id_producto", "ASC"]],
-      subQuery: false
+      subQuery: false,
     });
     return result;
   }
@@ -110,17 +110,46 @@ class ProductoService {
   }
 
   async updateProducto(id, data) {
-    const { id_estado_destino, ...productoData } = data;
+    const { id_estado_destino, stock, id_tipo_producto, ...productoData } = data;
 
-    if (id_estado_destino) {
-      const producto = await this.getProductoById(id);
+    // Obtener el tipo de producto
+    const producto = await this.getProductoById(id);
 
-      await TransicionEstadoProductoService.validarTransicion(
-        producto.id_estado_producto,
-        id_estado_destino
-      );
+    if (!producto) {
+      throw new Error("El producto no existe");
     }
-    return await ProductosRepository.update(id, productoData);
+
+    const tipo_producto = await TipoProductoRepository.findById(id_tipo_producto);
+
+    if (tipo_producto.dataValues.nombre === "Producto_Terminado") {
+      // Producto_Terminado
+      // Validar transición de estado si aplica
+      if (id_estado_destino) {
+        await TransicionEstadoProductoService.validarTransicion(
+          producto.id_estado_producto,
+          id_estado_destino
+        );
+      }
+
+      // Actualizar solo datos específicos de Producto_Terminado
+      await ProductosRepository.update(id, productoData);
+
+      // Si incluye stock, actualiza el inventario
+      if (typeof stock !== "undefined") {
+        await InventarioRepository.updateByProductoId(id, { cantidad: stock });
+      }
+    } else if (tipo_producto.dataValues.nombre === "Insumo") {
+      // Insumo
+      // Actualizar datos específicos de insumos
+      await ProductosRepository.update(id, productoData);
+
+      // Aquí puedes agregar lógica especial para insumos si aplica
+    } else {
+      throw new Error("El tipo de producto no es válido");
+    }
+
+    // Retornar el producto actualizado con inventario
+    return await this.getProductoById(id);
   }
 
   // Eliminar el producto
@@ -283,8 +312,8 @@ class ProductoService {
         as: "inventario",
         attributes: ["cantidad"], // Campos relevantes del inventario
         where: {
-          cantidad: {[Op.gt]:200}
-        }
+          cantidad: { [Op.gt]: 200 },
+        },
       },
     ];
 

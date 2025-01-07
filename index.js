@@ -38,7 +38,7 @@ import TransaccionRoutes from "./ventas/infrastructure/routes/TransaccionRoutes.
 import FacturasRoutes from "./ventas/infrastructure/routes/FacturasRoutes.js";
 import EstadoFacturaRoutes from "./ventas/infrastructure/routes/EstadoFacturaRoutes.js";
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
-import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js"
+import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js";
 /* import analisisRoutes from "./analisis/infraestructure/routes/";
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
@@ -49,6 +49,7 @@ import CamionRoutes from "./Entregas/infrastructure/routes/CamionRoutes.js";
 import AgendaCargaRoutes from "./Entregas/infrastructure/routes/AgendaCargaRoutes.js";
 import InventarioCamionRoutes from "./Entregas/infrastructure/routes/InvetarioCamionRoutes.js";
 import EntregaRoutes from "./Entregas/infrastructure/routes/EntregaRoutes.js";
+import VentaChoferRoutes from "./Entregas/infrastructure/routes/VentaChoferRoutes.js";
 /* MÓDULO ANÁLISIS */
 // Rutas del módulo de análisis
 import ProductoEstadisticaRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
@@ -128,6 +129,7 @@ app.use("/api/camiones", CamionRoutes);
 app.use("/api/inventario-camion", InventarioCamionRoutes);
 app.use("/api/agendas", AgendaCargaRoutes);
 app.use("/api/entregas", EntregaRoutes);
+app.use("/api/ventas-chofer", VentaChoferRoutes);
 
 
 const PORT = process.env.PORT || 9000;
