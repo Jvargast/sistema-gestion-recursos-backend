@@ -12,29 +12,20 @@ import Sucursal from "../auth/domain/models/Sucursal.js";
  * Módulo Inventario 7
  */
 import EstadoProducto from "../inventario/domain/models/EstadoProducto.js";
-import Producto from "../inventario/domain/models/Producto.js";
 import TipoProducto from "../inventario/domain/models/TipoProducto.js";
-import Inventario from "../inventario/domain/models/Inventario.js";
 import CategoriaProducto from "../inventario/domain/models/CategoriaProducto.js";
-import InventarioLog from "../inventario/domain/models/InventarioLogs.js";
 import TransicionEstadoProducto from "../inventario/domain/models/TransicionEstadoProducto.js";
 /**
  * Módulo Ventas 14
  */
 import EstadoPago from "../ventas/domain/models/EstadoPago.js";
 import MetodoPago from "../ventas/domain/models/MetodoPago.js";
-import Pago from "../ventas/domain/models/Pago.js";
-import DetalleTransaccion from "../ventas/domain/models/DetalleTransaccion.js";
-import Transaccion from "../ventas/domain/models/Transaccion.js";
-import Cliente from "../ventas/domain/models/Cliente.js";
 import EstadoTransaccion from "../ventas/domain/models/EstadoTransaccion.js";
 import EstadoDetalleTransaccion from "../ventas/domain/models/EstadoDetalleTransaccion.js";
 import TransicionEstadoDetalle from "../ventas/domain/models/TransicionEstadoDetalle.js";
 import TransicionTipoTransaccion from "../ventas/domain/models/TransicionTipoTransaccion.js";
-import EstadoFactura from "../ventas/domain/models/EstadoFactura.js";
 import TransicionEstadoTransaccion from "../ventas/domain/models/TransicionEstadoTransaccion.js";
-import Factura from "../ventas/domain/models/Factura.js";
-import LogTransaccion from "../ventas/domain/models/LogTransaccion.js";
+
 
 async function populateDatabase() {
   try {
@@ -253,7 +244,7 @@ async function populateDatabase() {
         "ver_perfil","editar_perfil","configurar_perfil_usuario",
         "autenticacion_dos_factores",  
         "ver_clientes", "ver_camiones",
-        "ver_agenda_carga", "ver_entregas", "ver_entregas_asignadas", "ver_ventas_chofer"
+        "ver_agenda_carga", "ver_entregas", "ver_entregas_asignadas", "ver_ventas_chofer",
       ],
     };
 
@@ -306,17 +297,17 @@ async function populateDatabase() {
         id_empresa: empresaCreada.dataValues.id_empresa,
         id_sucursal: sucursalCreada.dataValues.id_sucursal
       },
-      {
+/*       {
         rut: "98765432-1",
         nombre: "Test2",
         apellido: "Test2",
         email: "Test2.test@example.com",
         password:
-          "$2a$12$hpZ1Dq.mAvJLKJhZyQq6Ie2FSYsWzx46WJcJFpBXWG/Tvxx2HPibG", // Asegúrate de encriptar las contraseñas en producción
+          "$2a$12$hpZ1Dq.mAvJLKJhZyQq6Ie2FSYsWzx46WJcJFpBXWG/Tvxx2HPibG", 
         rolId: rolesCreados.find((r) => r.nombre === "vendedor").id,
         id_empresa: empresaCreada.dataValues.id_empresa,
         id_sucursal: sucursalCreada.dataValues.id_sucursal
-      },
+      }, */
     ];
 
     await Usuarios.bulkCreate(usuariosData);
@@ -377,7 +368,7 @@ async function populateDatabase() {
     await CategoriaProducto.bulkCreate(categorias);
     console.log("Categoria productos creadas");
     // Crear Productos
-    const productos = [
+/*     const productos = [
       {
         nombre_producto: "Botellón de Agua 20L",
         marca: "Agua Pura",
@@ -401,24 +392,23 @@ async function populateDatabase() {
     ];
 
     const productosCreados = await Producto.bulkCreate(productos);
-    console.log("Productos creados exitosamente.");
+    console.log("Productos creados exitosamente."); */
 
     // Crear Inventarios de productos
     // Lista de cantidades iniciales
-    const inventarios = [
-      { id_producto: 1, cantidad: 100 }, // Producto con id_producto 1
-      { id_producto: 2, cantidad: 2000 }, // Producto con id_producto 2
-      // Agrega más productos según sea necesario
-    ];
+/*     const inventarios = [
+      { id_producto: 1, cantidad: 100 }, 
+      { id_producto: 2, cantidad: 2000 }, 
+    ]; */
 
     // Asociar inventarios con los productos recién creados
-    const inventariosFinales = productosCreados.map((producto, index) => ({
+/*     const inventariosFinales = productosCreados.map((producto, index) => ({
       id_producto: producto.id_producto,
       cantidad: inventarios[index].cantidad,
       fecha_actualizacion: new Date(),
     }));
     await Inventario.bulkCreate(inventariosFinales);
-    console.log("Inventario inicial creado exitosamente.");
+    console.log("Inventario inicial creado exitosamente."); */
     // Transiciones FSM
     const transicionesEstado = [
       {
@@ -454,7 +444,7 @@ async function populateDatabase() {
     await TransicionEstadoProducto.bulkCreate(transicionesEstado);
     console.log("Transiciones FSM creadas exitosamente.");
 
-    await InventarioLog.bulkCreate([
+   /*  await InventarioLog.bulkCreate([
       {
         id_producto: 1,
         id_transaccion: null,
@@ -474,7 +464,7 @@ async function populateDatabase() {
         realizado_por: "Juan",
       },
     ]);
-    console.log("InventarioLog inicial creado exitosamente.");
+    console.log("InventarioLog inicial creado exitosamente."); */
     /******************************/
     //       Módulo VENTAS        *
     /******************************/
@@ -751,7 +741,7 @@ async function populateDatabase() {
     console.log("Métodos Pago creado exitosamente.");
 
     // Clientes de Ejemplo
-    const clientes = [
+    /* const clientes = [
       {
         rut: "123456781-1",
         nombre: "Juan Pérez",
@@ -782,7 +772,7 @@ async function populateDatabase() {
       },
     ];
     await Cliente.bulkCreate(clientes);
-    console.log("Clientes creados exitosamente.");
+    console.log("Clientes creados exitosamente."); */
 
     // Ejemplo de Cotización
     /* const cotizacion = await Transaccion.create({
