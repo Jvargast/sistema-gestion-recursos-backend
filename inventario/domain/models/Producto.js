@@ -22,8 +22,8 @@ const Producto = sequelize.define(
     },
     codigo_barra: {
       type: DataTypes.STRING,
-      unique: true, // Garantiza que no se repitan los códigos de barra
-      allowNull: true, // Puede no ser obligatorio para algunos productos
+      unique: true, 
+      allowNull: true, 
     },
     precio: {
       type: DataTypes.DECIMAL(10, 2),
@@ -48,13 +48,6 @@ const Producto = sequelize.define(
         key: "id_categoria",
       },
     },
-    id_tipo_producto: {
-      type: DataTypes.INTEGER,
-      references: {
-        model: TipoProducto,
-        key: "id_tipo_producto",
-      },
-    },
     id_estado_producto: {
       type: DataTypes.INTEGER,
       references: {
@@ -63,19 +56,12 @@ const Producto = sequelize.define(
       },
     },
     image_url: {
-      // Nuevo campo para almacenar la URL de la imagen
       type: DataTypes.STRING,
-      allowNull: true, // Puede ser opcional si algunos productos no tienen imagen
+      allowNull: true, 
     },
-    para_venta: {
-      // Campo para indicar si el producto está disponible para venta
+    es_para_venta: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true, // Por defecto, se asume que está disponible para venta
-    },
-    retornable: {
-      // Campo para indicar si el producto es retornable
-      type: DataTypes.BOOLEAN,
-      defaultValue: false, // Por defecto, se asume que no es retornable
+      defaultValue: true, 
     },
   },
   {
