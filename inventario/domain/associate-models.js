@@ -27,16 +27,6 @@ function loadInventarioAssociations() {
     as: "productos",
   });
 
-  // Relación Producto - TipoProducto
-  Producto.belongsTo(TipoProducto, {
-    foreignKey: "id_tipo_producto",
-    as: "tipo",
-  });
-  TipoProducto.hasMany(Producto, {
-    foreignKey: "id_tipo_producto",
-    as: "productos",
-  });
-
   // Relación Producto - Inventario (Uno a Uno)
   Producto.hasOne(Inventario, {
     foreignKey: "id_producto",
@@ -44,6 +34,22 @@ function loadInventarioAssociations() {
     onDelete: "CASCADE",
   });
   Inventario.belongsTo(Producto, { foreignKey: "id_producto", as: "producto" });
+
+  // Relación Insumo - Inventario (Uno a Uno)
+  Insumo.hasOne(Inventario, {
+    foreignKey: "id_insumo",
+    as: "inventario",
+    onDelete: "CASCADE",
+  });
+  Inventario.belongsTo(Insumo, { foreignKey: "id_inventario", as: "insumo" });
+
+  // Relación Insumo - Tipo insumo (Uno a Uno)
+  TipoInsumo.hasOne(Insumo, {
+    foreignKey: "id_tipo_insumo",
+    as: "tipo_insumo",
+    onDelete: "CASCADE",
+  });
+  Insumo.belongsTo(TipoInsumo, { foreignKey: "id_tipo_insumo", as: "tipo_insumo" });
 
   // Relación TransicionEstadoProducto - Producto
   Producto.hasMany(TransicionEstadoProducto, {
