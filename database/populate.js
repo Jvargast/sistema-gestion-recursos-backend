@@ -410,7 +410,7 @@ async function populateDatabase() {
     await Inventario.bulkCreate(inventariosFinales);
     console.log("Inventario inicial creado exitosamente."); */
     // Transiciones FSM
-    const transicionesEstado = [
+    /* const transicionesEstado = [
       {
         id_producto: 1,
         id_estado_origen: 1,
@@ -442,7 +442,7 @@ async function populateDatabase() {
     ];
 
     await TransicionEstadoProducto.bulkCreate(transicionesEstado);
-    console.log("Transiciones FSM creadas exitosamente.");
+    console.log("Transiciones FSM creadas exitosamente."); */
 
    /*  await InventarioLog.bulkCreate([
       {

@@ -6,7 +6,7 @@ import RolRepository from "../../auth/infraestructure/repositories/RolRepository
 const authenticate = async (req, res, next) => {
   try {
     // Obtener el token desde la cookie
-    const token = req.cookies.authToken;
+    const token = req.cookies?.authToken;
 
     if (!token) {
       return res.status(401).json({ error: "Token no encontrado" });
@@ -16,7 +16,9 @@ const authenticate = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
+      
       if (error.name === "TokenExpiredError") {
+        res.clearCookie("authToken"); // Elimina la cookie si el token es inválido
         return res.status(401).json({ error: "Token expirado" });
       }
       return res.status(401).json({ error: "Token inválido" });
