@@ -72,7 +72,7 @@ app.use(cookieParser());
 ]; */
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS.split(","), // Asegúrate de que esté configurado
+    origin: ["http://localhost:3000"], // Asegúrate de que esté configurado
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Métodos permitidos
     allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos

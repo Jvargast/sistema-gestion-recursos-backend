@@ -67,6 +67,16 @@ const Producto = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true, // Puede ser opcional si algunos productos no tienen imagen
     },
+    para_venta: {
+      // Campo para indicar si el producto está disponible para venta
+      type: DataTypes.BOOLEAN,
+      defaultValue: true, // Por defecto, se asume que está disponible para venta
+    },
+    retornable: {
+      // Campo para indicar si el producto es retornable
+      type: DataTypes.BOOLEAN,
+      defaultValue: false, // Por defecto, se asume que no es retornable
+    },
   },
   {
     tableName: "Producto",

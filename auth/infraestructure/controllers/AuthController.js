@@ -21,7 +21,7 @@ class AuthController {
         httpOnly: true, // Asegura que la cookie no sea accesible desde el frontend (prevención de XSS)
         secure: process.env.NODE_ENV === "production" ? true : false, // Solo enviar la cookie en HTTPS en producción
         sameSite: "strict", //sameSite: "strict", // Prevenir ataques CSRF
-        maxAge: 60 * 60 * 1000, // Expira en 1 hora
+        maxAge: 7 * 24 * 60 * 60 * 1000, // Expira en 7  hora
       });
 
       res.status(200).json({ success: true, usuario, token });
@@ -39,7 +39,7 @@ class AuthController {
     try {
       const ip = req.ip;
       res.clearCookie("authToken");
-      await AuditLogsService.logAction(req.user.id, "Cerrar Sesión", "Autenticación", ip);
+      await AuditLogsService.logAction(req?.user.id, "Cerrar Sesión", "Autenticación", ip);
       res.status(200).json({ message: "Cierre de sesión exitoso" });
     } catch {
       res.status(401).json({ error: error.message });
