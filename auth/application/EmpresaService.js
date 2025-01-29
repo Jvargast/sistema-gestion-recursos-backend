@@ -2,9 +2,9 @@ import EmpresaRepository from "../infraestructure/repositories/EmpresaRepository
 
 class EmpresaService {
 
-  async obtenerEmpresas() {
+  async obtenerEmpresas(rut) {
     try {
-      const empresas = await EmpresaRepository.getAllEmpresas();
+      const empresas = await EmpresaRepository.getAllEmpresas(rut);
       return empresas;
     } catch (error) {
       console.error("Error al obtener las empresas:", error);

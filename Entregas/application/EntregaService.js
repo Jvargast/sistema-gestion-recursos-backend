@@ -7,7 +7,6 @@ import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteR
 import DetalleTransaccionRepository from "../../ventas/infrastructure/repositories/DetalleTransaccionRepository.js";
 import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
 import PagoRepository from "../../ventas/infrastructure/repositories/PagoRepository.js";
-import TransaccionRepository from "../../ventas/infrastructure/repositories/TransaccionRepository.js";
 import AgendaCargaRepository from "../infrastructure/repositories/AgendaCargaRepository.js";
 import EntregaRepository from "../infrastructure/repositories/EntregaRepository.js";
 import InventarioCamionLogsRepository from "../infrastructure/repositories/InventarioCamionLogsRepository.js";
@@ -184,7 +183,7 @@ class EntregaService {
               {
                 model: ClienteRepository.getModel(),
                 as: "cliente",
-                attributes: ["rut", "nombre", "apellido", "direccion"],
+                attributes: ["id_cliente", "rut", "nombre", "apellido", "direccion"],
               },
             ],
           },

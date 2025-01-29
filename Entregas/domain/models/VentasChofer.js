@@ -3,6 +3,7 @@ import sequelize from "../../../database/database.js";
 import Cliente from "../../../ventas/domain/models/Cliente.js";
 import MetodoPago from "../../../ventas/domain/models/MetodoPago.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
+import Camion from "./Camion.js";
 
 // models/VentasChofer.js
 
@@ -18,16 +19,16 @@ const VentasChofer = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Camions",
+        model: Camion,
         key: "id_camion",
       },
     },
     id_cliente: {
-      type: DataTypes.STRING,
+      type: DataTypes.INTEGER,
       allowNull: true,
       references: {
         model: Cliente,
-        key: "rut",
+        key: "id_cliente",
       },
     },
     id_chofer: {
@@ -51,6 +52,12 @@ const VentasChofer = sequelize.define(
       allowNull: false,
       defaultValue: 0, // Inicializa el total en 0
     },
+    tipo_venta: {
+      type: DataTypes.ENUM("productos", "insumos", "mixto"),
+      allowNull: false,
+      defaultValue: "productos",
+    },
+    
     estadoPago: {
       type: DataTypes.ENUM("pendiente", "pagado", "rechazado"),
       allowNull: false,

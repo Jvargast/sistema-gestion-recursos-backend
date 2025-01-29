@@ -24,6 +24,7 @@ class AuthService {
     }
 
     const now = new Date();
+
     await UsuariosRepository.updateLastLogin(usuario.rut, now);
 
     // Generar el token JWT
@@ -32,11 +33,23 @@ class AuthService {
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
+    const refreshToken = jwt.sign(
+      { rut: usuario.rut },
+      process.env.REFRESH_SECRET,
+      { expiresIn: "7d" } // Refresh Token válido por 7 días
+    );
+
+    // Guardar el Refresh Token en la base de datos
+    const saved = await this.saveRefreshToken(usuario.rut, refreshToken);
+
+    if (!saved) {
+      throw new Error("Error al guardar el Refresh Token");
+    }
     return {
       token,
       usuario,
+      refreshToken,
     };
-    /* return token; */
   }
 
   async getUserFromToken(decodedToken) {
@@ -67,6 +80,76 @@ class AuthService {
       rolId: user.rolId,
       permisos,
     };
+  }
+
+  async isValidRefreshToken(token, userId) {
+    try {
+      // Decodificar el token para obtener el ID del usuario
+      const decoded = jwt.verify(token, process.env.REFRESH_SECRET);
+
+      // Verificar que el ID del usuario en el token coincida con el userId proporcionado
+      if (decoded.rut !== userId) {
+        return false;
+      }
+
+      // Consultar la base de datos para verificar si el token está almacenado y activo
+      const user = await UsuariosRepository.findByRut(userId);
+
+      if (!user) {
+        return false; // Usuario no encontrado
+      }
+      // Comprobar si el token existe en la lista de tokens válidos del usuario
+      const tokenIsValid = user.refreshTokens.includes(token);
+
+      return tokenIsValid;
+    } catch (error) {
+      console.error("Error al verificar el Refresh Token:", error.message);
+      return false;
+    }
+  }
+
+  async saveRefreshToken(rut, token) {
+    try {
+      // Actualizar el campo refreshToken del usuario
+      const result = await UsuariosRepository.update(rut, {
+        refreshTokens: token,
+      });
+
+      if (result[0] === 0) {
+        console.error(
+          `Usuario ${rut} no encontrado al guardar el Refresh Token`
+        );
+        return false;
+      }
+
+      console.log(`Refresh Token guardado para usuario ${rut}`);
+      return true;
+    } catch (error) {
+      console.error("Error al guardar el Refresh Token:", error.message);
+      return false;
+    }
+  }
+
+  async removeRefreshToken(userId) {
+    try {
+      // Actualizar el campo refreshToken a null
+      const result = await UsuariosRepository.update(userId, {
+        refreshToken: null,
+      });
+
+      if (result[0] === 0) {
+        console.error(
+          `Usuario ${userId} no encontrado al eliminar el Refresh Token`
+        );
+        return false;
+      }
+
+      console.log(`Refresh Token eliminado para usuario ${userId}`);
+      return true;
+    } catch (error) {
+      console.error("Error al eliminar el Refresh Token:", error.message);
+      return false;
+    }
   }
 }
 

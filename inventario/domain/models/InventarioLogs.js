@@ -22,7 +22,7 @@ const InventarioLog = sequelize.define(
     id_insumo: {
       type: DataTypes.INTEGER,
       references: {
-        model: insumo,
+        model: Insumo,
         key: "id_insumo",
       },
       allowNull: true,

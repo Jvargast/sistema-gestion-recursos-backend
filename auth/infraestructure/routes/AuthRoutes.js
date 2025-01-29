@@ -10,6 +10,9 @@ router.post('/login', AuthController.login);
 // Ruta para obtener usuario autenticado
 router.get('/me', authenticate, AuthController.getAuthenticatedUser);
 
+// Ruta para renovar el access token
+router.post("/refresh-token", AuthController.refreshToken);
+
 // Ruta para cerrar sesión
 router.post('/logout', authenticate, AuthController.logout);
 

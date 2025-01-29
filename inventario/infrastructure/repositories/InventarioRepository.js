@@ -21,8 +21,11 @@ class InventarioRepository extends IInventarioRepository {
     return await Inventario.update(data, { where: { id_producto } });
   }
 
-  async delete(id_producto) {
-    return await Inventario.destroy({ where: { id_producto } });
+  async delete(ids) {
+    if (!Array.isArray(ids)) {
+      throw new Error("Los IDs deben ser un array.");
+    }
+    return await Inventario.destroy({ where: { id_producto: ids } });
   }
 
   async updateByProductoId(idProducto, data) {

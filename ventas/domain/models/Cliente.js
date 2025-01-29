@@ -3,10 +3,15 @@ import sequelize from "../../../database/database.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
 
 const Cliente = sequelize.define('Cliente', {
+    id_cliente: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+        allowNull: false,
+    },
     rut: {
         type: DataTypes.STRING,
-        primaryKey: true,
-        allowNull: false,
+        allowNull: true,
         unique: true,
     },
     tipo_cliente: {

@@ -51,7 +51,7 @@ class FacturaService {
           {
             model: ClienteRepository.getModel(),
             as: "cliente",
-            attributes: ["nombre", "email", "rut"], // Atributos del cliente
+            attributes: ["id_cliente","nombre", "email", "rut"], // Atributos del cliente
           },
           {
             model: TransaccionRepository.getModel(),

@@ -1,14 +1,17 @@
-import IClienteRepository from "../../domain/repositories/IClienteRepository.js";
 import Cliente from "../../domain/models/Cliente.js";
 import { Op } from "sequelize";
 
-class ClienteRepository extends IClienteRepository {
+class ClienteRepository {
   async findWithFilter(where) {
     return await Cliente.findAll({ where });
   }
 
-  async findById(id) {
-    return await Cliente.findByPk(id);
+  async findById(id_cliente) {
+    return await Cliente.findByPk(id_cliente);
+  }
+
+  async findByDireccion(direccion) {
+    return await Cliente.findOne({ where: { direccion: direccion } });
   }
 
   async findAll() {
@@ -19,24 +22,24 @@ class ClienteRepository extends IClienteRepository {
     return await Cliente.create(data);
   }
 
-  async update(rut, data) {
-    return await Cliente.update(data, { where: { rut: rut } });
+  async update(id_cliente, data) {
+    return await Cliente.update(data, { where: { id_cliente } });
   }
   async updateWithconditions(id, data) {
     if (!id) {
       throw new Error("Se requiere de un Rut de cliente para actualizar.");
-    };
+    }
 
     const cliente = await Cliente.findByPk(id);
     if (!cliente) {
       throw new Error(`Cliente con RUT ${id} no encontrado.`);
-    };
+    }
 
     for (const [key, value] of Object.entries(data)) {
       if (value !== undefined && cliente[key] !== undefined) {
         cliente[key] = value;
       }
-    };
+    }
     await cliente.save();
 
     return cliente;
@@ -56,9 +59,9 @@ class ClienteRepository extends IClienteRepository {
     );
   }
 
-  async findByIds(ruts) {
+  async findByIds(ids) {
     return await Cliente.findAll({
-      where: { rut: ruts },
+      where: { id_cliente: ids },
     });
   }
 

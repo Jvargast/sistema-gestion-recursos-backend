@@ -147,6 +147,21 @@ class InventarioService {
     return inventario;
   }
 
+  async validarDisponibilidad(id_producto, cantidad) {
+    if (cantidad <= 0) {
+      throw new Error("Cantidad debe ser un número positivo.");
+    }
+
+    // Obtener el inventario del producto
+    const inventario = await this.getInventarioByProductoId(id_producto);
+    if (!inventario) {
+      throw new Error("Producto no encontrado en inventario.");
+    }
+
+    // Validar si el stock disponible es suficiente
+    return Math.floor(inventario.cantidad) >= Math.floor(cantidad);
+  }
+
   async decrementarStock(id_producto, cantidad) {
     // Validar cantidad positiva
     if (cantidad <= 0) {

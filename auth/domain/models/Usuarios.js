@@ -69,6 +69,11 @@ const Usuarios = sequelize.define(
       },
       allowNull: true, // Puede ser opcional si el usuario no está asignado a ninguna sucursal específica
     },
+    // Campo para almacenar Refresh Tokens
+    refreshTokens: {
+      type: DataTypes.TEXT, // Almacena un array de tokens en formato JSON
+      allowNull: true, // Inicialmente vacío
+    },
   },
   {
     tableName: "Usuarios",

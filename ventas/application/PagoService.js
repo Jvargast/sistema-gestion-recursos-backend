@@ -52,7 +52,7 @@ class PagoService {
           {
             model: ClienteRepository.getModel(),
             as: "cliente",
-            attributes: ["nombre", "email", "rut", "direccion", "telefono"],
+            attributes: ["id_cliente","nombre", "email", "rut", "direccion", "telefono"],
           },
           {
             model: EstadoPagoRepository.getModel(),

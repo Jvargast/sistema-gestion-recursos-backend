@@ -5,7 +5,7 @@ import UsuariosRepository from "../../auth/infraestructure/repositories/Usuarios
 export default function checkPermissions(requiredPermission) {
     return async (req, res, next) => {
         try {
-            const rut = req.user.rut; // esto debe venir de la cookie
+            const rut = req.user.id; // esto debe venir de la cookie
             const usuario = await UsuariosRepository.findByRut(rut);
             const rol = await RolRepository.findById(usuario.rolId);
             

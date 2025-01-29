@@ -1,33 +1,16 @@
-import Pago from "../../domain/models/Pago.js";
 import Documento from "../../domain/models/Documento.js";
-import Transaccion from "../../domain/models/Transaccion.js";
-import Cliente from "../../domain/models/Cliente.js";
-import EstadoPago from "../../domain/models/EstadoPago.js";
-import Usuarios from "../../../auth/domain/models/Usuarios.js";
 import MetodoPago from "../../domain/models/MetodoPago.js";
+import Pago from "../../domain/models/Pago.js";
+import Venta from "../../domain/models/Venta.js";
 
 class PagoRepository {
   async findById(id) {
     try {
       return await Pago.findByPk(id, {
         include: [
-          {
-            model: Documento,
-            as: "documento",
-            include: [
-              {
-                model: Transaccion,
-                as: "transaccion",
-                include: [{ model: Usuarios, as: "usuario" }],
-              },
-              { model: Cliente, as: "cliente" },
-              { model: EstadoPago, as: "estadoPago" },
-            ],
-          },
-          {
-            model: MetodoPago,
-            as: "metodo",
-          },
+          { model: Documento, as: "documento" },
+          { model: MetodoPago, as: "metodoPago" },
+          { model: Venta, as: "venta" },
         ],
       });
     } catch (error) {
@@ -41,10 +24,13 @@ class PagoRepository {
     const offset = options.page ? (options.page - 1) * (options.limit || 0) : 0;
 
     return await Pago.findAndCountAll({
-      where: filters, // `filters` debería contener { id_documento: valor }
+      where: filters,
       limit,
       offset,
-      include: [{ model: Documento, as: "documento" }],
+      include: [
+        { model: Documento, as: "documento" },
+        { model: MetodoPago, as: "metodoPago" },
+      ],
     });
   }
 
@@ -59,10 +45,8 @@ class PagoRepository {
     return updated > 0 ? await this.findById(id) : null;
   }
 
-  async findByIds(ids) {
-    return await Pago.findAll({
-      where: { id_pago: ids },
-    });
+  async delete(id) {
+    return await Pago.destroy({ where: { id_pago: id } });
   }
 
   getModel() {

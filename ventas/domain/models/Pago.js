@@ -1,6 +1,9 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
-
+import Venta from "./Venta.js";
+import Documento from "./Documento.js";
+import MetodoPago from "./MetodoPago.js";
+import EstadoPago from "./EstadoPago.js";
 
 const Pago = sequelize.define(
   "Pago",
@@ -10,38 +13,48 @@ const Pago = sequelize.define(
       autoIncrement: true,
       primaryKey: true,
     },
-    id_documento: {
+    id_venta: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Documento",
-        key: "id_documento",
+        model: Venta,
+        key: "id_venta",
       },
     },
-    tipo_documento: {
-      type: DataTypes.ENUM("factura", "boleta"),
-      allowNull: false,
+    id_documento: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: Documento,
+        key: "id_documento",
+      },
     },
     id_metodo_pago: {
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: "Metodo_Pago",
+        model: MetodoPago,
         key: "id_metodo_pago",
       },
     },
-    monto: {
-      type: DataTypes.DECIMAL(10, 2), // Almacenar el monto del pago específico
-      allowNull: true,
-      defaultValue: 0,
+    id_estado_pago: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: EstadoPago, // Asegúrate de importar y usar el modelo EstadoPago
+        key: "id_estado_pago",
+      },
     },
-    fecha: {
+    monto: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    fecha_pago: {
       type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
       allowNull: false,
     },
     referencia: {
-      type: DataTypes.STRING, // Código de referencia de transferencia o tarjeta
+      type: DataTypes.STRING,
       allowNull: true,
     },
   },

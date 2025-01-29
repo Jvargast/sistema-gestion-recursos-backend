@@ -256,7 +256,7 @@ class VentaChoferService {
       {
         model: ClienteRepository.getModel(),
         as: "cliente",
-        attributes: ["rut", "nombre", "email"],
+        attributes: ["id_cliente", "rut", "nombre", "email"],
       },
       {
         model: CamionRepository.getModel(),

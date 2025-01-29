@@ -19,7 +19,7 @@ const MetodoPago = sequelize.define(
     },
   },
   {
-    tableName: "Metodo_Pago",
+    tableName: "MetodoPago",
     timestamps: false,
   }
 );

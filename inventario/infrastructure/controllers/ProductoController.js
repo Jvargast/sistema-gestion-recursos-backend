@@ -17,7 +17,8 @@ class ProductoController {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 20) || 20,
         search: req.query.search,
-        tipo_producto: req.query.tipo_producto,
+        estado: req.query.estado,
+        categoria: req.query.categoria
       };
       delete filters.limit;
       delete filters.offset;
@@ -73,17 +74,6 @@ class ProductoController {
     }
   }
 
-  async getProductosByTipo(req, res) {
-    try {
-      const productos = await ProductoService.getProductosByTipo(
-        req.params.tipo
-      );
-      res.status(200).json(productos);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  }
-
   async getAvailableProductos(req, res) {
     try {
       const filters = req.query; // Filtros enviados en los query params
@@ -92,7 +82,7 @@ class ProductoController {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
         search: req.query.search,
-        tipo_producto: req.query.tipo_producto
+        categoria: req.query.categoria
       };
       delete filters.limit;
       delete filters.offset;

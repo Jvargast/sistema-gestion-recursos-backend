@@ -1,16 +1,19 @@
 import Producto from "./models/Producto.js";
 import EstadoProducto from "./models/EstadoProducto.js";
 import CategoriaProducto from "./models/CategoriaProducto.js";
-import TipoProducto from "./models/TipoProducto.js";
 import Inventario from "./models/Inventario.js";
 import TransicionEstadoProducto from "./models/TransicionEstadoProducto.js";
 import InventarioLog from "./models/InventarioLogs.js";
+import Insumo from "./models/Insumo.js";
+import TipoInsumo from "./models/TipoInsumo.js";
+import ProductoRetornable from "./models/ProductoRetornable.js";
+import EstadoProductoRetornable from "./models/EstadoProductoRetornable.js";
 
 function loadInventarioAssociations() {
   // Relación Producto - EstadoProducto
   Producto.belongsTo(EstadoProducto, {
     foreignKey: "id_estado_producto",
-    as: "estado",
+    as: "estadoProducto",
   });
   EstadoProducto.hasMany(Producto, {
     foreignKey: "id_estado_producto",
@@ -41,15 +44,32 @@ function loadInventarioAssociations() {
     as: "inventario",
     onDelete: "CASCADE",
   });
-  Inventario.belongsTo(Insumo, { foreignKey: "id_inventario", as: "insumo" });
+  Inventario.belongsTo(Insumo, { foreignKey: "id_insumo", as: "insumo" });
 
   // Relación Insumo - Tipo insumo (Uno a Uno)
-  TipoInsumo.hasOne(Insumo, {
+  TipoInsumo.hasMany(Insumo, {
     foreignKey: "id_tipo_insumo",
     as: "tipo_insumo",
     onDelete: "CASCADE",
   });
-  Insumo.belongsTo(TipoInsumo, { foreignKey: "id_tipo_insumo", as: "tipo_insumo" });
+  Insumo.belongsTo(TipoInsumo, {
+    foreignKey: "id_tipo_insumo",
+    as: "tipo_insumo",
+  });
+
+  // Relación Producto con BotellonRetornable
+  Producto.hasMany(ProductoRetornable, { foreignKey: "id_producto" });
+  ProductoRetornable.belongsTo(Producto, { foreignKey: "id_producto" });
+
+  ProductoRetornable.belongsTo(EstadoProductoRetornable, {
+    foreignKey: "id_estado",
+    as: "estadoRetornable",
+  });
+
+  EstadoProductoRetornable.hasMany(ProductoRetornable, {
+    foreignKey: "id_estado",
+    as: "productoRetornable",
+  });
 
   // Relación TransicionEstadoProducto - Producto
   Producto.hasMany(TransicionEstadoProducto, {
@@ -71,16 +91,6 @@ function loadInventarioAssociations() {
     as: "estadoOrigen",
   });
 
-  // Relación TransicionEstadoProducto - EstadoProducto (Destino)
-  EstadoProducto.hasMany(TransicionEstadoProducto, {
-    foreignKey: "id_estado_destino",
-    as: "transicionesDestino",
-  });
-  TransicionEstadoProducto.belongsTo(EstadoProducto, {
-    foreignKey: "id_estado_destino",
-    as: "estadoDestino",
-  });
-
   // Relación: Producto -> InventarioLog (1:N)
   Producto.hasMany(InventarioLog, {
     foreignKey: "id_producto",
@@ -94,6 +104,17 @@ function loadInventarioAssociations() {
     onDelete: "CASCADE",
     onUpdate: "CASCADE",
   });
+
+  // Relación TransicionEstadoProducto - EstadoProducto (Destino)
+  EstadoProducto.hasMany(TransicionEstadoProducto, {
+    foreignKey: "id_estado_destino",
+    as: "transicionesDestino",
+  });
+  TransicionEstadoProducto.belongsTo(EstadoProducto, {
+    foreignKey: "id_estado_destino",
+    as: "estadoDestino",
+  });
+  console.log("Asociaciones del módulo de inventario cargadas correctamente.");
 }
 
 export default loadInventarioAssociations;

@@ -35,7 +35,7 @@ const Inventario = sequelize.define(
       allowNull: true,
       references: {
         model: Insumo,
-        key: "id_producto",
+        key: "id_insumo",
       },
       onDelete: "CASCADE",
       onUpdate: "CASCADE",

@@ -33,13 +33,13 @@ class PermisosController {
   async getAllPermisos(req, res) {
     try {
       const filters = req.query;
+
+      console.log(req.query.limit)
       let options = {
         page: parseInt(req.query.page, 10) || 1,
-        limit: parseInt(req.query.limit, 20) || 20,
+        limit: parseInt(req.query.limit, 10) || 10,
         search: req.query.search,
       };
-      delete filters.limit;
-      delete filters.offset;
 
       const permisos = await PermisosService.findAllPermisos(filters, options);
       res.status(200).json({ data: permisos.data, total: permisos.pagination });

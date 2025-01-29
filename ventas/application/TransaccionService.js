@@ -107,7 +107,7 @@ class TransaccionService {
       {
         model: ClienteRepository.getModel(), // Modelo de Cliente
         as: "cliente", // Alias definido en las asociaciones
-        attributes: ["rut", "nombre", "tipo_cliente", "email"], // Campos que deseas incluir
+        attributes: ["id_cliente","rut", "nombre", "tipo_cliente", "email"], // Campos que deseas incluir
       },
       {
         model: UsuariosRepository.getModel(), // Modelo de Usuario
@@ -914,7 +914,7 @@ class TransaccionService {
       {
         model: ClienteRepository.getModel(), // Modelo de Cliente
         as: "cliente", // Alias definido en las asociaciones
-        attributes: ["rut", "nombre", "tipo_cliente", "email"], // Campos que deseas incluir
+        attributes: ["id_cliente", "rut", "nombre", "tipo_cliente", "email"], // Campos que deseas incluir
       },
       {
         model: EstadoTransaccionRepository.getModel(), // Modelo de EstadoTransaccion

@@ -16,6 +16,10 @@ const Permisos = sequelize.define('Permisos', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  categoria: {
+    type: DataTypes.STRING,
+    allowNull: true
+  }
 }, {
   timestamps: true,
 });

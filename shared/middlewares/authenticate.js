@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import AuthService from "../../auth/application/AuthService.js"; // Servicio para manejar la lógica relacionada con autenticación
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
-import RolRepository from "../../auth/infraestructure/repositories/RolRepository.js";
 
 const authenticate = async (req, res, next) => {
   try {
@@ -16,7 +15,6 @@ const authenticate = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
-      
       if (error.name === "TokenExpiredError") {
         res.clearCookie("authToken"); // Elimina la cookie si el token es inválido
         return res.status(401).json({ error: "Token expirado" });
@@ -30,9 +28,29 @@ const authenticate = async (req, res, next) => {
     if (!user) {
       return res.status(401).json({ error: "Usuario no encontrado" });
     }
-    
+
     const now = new Date();
     await UsuariosRepository.updateLastLogin(user.rut, now);
+
+    // Calcular el tiempo restante para la expiración del token
+    const currentTime = Math.floor(Date.now() / 1000);
+    const timeToExpire = decoded.exp - currentTime;
+
+    // Renovar el token si faltan menos de 15 minutos para expirar
+    if (timeToExpire < 60 * 15) {
+      const newToken = jwt.sign(
+        { rut: user.rut, rolId: user.rolId },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
+
+      res.cookie("authToken", newToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+      });
+    }
 
     // Agregar el usuario al objeto de la solicitud para uso posterior
     req.user = {

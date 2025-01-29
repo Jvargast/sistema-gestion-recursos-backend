@@ -2,7 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import EstadoProducto from "./EstadoProducto.js";
 import CategoriaProducto from "./CategoriaProducto.js";
-import TipoProducto from "./TipoProducto.js";
+
 
 const Producto = sequelize.define(
   "Producto",
@@ -27,7 +27,7 @@ const Producto = sequelize.define(
     },
     precio: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
+      allowNull: true,
     },
     descripcion: {
       type: DataTypes.TEXT,

@@ -10,7 +10,7 @@ import cookieParser from "cookie-parser";
 /**
  * Implementación de tareas
  */
-import setupAnalysisCronJobs from "./analisis/infrastructure/cron/analysisCronJobs.js";
+/* import setupAnalysisCronJobs from "./analisis/infrastructure/cron/analysisCronJobs.js"; */
 // Rutas para arquitectura hexagonal
 /* MÓDULO AUTH */
 import AuthRoutes from "./auth/infraestructure/routes/AuthRoutes.js";
@@ -26,34 +26,33 @@ import EstadoProductoRoutes from "./inventario/infrastructure/routes/EstadoProdu
 import CategoriaProductoRoutes from "./inventario/infrastructure/routes/CategoriaProductoRoutes.js";
 import InventarioRoutes from "./inventario/infrastructure/routes/InventarioRoutes.js";
 import ProductoRoutes from "./inventario/infrastructure/routes/ProductoRoutes.js";
-import TipoProductoRoutes from "./inventario/infrastructure/routes/TipoProductoRoutes.js";
+import InsumoRoutes from "./inventario/infrastructure/routes/InsumoRoutes.js";
+import ProductoRetonableRoutes from "./inventario/infrastructure/routes/ProductoRetornableRoutes.js";
+import TipoInsumoRoutes from "./inventario/infrastructure/routes/TipoInsumoRoutes.js";
 import ProductoImageRoutes from "./inventario/infrastructure/routes/ProductoImageRoutes.js"
 /* MÓDULO VENTAS */
 import ClienteRoutes from "./ventas/infrastructure/routes/ClienteRoutes.js";
-import EstadoTransaccionRoutes from "./ventas/infrastructure/routes/EstadoTransaccionRoutes.js";
-import DetalleTransaccionRoutes from "./ventas/infrastructure/routes/DetalleTransaccionroutes.js";
-import EstadoDetallesRoutes from "./ventas/infrastructure/routes/EstadoDetallesRoutes.js";
-import LogTransaccionRoutes from "./ventas/infrastructure/routes/LogTransaccionesRoutes.js";
-import TransaccionRoutes from "./ventas/infrastructure/routes/TransaccionRoutes.js";
-import FacturasRoutes from "./ventas/infrastructure/routes/FacturasRoutes.js";
-import EstadoFacturaRoutes from "./ventas/infrastructure/routes/EstadoFacturaRoutes.js";
+import VentasRoutes from "./ventas/infrastructure/routes/VentasRoutes.js";
+import CotizacionesRoutes from "./ventas/infrastructure/routes/CotizacionRoutes.js";
+import CajaRoutes from "./ventas/infrastructure/routes/CajaRoutes.js";
+/* 
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
-import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js";
+import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js"; */
 /* import analisisRoutes from "./analisis/infraestructure/routes/";
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
 import proveedoresRoutes from "./proveedores/infrastructure/routes/proveedoesrRoutes.js";
  */
 /* MÓDULO DE ENTREGAS */
-import CamionRoutes from "./Entregas/infrastructure/routes/CamionRoutes.js";
-import AgendaCargaRoutes from "./Entregas/infrastructure/routes/AgendaCargaRoutes.js";
-import InventarioCamionRoutes from "./Entregas/infrastructure/routes/InvetarioCamionRoutes.js";
-import EntregaRoutes from "./Entregas/infrastructure/routes/EntregaRoutes.js";
-import VentaChoferRoutes from "./Entregas/infrastructure/routes/VentaChoferRoutes.js";
+/* import CamionRoutes from "./Entregas/infrastructure/routes/CamionRoutes.js"; */
+/* import AgendaCargaRoutes from "./Entregas/infrastructure/routes/AgendaCargaRoutes.js"; */
+/* import InventarioCamionRoutes from "./Entregas/infrastructure/routes/InvetarioCamionRoutes.js"; */
+/* import EntregaRoutes from "./Entregas/infrastructure/routes/EntregaRoutes.js";
+import VentaChoferRoutes from "./Entregas/infrastructure/routes/VentaChoferRoutes.js"; */
 /* MÓDULO ANÁLISIS */
 // Rutas del módulo de análisis
-import ProductoEstadisticaRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
-import VentasEstadisticasRoutes from "./analisis/infrastructure/routes/VentasEstadisticasRoutes.js";
+/* import ProductoEstadisticaRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
+import VentasEstadisticasRoutes from "./analisis/infrastructure/routes/VentasEstadisticasRoutes.js"; */
 /* Configuración */
 
 dotenv.config();
@@ -101,7 +100,9 @@ app.use("/api/estados-productos", EstadoProductoRoutes);
 app.use("/api/categorias-productos", CategoriaProductoRoutes);
 app.use("/api/inventarios", InventarioRoutes);
 app.use("/api/productos", ProductoRoutes);
-app.use("/api/tipo-productos", TipoProductoRoutes);
+app.use("/api/insumos", InsumoRoutes);
+app.use("/api/producto-retornable", ProductoRetonableRoutes);
+app.use("/api/tipo-insumo", TipoInsumoRoutes);
 /**
  * Para carga de fotos
  */
@@ -110,7 +111,10 @@ app.use("/api/productos/imagenes", ProductoImageRoutes);
 
 /* MÓDULO VENTAS */
 app.use("/api/clientes", ClienteRoutes);
-app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
+app.use("/api/ventas", VentasRoutes);
+app.use("/api/cotizaciones", CotizacionesRoutes);
+app.use("/api/cajas", CajaRoutes);
+/* app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
 app.use("/api/logs-transaccion", LogTransaccionRoutes);
 app.use("/api/transacciones", TransaccionRoutes);
 app.use("/api/detalle-transacciones", DetalleTransaccionRoutes);
@@ -118,18 +122,18 @@ app.use("/api/estado-detalle", EstadoDetallesRoutes);
 app.use("/api/facturas", FacturasRoutes);
 app.use("/api/estado-factura", EstadoFacturaRoutes);
 app.use("/api/pagos", PagosRoutes);
-app.use("/api/documentos", DocumentosRoutes)
+app.use("/api/documentos", DocumentosRoutes) */
 
 /* MÓDULO ANÁLISIS */
-app.use("/api/analisis/productos", ProductoEstadisticaRoutes);
-app.use("/api/analisis/ventas", VentasEstadisticasRoutes);
+/* app.use("/api/analisis/productos", ProductoEstadisticaRoutes);
+app.use("/api/analisis/ventas", VentasEstadisticasRoutes); */
 
 /* MÓDULO DE ENTREGAS */
-app.use("/api/camiones", CamionRoutes);
-app.use("/api/inventario-camion", InventarioCamionRoutes);
-app.use("/api/agendas", AgendaCargaRoutes);
-app.use("/api/entregas", EntregaRoutes);
-app.use("/api/ventas-chofer", VentaChoferRoutes);
+/* app.use("/api/camiones", CamionRoutes);
+app.use("/api/inventario-camion", InventarioCamionRoutes); */
+/* app.use("/api/agendas", AgendaCargaRoutes); */
+/* app.use("/api/entregas", EntregaRoutes);
+app.use("/api/ventas-chofer", VentaChoferRoutes); */
 
 
 const PORT = process.env.PORT || 9000;
