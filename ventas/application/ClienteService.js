@@ -2,7 +2,6 @@ import { Op } from "sequelize";
 import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
-import TransaccionRepository from "../infrastructure/repositories/TransaccionRepository.js";
 import moment from "moment/moment.js";
 
 class ClienteService {
@@ -19,6 +18,7 @@ class ClienteService {
     options /* = { page: 1, limit: 20, rolId: null } */
   ) {
     const allowedFields = [
+      "id_cliente",
       "rut",
       "razon_social",
       "tipo_cliente",
@@ -49,13 +49,22 @@ class ClienteService {
   }
 
   async createCliente(data, rut) {
-    let newData = data;
-    const existingCliente = await ClienteRepository.findById(data.rut);
-    if (existingCliente) {
-      throw new Error("El cliente ya existe con este rut.");
+    const { nombre, direccion, telefono } = data;
+
+    // Validar campos básicos
+    if (!nombre || !direccion || !telefono) {
+        throw new Error("Faltan campos básicos: nombre, dirección y teléfono son obligatorios.");
     }
 
-    newData.creado_por = rut;
+    const existingCliente = await ClienteRepository.findByDireccion(direccion);
+    if (existingCliente) {
+        throw new Error("Ya existe un cliente registrado con esta dirección.");
+    }
+
+    const newData = {
+        ...data,
+        creado_por: rut,
+    };
 
     return await ClienteRepository.create(newData);
   }
@@ -91,17 +100,9 @@ class ClienteService {
     return await ClienteRepository.update(id, { activo: true });
   }
 
-  async getClienteTransacciones(id) {
-    const cliente = await ClienteRepository.findById(id);
-    if (!cliente) {
-      throw new Error("Cliente no encontrado.");
-    }
-
-    return await TransaccionRepository.findByClienteId(id);
-  }
-
   async searchClientes(filters) {
     const allowedFields = [
+      "id_cliente",
       "rut",
       "nombre",
       "email",
@@ -114,16 +115,17 @@ class ClienteService {
     const where = createFilter(filters, allowedFields);
     return await ClienteRepository.findWithFilter(where);
   }
-  async deleteClientes(ruts, id_usuario) {
-    if (!Array.isArray(ruts) || ruts.length === 0) {
+  async deleteClientes(ids, id_usuario) {
+    if (!Array.isArray(ids) || ids.length === 0) {
       throw new Error(
         "Debe proporcionar al menos un ID de cliente para eliminar."
       );
     }
-    const clientes = await ClienteRepository.findByIds(ruts);
-    if (clientes.length !== ruts.length) {
-      const notFoundIds = ruts.filter(
-        (rut) => !clientes.some((cliente) => cliente.rut === rut)
+    const clientes = await ClienteRepository.findByIds(ids);
+
+    if (clientes.length !== ids.length) {
+      const notFoundIds = ids.filter(
+        (id_cliente) => !clientes.some((cliente) => cliente.id_cliente === id_cliente)
       );
       throw new Error(
         `Las siguientes clientes no fueron encontradas: ${notFoundIds.join(
@@ -134,11 +136,11 @@ class ClienteService {
 
     for (const cliente of clientes) {
       const activo = false;
-      await ClienteRepository.update(cliente.rut, { activo: activo });
+      await ClienteRepository.update(cliente.id_cliente, { activo: activo });
     }
 
     return {
-      message: `Se marcaron como eliminados ${ruts.length} clientes.`,
+      message: `Se marcaron como eliminados ${ids.length} clientes.`,
     };
   }
 

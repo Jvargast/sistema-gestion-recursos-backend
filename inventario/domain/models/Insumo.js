@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
+import TipoInsumo from "./TipoInsumo.js";
 
 const Insumo = sequelize.define(
   "Insumo",
@@ -30,6 +31,10 @@ const Insumo = sequelize.define(
       },
       allowNull: false,
     },
+    image_url: {
+      type: DataTypes.STRING,
+      allowNull: true, 
+    },
     es_para_venta: {
       type: DataTypes.BOOLEAN,
       defaultValue: false, // Por defecto, no se venden.
@@ -37,6 +42,10 @@ const Insumo = sequelize.define(
     precio: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true, // Solo aplica si el insumo se vende.
+    },
+    unidad_de_medida: {
+      type: DataTypes.STRING,
+      allowNull: true
     },
     activo: {
       type: DataTypes.BOOLEAN,

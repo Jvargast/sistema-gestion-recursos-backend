@@ -1,155 +1,229 @@
-import Cliente from "./models/Cliente.js";
+import Sucursal from "../../auth/domain/models/Sucursal.js";
 import Usuarios from "../../auth/domain/models/Usuarios.js";
-import Transaccion from "./models/Transaccion.js";
-import DetalleTransaccion from "./models/DetalleTransaccion.js";
-import LogTransaccion from "./models/LogTransaccion.js";
-import Pago from "./models/Pago.js";
-import EstadoTransaccion from "./models/EstadoTransaccion.js";
+import Insumo from "../../inventario/domain/models/Insumo.js";
 import Producto from "../../inventario/domain/models/Producto.js";
-import EstadoPago from "./models/EstadoPago.js";
-import MetodoPago from "./models/MetodoPago.js";
-import EstadoDetalleTransaccion from "./models/EstadoDetalleTransaccion.js";
-import TransicionEstadoTransaccion from "./models/TransicionEstadoTransaccion.js";
-import TransicionEstadoDetalle from "./models/TransicionEstadoDetalle.js";
-import Factura from "./models/Factura.js";
-import Boleta from "./models/Boleta.js";
+import Caja from "./models/Caja.js";
+import Cliente from "./models/Cliente.js";
+import Cotizacion from "./models/Cotizacion.js";
+import DetalleCotizacion from "./models/DetalleCotizacion.js";
+import DetalleVenta from "./models/DetalleVenta.js";
 import Documento from "./models/Documento.js";
+import EstadoPago from "./models/EstadoPago.js";
+import EstadoVenta from "./models/EstadoVenta.js";
+import LogCotizacion from "./models/LogCotizacion.js";
+import LogVenta from "./models/LogVenta.js";
+import MetodoPago from "./models/MetodoPago.js";
+import MovimientoCaja from "./models/MovimientoCaja.js";
+import Pago from "./models/Pago.js";
+import Venta from "./models/Venta.js";
 
+function loadPOSAssociations() {
+  // Relación Caja -> Sucursal
+  Caja.belongsTo(Sucursal, { foreignKey: "id_sucursal", as: "sucursal" });
+  Sucursal.hasMany(Caja, { foreignKey: "id_sucursal", as: "cajas" });
 
-function loadSalesAssociations() {
-  // Relación: Cliente -> Transacción
-  Transaccion.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
-  Cliente.hasMany(Transaccion, { foreignKey: "id_cliente", as: "transacciones" });
-
-  // Relación: Usuario -> Transacción
-  Transaccion.belongsTo(Usuarios, { foreignKey: "id_usuario", as: "usuario" });
-  Usuarios.hasMany(Transaccion, { foreignKey: "id_usuario", as: "transacciones" });
-
-  // Relación: Estado de transacción -> Transacción
-  Transaccion.belongsTo(EstadoTransaccion, {
-    foreignKey: "id_estado_transaccion",
-    as: "estado",
+  // Relación Caja -> Usuarios (Apertura y Cierre)
+  Caja.belongsTo(Usuarios, {
+    foreignKey: "usuario_apertura",
+    as: "usuarioApertura",
   });
-  EstadoTransaccion.hasMany(Transaccion, {
-    foreignKey: "id_estado_transaccion",
-    as: "transacciones",
+  Caja.belongsTo(Usuarios, {
+    foreignKey: "usuario_cierre",
+    as: "usuarioCierre",
+  });
+  Caja.belongsTo(Usuarios, {
+    foreignKey: "usuario_asignado",
+    as: "usuarioAsignado",
+  });
+  Usuarios.hasMany(Caja, {
+    foreignKey: "usuario_apertura",
+    as: "cajasAperturadas",
+  });
+  Usuarios.hasMany(Caja, { foreignKey: "usuario_cierre", as: "cajasCerradas" });
+  Usuarios.hasMany(Caja, {
+    foreignKey: "usuario_asignado",
+    as: "cajasAsignadas",
   });
 
-  // Relación: Documento -> Transacción
-  Documento.belongsTo(Transaccion, { foreignKey: "id_transaccion", as: "transaccion" });
-  Transaccion.hasMany(Documento, { foreignKey: "id_transaccion", as: "documentos" });
+  // Relación: Cliente -> Venta
+  Venta.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
+  Cliente.hasMany(Venta, { foreignKey: "id_cliente", as: "ventas" });
+
+  // Relación: Cliente -> Cotizacion
+  Cotizacion.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
+  Cliente.hasMany(Cotizacion, { foreignKey: "id_cliente", as: "cotizaciones" });
+
+  // Relación: Venta -> DetalleVenta
+  DetalleVenta.belongsTo(Venta, { foreignKey: "id_venta", as: "venta" });
+  Venta.hasMany(DetalleVenta, { foreignKey: "id_venta", as: "detallesVenta" });
+
+  Venta.belongsTo(Sucursal, { foreignKey: "id_sucursal", as: "sucursal" });
+  Sucursal.hasMany(Venta, { foreignKey: "id_sucursal", as: "ventas" });
+
+  Cotizacion.belongsTo(Sucursal, { foreignKey: "id_sucursal", as: "sucursal" });
+  Sucursal.hasMany(Cotizacion, {
+    foreignKey: "id_sucursal",
+    as: "cotizaciones",
+  });
+
+  Venta.belongsTo(EstadoVenta, {
+    foreignKey: "id_estado_venta",
+    as: "estadoVenta",
+  });
+  EstadoVenta.hasMany(Venta, { foreignKey: "id_estado_venta", as: "ventas" });
+
+  // Relación: Cotizacion -> DetalleCotizacion
+  DetalleCotizacion.belongsTo(Cotizacion, {
+    foreignKey: "id_cotizacion",
+    as: "cotizacion",
+  });
+  Cotizacion.hasMany(DetalleCotizacion, {
+    foreignKey: "id_cotizacion",
+    as: "detallesCotizacion",
+  });
+
+  // Relación: Producto -> DetalleVenta
+  DetalleVenta.belongsTo(Producto, {
+    foreignKey: "id_producto",
+    as: "producto",
+  });
+  Producto.hasMany(DetalleVenta, {
+    foreignKey: "id_producto",
+    as: "detallesVenta",
+  });
+
+  // Relación: Insumo -> DetalleVenta
+  DetalleVenta.belongsTo(Insumo, { foreignKey: "id_insumo", as: "insumo" });
+  Insumo.hasMany(DetalleVenta, {
+    foreignKey: "id_insumo",
+    as: "detallesVenta",
+  });
+
+  // Relación: Producto -> DetalleCotizacion
+  DetalleCotizacion.belongsTo(Producto, {
+    foreignKey: "id_producto",
+    as: "producto",
+  });
+  Producto.hasMany(DetalleCotizacion, {
+    foreignKey: "id_producto",
+    as: "detallesCotizacion",
+  });
+
+  // Relación: Caja -> Venta
+  Venta.belongsTo(Caja, { foreignKey: "id_caja", as: "caja" });
+  Caja.hasMany(Venta, { foreignKey: "id_caja", as: "ventas" });
+
+  // Relación: Caja -> MovimientoCaja
+  MovimientoCaja.belongsTo(Caja, { foreignKey: "id_caja", as: "caja" });
+  Caja.hasMany(MovimientoCaja, { foreignKey: "id_caja", as: "movimientos" });
+
+  // Relación: MovimientoCaja -> Venta
+  MovimientoCaja.belongsTo(Venta, { foreignKey: "id_venta", as: "venta" });
+  Venta.hasMany(MovimientoCaja, { foreignKey: "id_venta", as: "movimientos" });
+
+  // Relación: MovimientoCaja -> MetodoPago
+  MovimientoCaja.belongsTo(MetodoPago, {
+    foreignKey: "id_metodo_pago",
+    as: "metodoPago",
+  });
+  MetodoPago.hasMany(MovimientoCaja, {
+    foreignKey: "id_metodo_pago",
+    as: "movimientos",
+  });
+  // Relación: Venta -> Documento
+  Documento.belongsTo(Venta, { foreignKey: "id_venta", as: "venta" });
+  Venta.hasOne(Documento, { foreignKey: "id_venta", as: "documento" });
+
+  Documento.belongsTo(EstadoPago, {
+    foreignKey: "id_estado_pago",
+    as: "estadoPago",
+  });
+  EstadoPago.hasMany(Documento, {
+    foreignKey: "id_estado_pago",
+    as: "documento",
+  });
+
+  // Relación Caja -> Pago
+  Caja.hasMany(Pago, { foreignKey: "id_caja", as: "pagos" });
+  Pago.belongsTo(Caja, { foreignKey: "id_caja", as: "caja" });
 
   // Relación: Cliente -> Documento
   Documento.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
   Cliente.hasMany(Documento, { foreignKey: "id_cliente", as: "documentos" });
 
+  Documento.belongsTo(Usuarios, {
+    foreignKey: "id_usuario_creador",
+    as: "creador",
+  });
+  Usuarios.hasMany(Documento, {
+    foreignKey: "id_usuario_creador",
+    as: "documentosCreados",
+  });
+  // Relación: Venta -> LogVenta
+  LogVenta.belongsTo(Venta, { foreignKey: "id_venta", as: "venta" });
+  Venta.hasMany(LogVenta, { foreignKey: "id_venta", as: "logs" });
 
-  // Relación: Documento -> EstadoPago
-  Documento.belongsTo(EstadoPago, { foreignKey: "id_estado_pago", as: "estadoPago" });
-  EstadoPago.hasMany(Documento, { foreignKey: "id_estado_pago", as: "documentos" });
-  
-  // Relación: Documento -> Factura y Boleta
-  Documento.hasOne(Factura, { foreignKey: "id_documento", as: "factura" });
-  Factura.belongsTo(Documento, { foreignKey: "id_documento", as: "documento" });
+  // Relación: Cotizacion -> LogCotizacion
+  LogCotizacion.belongsTo(Cotizacion, {
+    foreignKey: "id_cotizacion",
+    as: "cotizacion",
+  });
+  Cotizacion.hasMany(LogCotizacion, {
+    foreignKey: "id_cotizacion",
+    as: "logs",
+  });
 
-  Documento.hasOne(Boleta, { foreignKey: "id_documento", as: "boleta" });
-  Boleta.belongsTo(Documento, { foreignKey: "id_documento", as: "documento" });
+  // Relación: Venta -> Pago
+  Pago.belongsTo(Venta, { foreignKey: "id_venta", as: "venta" });
+  Venta.hasMany(Pago, { foreignKey: "id_venta", as: "pagos" });
 
-  // Relación: Pago -> Documento
+  // Relación: Documento -> Pago
   Pago.belongsTo(Documento, { foreignKey: "id_documento", as: "documento" });
   Documento.hasMany(Pago, { foreignKey: "id_documento", as: "pagos" });
 
-  // Relación: Pago -> Método de pago
-  Pago.belongsTo(MetodoPago, { foreignKey: "id_metodo_pago", as: "metodo" });
+  // Relación: MetodoPago -> Pago
+  Pago.belongsTo(MetodoPago, {
+    foreignKey: "id_metodo_pago",
+    as: "metodoPago",
+  });
   MetodoPago.hasMany(Pago, { foreignKey: "id_metodo_pago", as: "pagos" });
 
-  // Relación: Producto -> Detalle de transacción
-  DetalleTransaccion.belongsTo(Producto, {
-    foreignKey: "id_producto",
-    as: "producto",
+  // Relación: Pago -> EstadoPago
+  Pago.belongsTo(EstadoPago, {
+    foreignKey: "id_estado_pago",
+    as: "estadoPago",
   });
-  Producto.hasMany(DetalleTransaccion, {
-    foreignKey: "id_producto",
-    as: "detalles",
+  EstadoPago.hasMany(Pago, { foreignKey: "id_estado_pago", as: "pagos" });
+  // Relación: Venta -> MetodoPago
+  Venta.belongsTo(MetodoPago, {
+    foreignKey: "id_metodo_pago",
+    as: "metodoPago",
+  });
+  MetodoPago.hasMany(Venta, { foreignKey: "id_metodo_pago", as: "ventas" });
+
+  // Relación: Usuario (vendedor) -> Venta
+  Venta.belongsTo(Usuarios, { foreignKey: "id_vendedor", as: "vendedor" });
+  Usuarios.hasMany(Venta, { foreignKey: "id_vendedor", as: "ventas" });
+
+  // Relación: Usuario (vendedor) -> Cotizacion
+  Cotizacion.belongsTo(Usuarios, { foreignKey: "id_vendedor", as: "vendedor" });
+  Usuarios.hasMany(Cotizacion, {
+    foreignKey: "id_vendedor",
+    as: "cotizaciones",
   });
 
-  // Relación: Transacción -> Detalle de transacción
-  DetalleTransaccion.belongsTo(Transaccion, {
-    foreignKey: "id_transaccion",
-    as: "transaccion",
-  });
-  Transaccion.hasMany(DetalleTransaccion, {
-    foreignKey: "id_transaccion",
-    as: "detalles",
+  // Relación: Usuario (creador) -> LogVenta
+  LogVenta.belongsTo(Usuarios, { foreignKey: "usuario", as: "creador" });
+  Usuarios.hasMany(LogVenta, { foreignKey: "usuario", as: "logsVentas" });
+
+  // Relación: Usuario (creador) -> LogCotizacion
+  LogCotizacion.belongsTo(Usuarios, { foreignKey: "usuario", as: "creador" });
+  Usuarios.hasMany(LogCotizacion, {
+    foreignKey: "usuario",
+    as: "logsCotizaciones",
   });
 
-  // Relación: Log de Transacción -> Transacción
-  LogTransaccion.belongsTo(Transaccion, {
-    foreignKey: "id_transaccion",
-    as: "transaccionLog",
-  });
-  Transaccion.hasMany(LogTransaccion, {
-    foreignKey: "id_transaccion",
-    as: "logsTransaccion",
-  });
-
-  // Relación: Usuario -> Log de transacción
-  LogTransaccion.belongsTo(Usuarios, {
-    foreignKey: "id_usuario",
-    as: "usuario",
-  });
-  Usuarios.hasMany(LogTransaccion, { foreignKey: "id_usuario", as: "logs" });
-
-  // Relación: Transición Estado Transacción -> Estados de Transacción
-  TransicionEstadoTransaccion.belongsTo(EstadoTransaccion, {
-    foreignKey: "id_estado_origen",
-    as: "estadoOrigen",
-  });
-  EstadoTransaccion.hasMany(TransicionEstadoTransaccion, {
-    foreignKey: "id_estado_origen",
-    as: "transicionesOrigen",
-  });
-
-  TransicionEstadoTransaccion.belongsTo(EstadoTransaccion, {
-    foreignKey: "id_estado_destino",
-    as: "estadoDestino",
-  });
-  EstadoTransaccion.hasMany(TransicionEstadoTransaccion, {
-    foreignKey: "id_estado_destino",
-    as: "transicionesDestino",
-  });
-
-  // Relación: Detalle Transacción -> Estado Detalle Transacción
-  DetalleTransaccion.belongsTo(EstadoDetalleTransaccion, {
-    foreignKey: "estado_producto_transaccion",
-    as: "estado",
-  });
-  EstadoDetalleTransaccion.hasMany(DetalleTransaccion, {
-    foreignKey: "estado_producto_transaccion",
-    as: "detalles_transacciones",
-  });
-
-  // Relación: Transición Estado Detalle -> Estado Detalle Transacción (Origen)
-  TransicionEstadoDetalle.belongsTo(EstadoDetalleTransaccion, {
-    foreignKey: "id_estado_origen",
-    as: "estadoOrigen",
-  });
-  EstadoDetalleTransaccion.hasMany(TransicionEstadoDetalle, {
-    foreignKey: "id_estado_origen",
-    as: "transicionesOrigen",
-  });
-
-  // Relación: Transición Estado Detalle -> Estado Detalle Transacción (Destino)
-  TransicionEstadoDetalle.belongsTo(EstadoDetalleTransaccion, {
-    foreignKey: "id_estado_destino",
-    as: "estadoDestino",
-  });
-  EstadoDetalleTransaccion.hasMany(TransicionEstadoDetalle, {
-    foreignKey: "id_estado_destino",
-    as: "transicionesDestino",
-  });
-
-  console.log("Asociaciones del módulo de ventas cargadas correctamente.");
+  console.log("Asociaciones del módulo POS cargadas correctamente.");
 }
 
-export default loadSalesAssociations;
+export default loadPOSAssociations;

@@ -1,63 +1,82 @@
-import { DataTypes, Sequelize } from "sequelize";
+import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
-import VentasChofer from "../../../Entregas/domain/models/VentasChofer.js";
+import Usuarios from "../../../auth/domain/models/Usuarios.js";
+import EstadoPago from "./EstadoPago.js";
 
 const Documento = sequelize.define(
   "Documento",
   {
     id_documento: {
       type: DataTypes.INTEGER,
-      primaryKey: true,
       autoIncrement: true,
+      primaryKey: true,
     },
-    id_transaccion: {
+    id_venta: {
       type: DataTypes.INTEGER,
-      allowNull: true, 
-      references: {
-        model: "Transaccion",
-        key: "id_transaccion",
-      },
-    },
-    id_venta_chofer: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: VentasChofer,
-        key: "id_venta_chofer",
-      },
-    },
-    id_cliente:{
-      type: DataTypes.STRING,
-      allowNull: true, 
-      references: {
-        model: "Clientes",
-        key: "rut"
-      }
-    },
-    tipo_documento: {
-      type: DataTypes.STRING, // Ejemplo: "factura", "boleta", "nota_credito"
       allowNull: false,
     },
-    id_estado_pago: {
-      type: DataTypes.INTEGER, // Ejemplo: "Emitido", "Anulado"
+    id_usuario_creador: {
+      type: DataTypes.STRING,
+      allowNull: false,
       references: {
-        model: "Estado_Pago",
-        key: "id_estado_pago"
-      }
+        model: Usuarios,
+        key: "rut",
+      },
+    },
+    tipo_documento: {
+      type: DataTypes.ENUM("boleta", "factura"),
+      allowNull: false,
+    },
+    numero: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
     },
     fecha_emision: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
+    },
+    id_cliente: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    id_estado_pago: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: EstadoPago,
+        key: "id_estado_pago",
+      },
+      allowNull: false,
+    },
+    monto_neto: {
+      type: DataTypes.DECIMAL(10, 2), // Valor antes de aplicar impuestos
+      allowNull: false,
+      validate: {
+        min: 0,
+      },
+    },
+    iva: {
+      type: DataTypes.DECIMAL(10, 2), // Impuesto calculado sobre el neto
+      allowNull: false,
+      validate: {
+        min: 0,
+      },
+    },
+    subtotal: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
     },
     total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
-    monto_pagado: {
-      type: DataTypes.DECIMAL(10, 2),
+    estado: {
+      type: DataTypes.ENUM("emitido", "anulado"),
       allowNull: false,
-      defaultValue: 0,
+    },
+    observaciones: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

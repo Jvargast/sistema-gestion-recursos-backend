@@ -2,7 +2,6 @@ import IProductoRepository from "../../domain/repositories/IProductoRepository.j
 import Producto from "../../domain/models/Producto.js";
 import CategoriaProducto from "../../domain/models/CategoriaProducto.js";
 import EstadoProducto from "../../domain/models/EstadoProducto.js";
-import TipoProducto from "../../domain/models/TipoProducto.js";
 import Inventario from "../../domain/models/Inventario.js";
 
 class ProductoRepository extends IProductoRepository {
@@ -10,8 +9,12 @@ class ProductoRepository extends IProductoRepository {
     return await Producto.findByPk(id, {
       include: [
         { model: CategoriaProducto, as: "categoria" },
-        { model: EstadoProducto, as: "estado" },
-        { model: TipoProducto, as: "tipo" },
+        { model: EstadoProducto, as: "estadoProducto" },
+        {
+          model: Inventario, //Se incluye para optimizar la consulta, solo prueba
+          as: "inventario",
+          attributes: ["cantidad", "fecha_actualizacion"], // Solo los campos necesarios
+        },
       ],
     });
   }
@@ -20,8 +23,8 @@ class ProductoRepository extends IProductoRepository {
     return await Producto.findAll({
       include: [
         { model: CategoriaProducto, as: "categoria" },
-        { model: EstadoProducto, as: "estado" },
-        { model: TipoProducto, as: "tipo" },
+        { model: EstadoProducto, as: "estadoProducto" },
+
         {
           model: Inventario, //Se incluye para optimizar la consulta, solo prueba
           as: "inventario",
@@ -62,6 +65,10 @@ class ProductoRepository extends IProductoRepository {
     return await Producto.findAll({
       where: { id_producto: ids },
     });
+  }
+
+  async findByNombre(nombre_producto) {
+    return await Producto.findOne({ where: { nombre_producto } });
   }
 
   getModel() {

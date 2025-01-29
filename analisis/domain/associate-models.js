@@ -1,8 +1,8 @@
 import Producto from "../../inventario/domain/models/Producto.js";
 import ProductoEstadisticas from "./models/ProductoEstadisticas.js";
-import Transaccion from "../../ventas/domain/models/Transaccion.js";
+import Venta from "../../ventas/domain/models/Venta.js";
 import VentasEstadisticas from "./models/VentasEstadisticas.js";
-import EstadisticasTransacciones from "./models/EstadisticasTransacciones.js";
+
 
 function loadAnalysisAssociations() {
   // Relación: Producto -> ProductoEstadisticas

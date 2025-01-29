@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Camion from "./Camion.js";
 import Producto from "../../../inventario/domain/models/Producto.js";
+import Insumo from "../../../inventario/domain/models/Insumo.js";
 
 const InventarioCamionLogs = sequelize.define(
   "InventarioCamionLogs",
@@ -22,12 +23,26 @@ const InventarioCamionLogs = sequelize.define(
     },
     id_producto: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: Producto,
         key: "id_producto",
       },
       onDelete: "CASCADE",
+    },
+    id_insumo: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: Insumo,
+        key: "id_insumo",
+      },
+      onDelete: "CASCADE",
+    },
+    tipo_movimiento: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      
     },
     cantidad: {
       type: DataTypes.INTEGER,

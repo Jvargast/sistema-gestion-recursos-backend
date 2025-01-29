@@ -1,14 +1,12 @@
 import ProductosRepository from "../infrastructure/repositories/ProductosRepository.js";
 import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
-import TipoProductoService from "./TipoProductoService.js";
 import EstadoProductoService from "./EstadoProductoService.js";
 import InventarioService from "./InventarioService.js";
 import CategoriaProductoService from "./CategoriaProductoService.js";
 import TransicionEstadoProductoService from "./TransicionEstadoProductoService.js";
 import EstadoProductoRepository from "../infrastructure/repositories/EstadoProductoRepository.js";
 import CategoriaProductoRepository from "../infrastructure/repositories/CategoriaProductoRepository.js";
-import TipoProductoRepository from "../infrastructure/repositories/TipoProductoRepository.js";
 import { Op } from "sequelize";
 import InventarioRepository from "../infrastructure/repositories/InventarioRepository.js";
 
@@ -35,12 +33,9 @@ class ProductoService {
       "id_estado_producto",
     ];
     const where = createFilter(filters, allowedFields);
-    // Filtro adicional para tipo_producto (Insumo)
-    if (options.tipo_producto) {
-      /* where[Op.eq] = [
-        { "$tipo.nombre$": { [Op.eq]: `%${options.tipo_producto}%` } },
-      ]; */
-      where["$tipo.nombre$"] = options.tipo_producto; // Buscar en tipo.nombre
+
+    if (options.estado) {
+      where["$estadoProducto.nombre_estado$"] = options.estado;
     }
 
     if (options.search) {
@@ -49,7 +44,11 @@ class ProductoService {
           "$categoria.nombre_categoria$": { [Op.like]: `%${options.search}%` },
         }, // Buscar en categoria.nombre
         { "$tipo.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en tipo.nombre
-        { "$estado.nombre_estado$": { [Op.like]: `%${options.search}%` } }, // Buscar en estado.nombre_estado
+        {
+          "$estadoProducto.nombre_estado$": {
+            [Op.like]: `%${options.search}%`,
+          },
+        }, // Buscar en estado.nombre_estado
         { marca: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
         { descripcion: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
         { nombre_producto: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
@@ -62,13 +61,8 @@ class ProductoService {
         attributes: ["nombre_categoria", "descripcion"],
       },
       {
-        model: TipoProductoRepository.getModel(),
-        as: "tipo",
-        attributes: ["nombre", "descripcion"],
-      },
-      {
         model: EstadoProductoRepository.getModel(),
-        as: "estado",
+        as: "estadoProducto",
         attributes: ["nombre_estado", "descripcion"],
       },
       {
@@ -90,19 +84,49 @@ class ProductoService {
   async createProducto(data) {
     const { cantidad_inicial, ...productoData } = data;
 
+    // Validar datos obligatorios
+    if (!productoData.nombre_producto) {
+      throw new Error("El campo 'nombre_producto' es obligatorio");
+    }
+    if (
+      !productoData.precio ||
+      isNaN(Number(productoData.precio)) ||
+      Number(productoData.precio) < 0
+    ) {
+      throw new Error(
+        "El campo 'precio' debe ser un número válido y mayor o igual a 0"
+      );
+    }
+    if (!productoData.id_categoria) {
+      throw new Error("El campo 'id_categoria' es obligatorio");
+    }
+
     // Validar relaciones
     await CategoriaProductoService.getCategoriaById(productoData.id_categoria);
-    await TipoProductoService.getTipoById(productoData.id_tipo_producto);
-    await EstadoProductoService.getEstadoById(productoData.id_estado_producto);
+
+    const productoExistente = await ProductosRepository.findByNombre(
+      productoData.nombre_producto
+    );
+
+    if (productoExistente) {
+      throw new Error("El producto ya se encuentra registrado");
+    }
+
+    // Convertir precio a número
+    productoData.precio = Number(productoData.precio);
 
     // Crear el producto
-    const producto = await ProductosRepository.create(productoData);
+    const producto = await ProductosRepository.create({
+      ...productoData,
+      id_estado_producto: 1,
+      image_url: "https://via.placeholder.com/150",
+    });
 
     // Crear el inventario inicial para el producto
     if (cantidad_inicial !== undefined && cantidad_inicial >= 0) {
       await InventarioRepository.create({
         id_producto: producto.id_producto,
-        cantidad: cantidad_inicial,
+        cantidad: Number(cantidad_inicial),
         fecha_actualizacion: new Date(),
       });
     }
@@ -110,7 +134,7 @@ class ProductoService {
   }
 
   async updateProducto(id, data) {
-    const { id_estado_destino, stock, id_tipo_producto, ...productoData } = data;
+    const { stock, ...productoData } = data;
 
     // Obtener el tipo de producto
     const producto = await this.getProductoById(id);
@@ -119,36 +143,13 @@ class ProductoService {
       throw new Error("El producto no existe");
     }
 
-    const tipo_producto = await TipoProductoRepository.findById(id_tipo_producto);
-
-    if (tipo_producto.dataValues.nombre === "Producto_Terminado") {
-      // Producto_Terminado
-      // Validar transición de estado si aplica
-      if (id_estado_destino) {
-        await TransicionEstadoProductoService.validarTransicion(
-          producto.id_estado_producto,
-          id_estado_destino
-        );
-      }
-
-      // Actualizar solo datos específicos de Producto_Terminado
-      await ProductosRepository.update(id, productoData);
-
-      // Si incluye stock, actualiza el inventario
-      if (typeof stock !== "undefined") {
-        await InventarioRepository.updateByProductoId(id, { cantidad: stock });
-      }
-    } else if (tipo_producto.dataValues.nombre === "Insumo") {
-      // Insumo
-      // Actualizar datos específicos de insumos
-      await ProductosRepository.update(id, productoData);
-
-      // Aquí puedes agregar lógica especial para insumos si aplica
-    } else {
-      throw new Error("El tipo de producto no es válido");
+    await ProductosRepository.update(id, { ...productoData });
+    if (stock) {
+      await InventarioRepository.update(producto.id_producto, {
+        cantidad: stock,
+      });
     }
 
-    // Retornar el producto actualizado con inventario
     return await this.getProductoById(id);
   }
 
@@ -157,30 +158,6 @@ class ProductoService {
     await InventarioService.deleteInventario(id);
     await ProductosRepository.delete(id);
     return true;
-  }
-
-  //Modificarla?
-  async getProductosByTipo(tipo) {
-    const tipoProducto = await TipoProductoService.getAllTipos();
-
-    const tipoId = tipoProducto.find(
-      (t) => t.nombre === tipo
-    )?.id_tipo_producto;
-
-    if (!tipoId) throw new Error("Tipo de producto no encontrado.");
-
-    const productos = await ProductosRepository.findAll({
-      where: { id_tipo_producto: tipoId },
-    });
-
-    for (const producto of productos) {
-      const inventario = await InventarioService.getInventarioByProductoId(
-        producto.id_producto
-      );
-      producto.dataValues.inventario = inventario;
-    }
-
-    return productos;
   }
 
   async cambiarEstadoProducto(idProducto, nuevoEstado) {
@@ -267,16 +244,17 @@ class ProductoService {
       "descripcion",
       "precio",
       "id_categoria",
-      "id_tipo_producto",
       "id_estado_producto",
     ];
     const where = createFilter(filters, allowedFields);
-    // Filtro adicional para tipo_producto (Insumo)
-    if (options.tipo_producto) {
-      /* where[Op.eq] = [
-        { "$tipo.nombre$": { [Op.eq]: `%${options.tipo_producto}%` } },
-      ]; */
-      where["$tipo.nombre$"] = { [Op.eq]: options.tipo_producto }; // Buscar en tipo.nombre
+    // Filtro adicional para estado no "Eliminado"
+    if (options.estado) {
+      where["$estadoProducto.nombre_estado$"] = options.estado;
+    }
+
+    // Filtro de categoría (ignorar si es "all" o no está definido)
+    if (options.categoria && options.categoria !== "all") {
+      where["$categoria.nombre_categoria$"] = options.categoria;
     }
 
     if (options.search) {
@@ -284,8 +262,11 @@ class ProductoService {
         {
           "$categoria.nombre_categoria$": { [Op.like]: `%${options.search}%` },
         }, // Buscar en categoria.nombre
-        { "$tipo.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en tipo.nombre
-        { "$estado.nombre_estado$": { [Op.like]: `%${options.search}%` } }, // Buscar en estado.nombre_estado
+        {
+          "$estadoProducto.nombre_estado$": {
+            [Op.like]: `%${options.search}%`,
+          },
+        }, // Buscar en estado.nombre_estado
         { marca: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
         { descripcion: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
         { nombre_producto: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
@@ -298,13 +279,8 @@ class ProductoService {
         attributes: ["nombre_categoria"],
       },
       {
-        model: TipoProductoRepository.getModel(),
-        as: "tipo",
-        attributes: ["nombre"],
-      },
-      {
         model: EstadoProductoRepository.getModel(),
-        as: "estado",
+        as: "estadoProducto",
         attributes: ["nombre_estado"],
       },
       {

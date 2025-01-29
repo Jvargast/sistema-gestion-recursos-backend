@@ -176,7 +176,7 @@ class UsuarioService {
 
     if (result[0] === 0) {
       throw new Error(
-        "No se pudo actualizar el usuario, posiblemente no existe"
+        "No se pudo actualizar el usuario, posiblemente no existe..."
       );
     }
 

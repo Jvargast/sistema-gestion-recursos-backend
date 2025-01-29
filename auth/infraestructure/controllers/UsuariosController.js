@@ -124,7 +124,6 @@ class UsuarioController {
   async update(req, res) {
     const { rut } = req.params;
     const data = req.body;
-
     try {
       const updatedUsuario = await UsuariosService.updateUsuario(rut, data);
       res.status(200).json(updatedUsuario);

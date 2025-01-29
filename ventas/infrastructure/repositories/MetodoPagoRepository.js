@@ -1,7 +1,6 @@
-import IMetodoPagoRepository from "../../domain/repositories/IMetodoPagoRepository.js";
 import MetodoPago from "../../domain/models/MetodoPago.js";
 
-class MetodoPagoRepository extends IMetodoPagoRepository {
+class MetodoPagoRepository {
   async findById(id) {
     return await MetodoPago.findByPk(id);
   }

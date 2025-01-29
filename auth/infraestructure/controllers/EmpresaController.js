@@ -4,7 +4,8 @@ class EmpresaController {
   // Obtener todas las empresas
   async getAllEmpresas(req, res) {
     try {
-      const empresas = await EmpresaService.obtenerEmpresas();
+      const rut = req.user.id;
+      const empresas = await EmpresaService.obtenerEmpresas(rut);
       res.json(empresas);
     } catch (error) {
       res.status(500).json({ message: error.message });

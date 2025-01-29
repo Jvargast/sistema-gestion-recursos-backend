@@ -4,7 +4,7 @@ import sequelize from './database.js';
 import loadAuthAssociations from '../auth/domain/associate-models.js';
 import loadInventarioAssociations from '../inventario/domain/associate-models.js';
 import loadSalesAssociations from '../ventas/domain/associate-models.js';
-import loadAnalysisAssociations from '../analisis/domain/associate-models.js';
+/* import loadAnalysisAssociations from '../analisis/domain/associate-models.js'; */
 import loadEntregasAssociations from '../Entregas/domain/associate-model.js';
 //import loadGeografiaAssociations from '../geografia/domain/associate-models.js';
 //import loadManagementAssociations from '../management/domain/associate-models.js';
@@ -23,7 +23,7 @@ async function initializeDatabase() {
     loadAuthAssociations();
     loadInventarioAssociations();
     loadSalesAssociations();
-    loadAnalysisAssociations();
+    /* loadAnalysisAssociations(); */
     loadEntregasAssociations();
     //loadGeografiaAssociations();
     //loadManagementAssociations();
@@ -31,7 +31,7 @@ async function initializeDatabase() {
 
 
     // Sincronizar modelos con la base de datos
-    await sequelize.sync({ alter: false }); // `alter: true` ajusta los modelos según cambios (solo en desarrollo)
+    await sequelize.sync({ alter: true }); // `alter: true` ajusta los modelos según cambios (solo en desarrollo)
     console.log('Modelos sincronizados con la base de datos.');
   } catch (error) {
     console.error('Error al conectar con la base de datos:', error);
