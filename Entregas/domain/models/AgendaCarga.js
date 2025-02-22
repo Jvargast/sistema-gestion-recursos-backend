@@ -14,6 +14,7 @@ const AgendaCarga = sequelize.define(
     fecha_hora: {
       type: DataTypes.DATE,
       allowNull: false,
+      defaultValue: DataTypes.NOW,
     },
     id_usuario_chofer: {
       type: DataTypes.STRING,
@@ -21,6 +22,7 @@ const AgendaCarga = sequelize.define(
         model: Usuarios,
         key: "rut",
       },
+      allowNull: false,
     },
     id_usuario_creador: {
       type: DataTypes.STRING,
@@ -28,6 +30,7 @@ const AgendaCarga = sequelize.define(
         model: Usuarios,
         key: "rut",
       },
+      allowNull: false,
     },
     id_camion: {
       type: DataTypes.INTEGER,
@@ -35,7 +38,7 @@ const AgendaCarga = sequelize.define(
       references: { model: Camion, key: "id_camion" },
     },
     estado: {
-      type: DataTypes.ENUM("Pendiente", "Completada"),
+      type: DataTypes.ENUM("Pendiente", "Completada", "Cancelada"),
       allowNull: false,
       defaultValue: "Pendiente",
     },

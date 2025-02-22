@@ -3,6 +3,7 @@ import Cliente from "../../../ventas/domain/models/Cliente.js";
 import Producto from "./Producto.js";
 import sequelize from "../../../database/database.js";
 import Entrega from "../../../Entregas/domain/models/Entrega.js";
+import Venta from "../../../ventas/domain/models/Venta.js";
 
 const ProductoRetornable = sequelize.define(
   "ProductoRetornable",
@@ -22,10 +23,18 @@ const ProductoRetornable = sequelize.define(
     },
     id_entrega: {
       type: DataTypes.INTEGER,
-      allowNull: false, 
+      allowNull: true, 
       references: {
         model: Entrega,
         key: "id_entrega",
+      },
+    },
+    id_venta: {
+      type: DataTypes.INTEGER,
+      allowNull: true, 
+      references: {
+        model: Venta,
+        key: "id_venta",
       },
     },
     cantidad: {

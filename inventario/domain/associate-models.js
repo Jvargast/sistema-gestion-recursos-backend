@@ -8,6 +8,7 @@ import Insumo from "./models/Insumo.js";
 import TipoInsumo from "./models/TipoInsumo.js";
 import ProductoRetornable from "./models/ProductoRetornable.js";
 import EstadoProductoRetornable from "./models/EstadoProductoRetornable.js";
+import Venta from "../../ventas/domain/models/Venta.js";
 
 function loadInventarioAssociations() {
   // Relación Producto - EstadoProducto
@@ -60,6 +61,9 @@ function loadInventarioAssociations() {
   // Relación Producto con BotellonRetornable
   Producto.hasMany(ProductoRetornable, { foreignKey: "id_producto" });
   ProductoRetornable.belongsTo(Producto, { foreignKey: "id_producto" });
+
+  Venta.hasMany(ProductoRetornable, { foreignKey: "id_venta" });
+  ProductoRetornable.belongsTo(Venta, { foreignKey: "id_venta" });
 
   ProductoRetornable.belongsTo(EstadoProductoRetornable, {
     foreignKey: "id_estado",

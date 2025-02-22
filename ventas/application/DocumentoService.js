@@ -1,11 +1,8 @@
-import BoletaRepository from "../infrastructure/repositories/BoletaRepository.js";
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
 import EstadoPagoService from "./EstadoPagoService.js";
-import FacturaService from "./FacturaService.js";
-
 
 class Documento {
-  async crearDocumento({ id_transaccion, tipo_documento, id_cliente, total }) {
+  /* async crearDocumento({ id_transaccion, tipo_documento, id_cliente, total }) {
     const estadoInicial = await EstadoPagoService.findByNombre("Pendiente");
 
     const documento = await DocumentoRepository.create({
@@ -18,7 +15,7 @@ class Documento {
     });
     if (tipo_documento === "factura") {
       const factura = await FacturaService.generarFacturaDesdeDocumento(
-        documento.id_documento,
+        documento.id_documento
       );
       return { ...documento.dataValues, factura };
     } else if (tipo_documento === "boleta") {
@@ -28,7 +25,7 @@ class Documento {
       return { ...documento.dataValues, boleta };
     }
     throw new Error("Tipo de documento no válido.");
-  }
+  } */
   // Obtener documento por ID de transacción
   async obtenerDocumentoPorTransaccion(id_transaccion) {
     const documento = await DocumentoRepository.findByTransaccionId(
@@ -42,6 +39,25 @@ class Documento {
     }
 
     return documento;
+  }
+
+  async obtenerDocumentosPorVenta(id_venta) {
+    try {
+      if (!id_venta) {
+        throw new Error("El ID de la venta es obligatorio.");
+      }
+
+      const documentos = await DocumentoRepository.findByVentaId(id_venta);
+
+      if (!documentos || documentos.length === 0) {
+        return []; 
+      }
+      return documentos;
+    } catch (error) {
+      throw new Error(
+        `Error al obtener documentos de la venta: ${error.message}`
+      );
+    }
   }
 
   // Actualizar un documento

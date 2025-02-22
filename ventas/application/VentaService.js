@@ -12,42 +12,48 @@ import InventarioService from "../../inventario/application/InventarioService.js
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
 import EstadoPagoRepository from "../infrastructure/repositories/EstadoPagoRepository.js";
 import PagoRepository from "../infrastructure/repositories/PagoRepository.js";
-import MovimientoCajaRepository from "../infrastructure/repositories/MovimientoCajaRepository.js";
 import LogVentaRepository from "../infrastructure/repositories/LogVentaRepository.js";
 import MovimientoCajaService from "./MovimientoCajaService.js";
+import ProductoRetornableRepository from "../../inventario/infrastructure/repositories/ProductoRetornableRepository.js";
+import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
+import EntregaRepository from "../../Entregas/infrastructure/repositories/EntregaRepository.js";
+import DetalleVentaService from "./DetalleVentaService.js";
+import DocumentoService from "./DocumentoService.js";
+import PagoService from "./PagoService.js";
 
 class VentaService {
   async getVentaById(id) {
-    // Buscar la venta principal
-    const venta = await VentaRepository.findById(id);
-    if (!venta) {
-      throw new Error("Venta no encontrada.");
+    try {
+
+      const venta = await VentaRepository.findById(id);
+      if (!venta) {
+        throw new Error("Venta no encontrada.");
+      }
+
+      const detalles = await DetalleVentaService.getDetallesPorVenta(id);
+
+      const documentos = await DocumentoService.obtenerDocumentosPorVenta(id); 
+  
+      let pagos = [];
+      if (documentos.length > 0) {
+        const pagosPromises = documentos.map((doc) =>
+          PagoService.obtenerPagosPorDocumento(doc.id_documento)
+        );
+        pagos = (await Promise.all(pagosPromises)).flat(); 
+      }
+  
+      const cliente = venta.id_cliente
+        ? await ClienteRepository.findById(venta.id_cliente)
+        : null;
+  
+      const vendedor = await UsuariosRepository.findByRut(venta.id_vendedor);
+  
+      return { venta, detalles, documentos, pagos, cliente, vendedor };
+    } catch (error) {
+      throw new Error(`Error al obtener la venta: ${error.message}`);
     }
-
-    // Obtener detalles de la venta
-    const detalles = await DetalleVentaService.getDetallesByVentaId(id);
-
-    // Obtener documentos relacionados
-    const documentos = await DocumentoService.obtenerDocumentosPorVenta(id);
-
-    // Obtener pagos relacionados
-    let pagos = [];
-    if (documentos && documentos.length > 0) {
-      pagos = await PagoService.obtenerPagosPorDocumento(
-        documentos[0].id_documento // Suponemos que siempre usamos el primer documento
-      );
-    }
-
-    // Obtener información del cliente
-    const cliente = venta.id_cliente
-      ? await ClienteRepository.findById(venta.id_cliente)
-      : null;
-
-    // Obtener información del vendedor
-    const vendedor = await UsuariosRepository.findById(venta.id_vendedor);
-
-    return { venta, detalles, documentos, pagos, cliente, vendedor };
   }
+  
 
   async getAllVentas(filters = {}, options = {}) {
     // Definir los campos permitidos para los filtros
@@ -109,9 +115,10 @@ class VentaService {
       tipo_entrega,
       direccion_entrega,
       productos,
+      productos_retornables,
       id_metodo_pago,
       notas,
-      impuesto = 0.19, // Valor por defecto del 19%
+      impuesto = 0,
       descuento_total_porcentaje = 0,
       tipo_documento = "boleta",
     } = data;
@@ -172,13 +179,17 @@ class VentaService {
 
     // Calcular impuestos y total final
     const totalAntesImpuestos = subtotal - descuentoTotal;
-    const impuestos_totales = totalAntesImpuestos * (impuesto || 0.19); // 19% por defecto
+    const impuestos_totales = totalAntesImpuestos * (impuesto / 100); // 19% por defecto
     const totalConImpuesto = totalAntesImpuestos + impuestos_totales;
 
-    const estado_venta = await EstadoVentaRepository.findByNombre(
-      "Pendiente de Pago"
-    );
-
+    let estado_venta;
+    if (tipo_documento === "boleta") {
+      estado_venta = await EstadoVentaRepository.findByNombre("Pagada");
+    } else if (tipo_documento === "factura") {
+      estado_venta = await EstadoVentaRepository.findByNombre(
+        "Pendiente de Pago"
+      );
+    }
     // 3. Registrar la venta
     const venta = await VentaRepository.create({
       id_cliente,
@@ -244,6 +255,37 @@ class VentaService {
       observaciones: notas,
     });
 
+    if (productos_retornables && productos_retornables.length > 0) {
+      const esEntrega = tipo_entrega === "despacho_a_domicilio";
+
+      let idEntrega = null;
+
+      if (esEntrega) {
+        const entrega = await EntregaRepository.create({
+          id_cliente: id_cliente,
+          id_vendedor: id_vendedor,
+          id_documento: documento.id_documento,
+          fecha_hora: new Date(),
+          estado_entrega: "pendiente",
+          monto_total: totalConImpuesto,
+        });
+        idEntrega = entrega.id_entrega;
+      }
+
+      for (const retornable of productos_retornables) {
+        await ProductoRetornableRepository.create({
+          id_producto: retornable.id_producto,
+          id_venta: !esEntrega ? venta.id_venta : null,
+          id_entrega: esEntrega ? idEntrega : null,
+          cantidad: retornable.cantidad,
+          estado: retornable.estado || "reutilizable",
+          tipo_defecto:
+            retornable.estado === "defectuoso" ? retornable.tipo_defecto : null,
+          fecha_retorno: new Date(),
+        });
+      }
+    }
+
     let estado_pago;
 
     // 7. Registrar el pago si es boleta (pago inmediato)
@@ -258,6 +300,7 @@ class VentaService {
         id_estado_pago: estado_pago.id_estado_pago, // Estado "acreditado" para boletas
         monto: totalConImpuesto,
         fecha_pago: new Date(),
+        id_caja: caja.id_caja,
         referencia:
           data.referencia || `AUTO-${tipo_documento}-${venta.id_venta}`, // Por defecto nulo, se puede actualizar después
       });
@@ -291,20 +334,19 @@ class VentaService {
             monto: vuelto,
             descripcion: `Vuelto entregado para venta ID ${venta.id_venta}`,
             id_venta: venta.id_venta,
-            id_metodo_pago: null, // No aplica método de pago para vuelto
+            id_metodo_pago: null,
           });
         }
       }
     } else if (tipo_documento === "factura") {
       estado_pago = await EstadoPagoRepository.findByNombre("Pendiente");
-      // En el caso de factura, el pago se registra más adelante.
       await PagoRepository.create({
         id_venta: venta.id_venta,
         id_documento: documento.id_documento,
         id_metodo_pago,
-        id_estado_pago: estado_pago.id_estado_pago, // Estado inicial "pendiente" para facturas
+        id_estado_pago: estado_pago.id_estado_pago,
         monto: totalConImpuesto,
-        fecha_pago: null, // Fecha de pago pendiente
+        fecha_pago: null,
         referencia: null,
       });
     }

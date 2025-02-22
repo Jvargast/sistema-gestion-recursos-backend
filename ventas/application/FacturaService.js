@@ -11,7 +11,6 @@ import TransaccionRepository from "../infrastructure/repositories/TransaccionRep
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
 import { Op, Sequelize } from "sequelize";
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
-import BoletaRepository from "../infrastructure/repositories/BoletaRepository.js";
 import EstadoPagoRepository from "../infrastructure/repositories/EstadoPagoRepository.js";
 
 class FacturaService {
@@ -115,11 +114,12 @@ class FacturaService {
       throw new Error("El documento no es del tipo boleta.");
     }
 
-    const boleta = await BoletaRepository.create({
+    /* const boleta = await BoletaRepository.create({
       id_documento: documento.id_documento,
     });
 
-    return boleta;
+    return boleta; */
+    return null;
   }
 
   // Actualizar estado de un documento

@@ -96,6 +96,16 @@ class UsuarioController {
     }
   }
 
+  async getAllVendedores(req, res) {
+    try {
+      const vendedores = await UsuariosService.getAllVendedores();
+      res.status(200).json(vendedores);
+    } catch (error) {
+      console.error("Error al obtener choferes:", error.message);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  }
+
   /**
    * Obtener un usuario por su RUT.
    * @param {Request} req - Solicitud HTTP.

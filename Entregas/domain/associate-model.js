@@ -366,7 +366,7 @@ function loadEntregasAssociations(models) {
     as: "documentos",
   });
 
-  //Pedidos
+/*   //Pedidos
   Pedido.belongsTo(Usuarios, { foreignKey: "id_chofer", as: "chofer" });
   Usuarios.hasMany(Pedido, { foreignKey: "id_chofer", as: "pedidosAsignados" });
 
@@ -383,7 +383,7 @@ function loadEntregasAssociations(models) {
   AgendaViajes.hasMany(Pedido, {
     foreignKey: "id_agenda_viaje",
     as: "pedidosViaje",
-  });
+  }); */
 
   console.log("Asociaciones del módulo de entregas cargadas correctamente.");
 }

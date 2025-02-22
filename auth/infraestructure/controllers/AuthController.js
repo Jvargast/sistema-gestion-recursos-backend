@@ -58,7 +58,7 @@ class AuthController {
       const { refreshToken } = req.cookies;
       if (refreshToken) {
         const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
-        await AuthService.removeRefreshToken(decoded.id, refreshToken);
+        await AuthService.removeRefreshToken(decoded.rut);
       }
       await AuditLogsService.logAction(
         req?.user.id,

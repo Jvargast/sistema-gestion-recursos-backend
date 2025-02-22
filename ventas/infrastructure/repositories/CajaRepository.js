@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import Sucursal from "../../../auth/domain/models/Sucursal.js";
 import Caja from "../../domain/models/Caja.js";
 
@@ -28,7 +29,10 @@ class CajaRepository {
   async findCajaEstadoByUsuario(rut, estado) {
     return await Caja.findOne({
       where: {
-        usuario_apertura: rut,
+        [Op.or]: [
+          { usuario_apertura: rut }, // Si el usuario abrió la caja
+          { usuario_asignado: rut }, // O si el usuario tiene asignada la caja
+        ],
         estado: estado,
       },
     });
@@ -36,8 +40,17 @@ class CajaRepository {
 
   async findByAsignado(rut) {
     return await Caja.findOne({
-      where: { usuario_asignado: rut },
+      where: { usuario_asignado: rut }, 
       include: [{ model: Sucursal, as: "sucursal" }],
+    });
+  }
+
+  async findCajaEstado(estado) {
+    return await Caja.findAll({
+      where: {
+        estado: estado,
+      },
+      order: [["fecha_apertura", "DESC"]],
     });
   }
 

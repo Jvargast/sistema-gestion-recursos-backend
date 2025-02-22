@@ -45,7 +45,7 @@ const AgendaCargaDetalle = sequelize.define(
       allowNull: true, 
     },
     estado: {
-      type: DataTypes.ENUM("Pendiente", "Cargado", "Rechazado"),
+      type: DataTypes.ENUM("Pendiente", "Cargado", "Rechazado", "Descargado"),
       allowNull: false,
       defaultValue: "Pendiente",
     },

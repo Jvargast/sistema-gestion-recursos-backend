@@ -63,6 +63,11 @@ const Producto = sequelize.define(
       type: DataTypes.BOOLEAN,
       defaultValue: true, 
     },
+    es_retornable: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false, 
+    }
+    
   },
   {
     tableName: "Producto",

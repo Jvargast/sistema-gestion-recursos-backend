@@ -30,26 +30,39 @@ class CajaController {
   }
   async getEstadoCaja(req, res) {
     const rutUsuario = req.user.id;
+    const rolUsuario = req.user.rol;
 
     try {
-      const caja = await CajaService.verificarEstadoCaja(rutUsuario);
+      const caja = await CajaService.verificarEstadoCaja(
+        rutUsuario,
+        rolUsuario
+      );
       if (caja) {
         return res.status(200).json({ cajaAbierta: true, caja });
       } else {
         return res.status(200).json({ cajaAbierta: false });
       }
     } catch (error) {
+      console.error("Error al obtener el estado de la caja:", error);
       res.status(500).json({ message: error.message });
     }
   }
 
   async getCajaAsignada(req, res) {
-    const rutUsuario = req.user.id;
+    const rutUsuario = req.query.rutUsuario || req.user.id;
 
     try {
-      const caja = await CajaService.getCajaAsignada(rutUsuario);
-      if (caja) {
-        return res.status(200).json({ asignada: true, caja });
+      const resultado = await CajaService.getCajaAsignada(
+        rutUsuario,
+        req.user.rol
+      );
+
+      if (resultado?.caja) {
+        return res.status(200).json({
+          asignada: true,
+          caja: resultado.caja,
+          cajaListaParaAbrir: resultado.cajaListaParaAbrir,
+        });
       } else {
         return res.status(200).json({ asignada: false });
       }
@@ -66,9 +79,7 @@ class CajaController {
     }
 
     try {
-      const usuario = await UsuariosService.getUsuarioByRut(
-        usuario_asignado
-      );
+      const usuario = await UsuariosService.getUsuarioByRut(usuario_asignado);
       if (!usuario) {
         return res
           .status(404)
@@ -107,11 +118,11 @@ class CajaController {
   }
 
   async closeCaja(req, res) {
-    const { saldoFinal, idCaja } = req.body;
+    const { idCaja } = req.body;
     const rutUsuario = req.user.id;
 
     try {
-      const caja = await CajaService.abrirCaja(idCaja, saldoFinal, rutUsuario);
+      const caja = await CajaService.cerrarCaja(idCaja, rutUsuario);
       res.status(200).json(caja);
     } catch (error) {
       res.status(400).json({ error: error.message });

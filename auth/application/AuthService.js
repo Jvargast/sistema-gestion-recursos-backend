@@ -132,9 +132,8 @@ class AuthService {
 
   async removeRefreshToken(userId) {
     try {
-      // Actualizar el campo refreshToken a null
       const result = await UsuariosRepository.update(userId, {
-        refreshToken: null,
+        refreshTokens: null,
       });
 
       if (result[0] === 0) {

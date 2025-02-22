@@ -1,0 +1,65 @@
+import Usuarios from "../../../auth/domain/models/Usuarios.js";
+import Producto from "../../../inventario/domain/models/Producto.js";
+import Cliente from "../../domain/models/Cliente.js";
+import DetallePedido from "../../domain/models/DetallePedido.js";
+import EstadoVenta from "../../domain/models/EstadoVenta.js";
+import MetodoPago from "../../domain/models/MetodoPago.js";
+import Pedido from "../../domain/models/Pedido.js";
+
+
+class PedidoRepository {
+  async findById(id_pedido) {
+    return await Pedido.findByPk(id_pedido, {
+      include: [
+        { model: Cliente, as: "Cliente" },
+        { model: Usuarios, as: "Chofer" },
+        { model: Usuarios, as: "Creador" },
+        { model: MetodoPago, as: "MetodoPago" },
+        { model: EstadoVenta, as: "EstadoPedido" },
+        {
+          model: DetallePedido,
+          as: "DetallesPedido",
+          include: [{ model: Producto, as: "Producto" }],
+        },
+      ],
+    });
+  }
+
+  async findAll() {
+    return await Pedido.findAll({
+      include: [
+        { model: Cliente, as: "Cliente" },
+        { model: Usuarios, as: "Chofer" },
+        { model: Usuarios, as: "Creador" },
+        { model: MetodoPago, as: "MetodoPago" },
+        { model: EstadoVenta, as: "EstadoPedido" },
+        {
+          model: DetallePedido,
+          as: "DetallesPedido",
+          include: [{ model: Producto, as: "Producto" }],
+        },
+      ],
+    });
+  }
+
+  async create(data) {
+    return await Pedido.create(data);
+  }
+
+  async update(id, updates) {
+    const [updated] = await Pedido.update(updates, {
+      where: { id_pedido: id },
+    });
+    return updated > 0 ? await Pedido.findByPk(id) : null;
+  }
+
+  async delete(id) {
+    return await Pedido.destroy({ where: { id_pedido: id } });
+  }
+
+  getModel() {
+    return Pedido;
+  }
+}
+
+export default new PedidoRepository();

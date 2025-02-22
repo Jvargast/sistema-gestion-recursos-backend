@@ -1,11 +1,12 @@
+import Producto from "../../../inventario/domain/models/Producto.js";
 import DetalleVenta from "../../domain/models/DetalleVenta.js";
-import Venta from "../../domain/models/Venta.js";
+
 
 class DetalleVentaRepository {
     async findByVentaId(id_venta) {
       return await DetalleVenta.findAll({
         where: { id_venta },
-        include: [{ model: Venta, as: "venta" }],
+        include: [{ model: Producto, as: "producto" }],
       });
     }
   
