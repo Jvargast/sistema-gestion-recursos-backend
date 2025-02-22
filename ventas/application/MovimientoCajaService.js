@@ -1,6 +1,66 @@
+import { Op } from "sequelize";
+import createFilter from "../../shared/utils/helpers.js";
+import paginate from "../../shared/utils/pagination.js";
 import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
 import MovimientoCajaRepository from "../infrastructure/repositories/MovimientoCajaRepository.js";
 class MovimientoCajaService {
+  async getAllMovimientos(filters, options) {
+    const allowedFields = [
+      "id_movimiento",
+      "fecha_movimiento",
+    ];
+    const where = createFilter(filters, allowedFields);
+
+    if (filters.fecha_movimiento) {
+      where.fecha_movimiento = {
+        [Op.between]: [
+          `${filters.fecha_movimiento} 00:00:00`,
+          `${filters.fecha_movimiento} 23:59:59`,
+        ],
+      };
+    }
+
+    const result = await paginate(
+      MovimientoCajaRepository.getModel(),
+      options,
+      {
+        where,
+        order: [["id_movimiento", "ASC"]],
+      }
+    );
+
+    return result;
+  }
+  async getMovimientosByCajaAndDate(id_caja, fecha, page, limit) {
+    if (!id_caja) {
+      throw new Error("El ID de la caja es requerido.");
+    }
+    if (!fecha) {
+      throw new Error("La fecha es requerida.");
+    }
+
+    const offset = (page - 1) * limit;
+
+    const movimientos = await MovimientoCajaRepository.findByCajaIdAndDate(
+      id_caja,
+      fecha,
+      limit,
+      offset
+    );
+
+    const totalMovimientos =
+      await MovimientoCajaRepository.countByCajaIdAndDate(id_caja, fecha);
+
+    return {
+      data: movimientos,
+      pagination: {
+        totalItems: totalMovimientos,
+        totalPages: Math.ceil(totalMovimientos / limit),
+        currentPage: page,
+        pageSize: limit,
+      },
+    };
+  }
   async registrarMovimiento({
     id_caja,
     tipo_movimiento,

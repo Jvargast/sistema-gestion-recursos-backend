@@ -15,6 +15,9 @@ router.post('/crear', authenticate, checkPermissions('crear_usuarios'), Usuarios
 router.get('/', authenticate, checkPermissions('ver_usuarios'), UsuariosController.getAllUsers);
 // Obtener todos los usuarios rol chofer
 router.get('/choferes', authenticate, checkPermissions('ver_usuarios'), UsuariosController.getAllChoferes);
+
+router.get('/vendedores', authenticate, checkPermissions('ver_usuarios'), UsuariosController.getAllVendedores);
+
 // Obtener mi perfil propio
 router.get('/mi-perfil', authenticate, UsuariosController.getOwnProfile);
 // Obtener un usuario por RUT

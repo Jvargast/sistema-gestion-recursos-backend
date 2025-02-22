@@ -1,3 +1,5 @@
+import { Op } from "sequelize";
+import Caja from "../../domain/models/Caja.js";
 import MovimientoCaja from "../../domain/models/MovimientoCaja.js";
 
 class MovimientoCajaRepository {
@@ -5,6 +7,31 @@ class MovimientoCajaRepository {
     return await MovimientoCaja.findAll({
       where: { id_caja },
       include: [{ model: Caja, as: "caja" }],
+    });
+  }
+
+  async findByCajaIdAndDate(id_caja, fecha, limit, offset) {
+    return await MovimientoCaja.findAll({
+      where: {
+        id_caja,
+        fecha_movimiento: {
+          [Op.between]: [`${fecha} 00:00:00`, `${fecha} 23:59:59`],
+        },
+      },
+      order: [["fecha_movimiento", "DESC"]],
+      limit,
+      offset,
+    });
+  }
+
+  async countByCajaIdAndDate(id_caja, fecha) {
+    return await MovimientoCaja.count({
+      where: {
+        id_caja,
+        fecha_movimiento: {
+          [Op.between]: [`${fecha} 00:00:00`, `${fecha} 23:59:59`],
+        },
+      },
     });
   }
 

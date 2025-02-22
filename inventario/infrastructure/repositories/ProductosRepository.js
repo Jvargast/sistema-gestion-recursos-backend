@@ -71,6 +71,10 @@ class ProductoRepository extends IProductoRepository {
     return await Producto.findOne({ where: { nombre_producto } });
   }
 
+  async findByCodigo(codigo_barra) {
+    return await Producto.findOne({ where: { codigo_barra } });
+  }
+
   getModel() {
     return Producto;
   }

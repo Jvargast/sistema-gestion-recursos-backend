@@ -265,6 +265,21 @@ async function populateDatabase() {
         categoria: "Gestión de Inventario",
       },
       {
+        nombre: "crear_tipo_insumo",
+        descripcion: "Permiso para crear tipo de insumo",
+        categoria: "Gestión de Inventario",
+      },
+      {
+        nombre: "editar_tipo_insumo",
+        descripcion: "Permiso para editar tipo de insumo",
+        categoria: "Gestión de Inventario",
+      },
+      {
+        nombre: "borrar_tipo_insumo",
+        descripcion: "Permiso para borrar tipo de insumo",
+        categoria: "Gestión de Inventario",
+      },
+      {
         nombre: "crear_categoria",
         descripcion: "Permiso para crear categoria",
         categoria: "Gestión de Inventario",
@@ -648,6 +663,11 @@ async function populateDatabase() {
         categoria: "Gestión de Vistas Permitidas",
       },
       {
+        nombre: "ver_tipo_insumo",
+        descripcion: "Permiso para ver tipos de insumo",
+        categoria: "Gestión de Vistas Permitidas",
+      },
+      {
         nombre: "ver_categorias",
         descripcion: "Permiso para ver categorias",
         categoria: "Gestión de Vistas Permitidas",
@@ -861,6 +881,7 @@ async function populateDatabase() {
         "ver_productos_retornables",
         "borrar_producto_retornable",
         "ver_categorias",
+        "ver_tipo_insumo",
         "ver_entregas_realizadas",
         "ver_camiones",
         "ver_agenda_carga",
@@ -876,6 +897,9 @@ async function populateDatabase() {
         "crear_categoria",
         "editar_categoria",
         "borrar_categoria",
+        "crear_tipo_insumo",
+        "editar_tipo_insumo",
+        "borrar_tipo_insumo"
       ],
 
       operario: [

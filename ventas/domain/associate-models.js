@@ -6,18 +6,67 @@ import Caja from "./models/Caja.js";
 import Cliente from "./models/Cliente.js";
 import Cotizacion from "./models/Cotizacion.js";
 import DetalleCotizacion from "./models/DetalleCotizacion.js";
+import DetallePedido from "./models/DetallePedido.js";
 import DetalleVenta from "./models/DetalleVenta.js";
 import Documento from "./models/Documento.js";
 import EstadoPago from "./models/EstadoPago.js";
 import EstadoVenta from "./models/EstadoVenta.js";
+import HistorialCaja from "./models/HistorialCaja.js";
 import LogCotizacion from "./models/LogCotizacion.js";
 import LogVenta from "./models/LogVenta.js";
 import MetodoPago from "./models/MetodoPago.js";
 import MovimientoCaja from "./models/MovimientoCaja.js";
 import Pago from "./models/Pago.js";
+import Pedido from "./models/Pedido.js";
 import Venta from "./models/Venta.js";
 
 function loadPOSAssociations() {
+  // Relación: Un Pedido pertenece a un Cliente
+  Pedido.belongsTo(Cliente, { foreignKey: "id_cliente", as: "Cliente" });
+  Cliente.hasMany(Pedido, { foreignKey: "id_cliente", as: "Pedidos" });
+
+  // Relación: Un Pedido es creado por un Administrador o Vendedor
+  Pedido.belongsTo(Usuarios, { foreignKey: "id_creador", as: "Creador" });
+  Usuarios.hasMany(Pedido, { foreignKey: "id_creador", as: "PedidosCreados" });
+
+  // Relación: Un Pedido puede estar asignado a un Chofer
+  Pedido.belongsTo(Usuarios, { foreignKey: "id_chofer", as: "Chofer" });
+  Usuarios.hasMany(Pedido, { foreignKey: "id_chofer", as: "PedidosAsignados" });
+
+  // Relación: Un Pedido tiene un Método de Pago
+  Pedido.belongsTo(MetodoPago, {
+    foreignKey: "id_metodo_pago",
+    as: "MetodoPago",
+  });
+  MetodoPago.hasMany(Pedido, { foreignKey: "id_metodo_pago", as: "Pedidos" });
+
+  // Relación: Un Pedido tiene un Estado
+  Pedido.belongsTo(EstadoVenta, {
+    foreignKey: "id_estado_pedido",
+    as: "EstadoPedido",
+  });
+  EstadoVenta.hasMany(Pedido, {
+    foreignKey: "id_estado_pedido",
+    as: "Pedidos",
+  });
+
+  // Relación: Un Pedido tiene muchos Detalles de Pedido (productos)
+  Pedido.hasMany(DetallePedido, {
+    foreignKey: "id_pedido",
+    as: "DetallesPedido",
+  });
+  DetallePedido.belongsTo(Pedido, { foreignKey: "id_pedido", as: "Pedido" });
+
+  // Relación: Un DetallePedido pertenece a un Producto específico
+  DetallePedido.belongsTo(Producto, {
+    foreignKey: "id_producto",
+    as: "Producto",
+  });
+  Producto.hasMany(DetallePedido, {
+    foreignKey: "id_producto",
+    as: "Detalles",
+  });
+  
   // Relación Caja -> Sucursal
   Caja.belongsTo(Sucursal, { foreignKey: "id_sucursal", as: "sucursal" });
   Sucursal.hasMany(Caja, { foreignKey: "id_sucursal", as: "cajas" });
@@ -107,6 +156,18 @@ function loadPOSAssociations() {
   Producto.hasMany(DetalleCotizacion, {
     foreignKey: "id_producto",
     as: "detallesCotizacion",
+  });
+
+  Caja.hasMany(HistorialCaja, { foreignKey: "id_caja", as: "historial" });
+  HistorialCaja.belongsTo(Caja, { foreignKey: "id_caja", as: "caja" });
+
+  Usuarios.hasMany(HistorialCaja, {
+    foreignKey: "usuario_cierre",
+    as: "cierres",
+  });
+  HistorialCaja.belongsTo(Usuarios, {
+    foreignKey: "usuario_cierre",
+    as: "usuario",
   });
 
   // Relación: Caja -> Venta

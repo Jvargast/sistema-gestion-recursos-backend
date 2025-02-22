@@ -1,5 +1,7 @@
+import moment from "moment";
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
+import HistorialCajaRepository from "../infrastructure/repositories/HistorialCajaRepository.js";
 
 class CajaService {
   async getCajaById(id) {
@@ -21,33 +23,36 @@ class CajaService {
     if (!caja) {
       throw new Error(`La caja con id ${id} no existe.`);
     }
-  
+
     try {
       const updated = await CajaRepository.update(id, data);
-  
+
       if (!updated || updated[0] === 0) {
         throw new Error(
           `No se pudo actualizar la caja con id ${id}. Verifica los datos.`
         );
       }
-  
+
       return await this.getCajaById(id);
     } catch (error) {
       console.error("Error al actualizar la caja:", error.message);
-      throw error; 
+      throw error;
     }
   }
-  
 
-  async verificarEstadoCaja(rutUsuario) {
-    const usuario = UsuariosRepository.findByRut(rutUsuario);
+  async verificarEstadoCaja(rutUsuario, rol) {
+    const usuario = await UsuariosRepository.findByRut(rutUsuario);
     if (!usuario) {
-      return res.status(404).json({ message: "Usuario no encontrado" });
+      throw new Error("Usuario no encontrado");
     }
-    console.log(usuario);
+
     const estado = "abierta";
-    const caja = CajaRepository.findCajaEstadoByUsuario(rutUsuario, estado);
-    return caja;
+
+    if (rol === "administrador") {
+      return await CajaRepository.findCajaEstado(estado);
+    }
+
+    return await CajaRepository.findCajaEstadoByUsuario(rutUsuario, estado);
   }
 
   async getCajaAsignada(rutUsuario) {
@@ -56,9 +61,14 @@ class CajaService {
       throw new Error("Usuario no encontrado.");
     }
 
+
     const caja = await CajaRepository.findByAsignado(rutUsuario);
 
-    return caja;
+    if (!caja) return null;
+
+    const cajaListaParaAbrir = caja.estado === "cerrada";
+
+    return { caja, cajaListaParaAbrir };
   }
 
   async abrirCaja(idCaja, saldoInicial, rutUsuario) {
@@ -78,16 +88,31 @@ class CajaService {
     return await this.updateCaja(idCaja, datosActualizados);
   }
 
-  async cerrarCaja(idCaja, saldoFinal, rutUsuario) {
+  async cerrarCaja(idCaja, rutUsuario) {
     const caja = await this.getCajaById(idCaja);
+
+    if (!caja) {
+      throw new Error("La caja no existe.");
+    }
 
     if (caja.estado === "cerrada") {
       throw new Error("La caja ya está cerrada.");
     }
 
+    // Registrar el historial antes de actualizar el estado de la caja
+    await HistorialCajaRepository.create({
+      id_caja: idCaja,
+      id_sucursal: caja.id_sucursal,
+      fecha_cierre: new Date(),
+      saldo_final: caja.saldo_final,
+      usuario_cierre: rutUsuario,
+      observaciones: `Cierre de caja registrado el ${new Date().toLocaleString()}`,
+    });
+
+    // Actualizar la caja a estado "cerrada"
     const datosActualizados = {
       estado: "cerrada",
-      saldo_final: saldoFinal,
+      saldo_final: null,
       fecha_cierre: new Date(),
       usuario_cierre: rutUsuario,
     };

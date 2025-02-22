@@ -29,12 +29,15 @@ import ProductoRoutes from "./inventario/infrastructure/routes/ProductoRoutes.js
 import InsumoRoutes from "./inventario/infrastructure/routes/InsumoRoutes.js";
 import ProductoRetonableRoutes from "./inventario/infrastructure/routes/ProductoRetornableRoutes.js";
 import TipoInsumoRoutes from "./inventario/infrastructure/routes/TipoInsumoRoutes.js";
-import ProductoImageRoutes from "./inventario/infrastructure/routes/ProductoImageRoutes.js"
+import ProductoImageRoutes from "./inventario/infrastructure/routes/ProductoImageRoutes.js";
 /* MÓDULO VENTAS */
 import ClienteRoutes from "./ventas/infrastructure/routes/ClienteRoutes.js";
 import VentasRoutes from "./ventas/infrastructure/routes/VentasRoutes.js";
+import PedidosRoutes from "./ventas/infrastructure/routes/PedidosRoutes.js";
 import CotizacionesRoutes from "./ventas/infrastructure/routes/CotizacionRoutes.js";
 import CajaRoutes from "./ventas/infrastructure/routes/CajaRoutes.js";
+import MovimientoCajaRoutes from "./ventas/infrastructure/routes/MovimientoCajaRoutes.js";
+import LogVentasRoutes from "./ventas/infrastructure/routes/LogVentasRoutes.js";
 /* 
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
 import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js"; */
@@ -108,12 +111,14 @@ app.use("/api/tipo-insumo", TipoInsumoRoutes);
  */
 app.use("/api/productos/imagenes", ProductoImageRoutes);
 
-
 /* MÓDULO VENTAS */
 app.use("/api/clientes", ClienteRoutes);
 app.use("/api/ventas", VentasRoutes);
+app.use("/api/pedidos", PedidosRoutes);
 app.use("/api/cotizaciones", CotizacionesRoutes);
 app.use("/api/cajas", CajaRoutes);
+app.use("/api/movimientos", MovimientoCajaRoutes);
+app.use("/api/log-ventas", LogVentasRoutes);
 /* app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
 app.use("/api/logs-transaccion", LogTransaccionRoutes);
 app.use("/api/transacciones", TransaccionRoutes);
@@ -134,7 +139,6 @@ app.use("/api/inventario-camion", InventarioCamionRoutes); */
 /* app.use("/api/agendas", AgendaCargaRoutes); */
 /* app.use("/api/entregas", EntregaRoutes);
 app.use("/api/ventas-chofer", VentaChoferRoutes); */
-
 
 const PORT = process.env.PORT || 9000;
 

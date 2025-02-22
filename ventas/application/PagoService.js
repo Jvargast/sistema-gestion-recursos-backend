@@ -1,11 +1,8 @@
 import { Op } from "sequelize";
 import PagoRepository from "../infrastructure/repositories/PagoRepository.js";
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
-import FacturaRepository from "../infrastructure/repositories/FacturaRepository.js";
-import BoletaRepository from "../infrastructure/repositories/BoletaRepository.js";
 import EstadoPagoService from "./EstadoPagoService.js";
 import MetodoPagoService from "./MetodoPagoService.js";
-import TransaccionService from "./TransaccionService.js";
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
 import paginate from "../../shared/utils/pagination.js";
 import createFilter from "../../shared/utils/helpers.js";
@@ -13,7 +10,7 @@ import MetodoPagoRepository from "../infrastructure/repositories/MetodoPagoRepos
 import EstadoPagoRepository from "../infrastructure/repositories/EstadoPagoRepository.js";
 
 class PagoService {
-  async getPagoById(id) {
+/*   async getPagoById(id) {
     const pago = await PagoRepository.findById(id);
     if (!pago) {
       throw new Error("Pago no encontrado.");
@@ -110,7 +107,7 @@ class PagoService {
     }
 
     return nuevoPago;
-  }
+  } 
 
   async completarPago(id_documento, metodo_pago, referencia, rut) {
     const documento = await DocumentoRepository.findById(id_documento);
@@ -229,7 +226,7 @@ class PagoService {
     });
 
     return nuevoPago;
-  }
+  } */
 
   async obtenerPagosPorDocumento(id_documento) {
     if (!id_documento) {
@@ -241,7 +238,7 @@ class PagoService {
     return pagos;
   }
 
-  async cambiarEstadoPago(id_pago, nuevo_estado) {
+/*   async cambiarEstadoPago(id_pago, nuevo_estado) {
     const estado = await EstadoPagoService.findByNombre(nuevo_estado);
 
     if (!estado) {
@@ -287,7 +284,7 @@ class PagoService {
     return {
       message: `Se marcaron como rechazados ${ids.length} pagos.`,
     };
-  }
+  } */
 }
 
 export default new PagoService();

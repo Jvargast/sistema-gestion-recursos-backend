@@ -155,6 +155,18 @@ class UsuarioService {
     }
   }
 
+  async getAllVendedores(filters = {}, options) {
+    try {
+      const rolVendedor = await RolesService.getRolIdByName("vendedor");
+
+      const vendedores = await UsuariosRepository.findAllByRolId(rolVendedor);
+
+      return vendedores;
+    } catch (error) {
+      throw new Error(`Error al obtener choferes: ${error.message}`);
+    }
+  }
+
   /**
    * Obtener un usuario por su RUT.
    */

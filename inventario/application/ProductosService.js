@@ -29,8 +29,8 @@ class ProductoService {
       "descripcion",
       "precio",
       "id_categoria",
-      "id_tipo_producto",
       "id_estado_producto",
+      "id_inventario"
     ];
     const where = createFilter(filters, allowedFields);
 
@@ -42,8 +42,7 @@ class ProductoService {
       where[Op.or] = [
         {
           "$categoria.nombre_categoria$": { [Op.like]: `%${options.search}%` },
-        }, // Buscar en categoria.nombre
-        { "$tipo.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en tipo.nombre
+        },
         {
           "$estadoProducto.nombre_estado$": {
             [Op.like]: `%${options.search}%`,
@@ -134,16 +133,41 @@ class ProductoService {
   }
 
   async updateProducto(id, data) {
-    const { stock, ...productoData } = data;
+    const { stock, codigo_barra, ...productoData } = data;
 
-    // Obtener el tipo de producto
+    // Obtener el producto por ID
     const producto = await this.getProductoById(id);
-
     if (!producto) {
       throw new Error("El producto no existe");
     }
 
-    await ProductosRepository.update(id, { ...productoData });
+    // Validar que el código de barras no se repita
+    const productoConCodigo = await ProductosRepository.findByCodigo(
+      codigo_barra
+    );
+
+    if (
+      productoConCodigo &&
+      producto.codigo_barra !== productoConCodigo.codigo_barra
+    ) {
+      throw new Error(
+        `Ya existe un producto con el código de barras: ${codigo_barra}`
+      );
+    }
+
+    // Intentar actualizar el producto
+    const updatedRows = await ProductosRepository.update(id, {
+      ...productoData,
+      codigo_barra,
+    });
+
+    if (!updatedRows || updatedRows[0] === 0) {
+      throw new Error(
+        "No se pudo actualizar el producto. Verifique los datos."
+      );
+    }
+
+    // Actualizar el stock si se envía
     if (stock) {
       await InventarioRepository.update(producto.id_producto, {
         cantidad: stock,
