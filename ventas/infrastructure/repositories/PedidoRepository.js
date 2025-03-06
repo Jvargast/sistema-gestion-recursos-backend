@@ -6,20 +6,30 @@ import EstadoVenta from "../../domain/models/EstadoVenta.js";
 import MetodoPago from "../../domain/models/MetodoPago.js";
 import Pedido from "../../domain/models/Pedido.js";
 
-
 class PedidoRepository {
   async findById(id_pedido) {
     return await Pedido.findByPk(id_pedido, {
       include: [
-        { model: Cliente, as: "Cliente" },
-        { model: Usuarios, as: "Chofer" },
-        { model: Usuarios, as: "Creador" },
-        { model: MetodoPago, as: "MetodoPago" },
-        { model: EstadoVenta, as: "EstadoPedido" },
+        { model: Cliente, as: "Cliente", attributes: ["nombre", "apellido"] },
+        {
+          model: Usuarios,
+          as: "Chofer",
+          attributes: ["rut", "nombre", "apellido"],
+        },
+        { model: Usuarios, as: "Creador", attributes: ["rut", "nombre"] },
+        { model: MetodoPago, as: "MetodoPago", attributes: ["nombre"] },
+        { model: EstadoVenta, as: "EstadoPedido", attributes: ["nombre_estado"] },
         {
           model: DetallePedido,
           as: "DetallesPedido",
-          include: [{ model: Producto, as: "Producto" }],
+          attributes: ["cantidad", "precio_unitario", "subtotal"],
+          include: [
+            {
+              model: Producto,
+              as: "Producto",
+              attributes: ["nombre_producto", "precio"],
+            },
+          ],
         },
       ],
     });

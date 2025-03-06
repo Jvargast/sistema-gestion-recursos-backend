@@ -4,7 +4,6 @@ import { Op } from "sequelize";
 import Producto from "../../../inventario/domain/models/Producto.js";
 import Camion from "../../domain/models/Camion.js";
 import InventarioCamion from "../../domain/models/InventarioCamion.js";
-import DetalleTransaccion from "../../../ventas/domain/models/DetalleTransaccion.js";
 
 class InventarioCamionRepository {
   async create(data) {
@@ -47,7 +46,13 @@ class InventarioCamionRepository {
           [Op.notIn]: ["Regresado", "Entregado"],
         },
       },
-      include: [{ model: Producto, as: "producto" }],
+      include: [
+        {
+          model: Producto,
+          as: "producto",
+          attributes: ["id_producto", "nombre_producto", "precio"],
+        },
+      ],
     });
   }
 
@@ -79,6 +84,13 @@ class InventarioCamionRepository {
     return inventario;
   }
 
+  async updateCantidad(id_camion, id_producto, cantidad) {
+    return await InventarioCamion.update(
+      { cantidad },
+      { where: { id_camion, id_producto } }
+    );
+  }
+
   async updateById(id, data) {
     const inventario = await InventarioCamion.update(data, {
       where: { id_inventario_camion: id },
@@ -96,7 +108,7 @@ class InventarioCamionRepository {
     }
     return await inventario.destroy();
   }
-
+  /* 
   async findByDetalle(id_detalle_transaccion, id_camion) {
     return await InventarioCamion.findOne({
       where: {
@@ -111,15 +123,45 @@ class InventarioCamionRepository {
         },
       ],
     });
-  }
+  } */
 
   async findByCamionProductoAndEstado(id_camion, id_producto, estado) {
     return await InventarioCamion.findOne({
       where: {
         id_camion,
         id_producto,
-        estado
+        estado,
       },
+    });
+  }
+
+  async findAllByCamionId(id_camion) {
+    return await InventarioCamion.findAll({
+      where: { id_camion },
+      include: [
+        {
+          model: Producto,
+          as: "producto",
+          attributes: [
+            "id_producto",
+            "nombre_producto",
+            "precio",
+            "es_retornable",
+          ],
+        },
+      ],
+    });
+  }
+
+  async findByCamionAndProduct(id_camion, id_producto) {
+    return await InventarioCamion.findOne({
+      where: { id_camion, id_producto },
+    });
+  }
+
+  async deleteProductInCamion(id_camion, id_producto) {
+    return await InventarioCamion.destroy({
+      where: { id_camion, id_producto },
     });
   }
 

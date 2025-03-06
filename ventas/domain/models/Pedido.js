@@ -24,7 +24,7 @@ const Pedido = sequelize.define(
     },
     id_chofer: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: Usuarios,
         key: "rut",

@@ -2,9 +2,10 @@ import { Op } from "sequelize";
 import InventarioService from "../../inventario/application/InventarioService.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
 import InventarioCamionLogsRepository from "../infrastructure/repositories/InventarioCamionLogsRepository.js";
-import InventarioCamion from "../domain/models/InventarioCamion.js";
-import Camion from "../domain/models/Camion.js";
-import Producto from "../../inventario/domain/models/Producto.js";
+import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
+import InventarioCamionReservasRepository from "../infrastructure/repositories/InventarioCamionReservasRepository.js";
+import CamionRepository from "../infrastructure/repositories/CamionRepository.js";
+import ProductoRetornableRepository from "../../inventario/infrastructure/repositories/ProductoRetornableRepository.js";
 
 class InventarioCamionService {
   async retornarProductosAdicionales(id_camion) {
@@ -45,79 +46,24 @@ class InventarioCamionService {
     };
   }
 
-  async addProductToCamion(data, esReservado = false) {
-    const { id_camion, id_producto, cantidad, id_detalle_transaccion } = data;
+  async addProductToCamion(data) {
+    const { id_camion, id_producto, cantidad, tipo } = data;
 
-    if (!id_camion || !id_producto || !cantidad) {
-      throw new Error(
-        "Faltan datos requeridos: id_camion, id_producto, cantidad"
-      );
-    }
+    const producto = await ProductosRepository.findById(id_producto);
+    if (!producto) throw new Error("Producto no encontrado.");
 
-    // Obtener capacidad del camión y su inventario
-    const camion = await Camion.findByPk(id_camion, {
-      include: [{ model: InventarioCamion, as: "inventario" }],
-    });
-    if (!camion) {
-      throw new Error(`Camión con id ${id_camion} no encontrado`);
-    }
+    const esRetornable = producto.es_retornable ?? false;
 
-    // Calcular la carga total actual del camión
-    const cargaActual = camion.inventario.reduce(
-      (sum, item) => sum + item.cantidad,
-      0
-    );
-    if (cargaActual + cantidad > camion.capacidad) {
-      throw new Error(
-        `La carga excede la capacidad del camión. Capacidad máxima: ${camion.capacidad}, Carga actual: ${cargaActual}`
-      );
-    }
-
-    // Verificar inventario principal
-    const inventarioPrincipal =
-      await InventarioService.getInventarioByProductoId(id_producto);
-    if (!inventarioPrincipal || inventarioPrincipal.cantidad < cantidad) {
-      throw new Error(
-        `Stock insuficiente para el producto con id ${id_producto}.`
-      );
-    }
-
-    // Registrar log de inventario antes de realizar cambios
-    const estado = esReservado
-      ? "En Camión - Reservado"
-      : "En Camión - Disponible";
-    await InventarioCamionLogsRepository.create({
+    await InventarioCamionRepository.create({
       id_camion,
       id_producto,
       cantidad,
-      estado,
-      fecha: new Date(),
-    });
-
-    // Reducir inventario principal
-    await InventarioService.decrementarStock(id_producto, cantidad);
-
-    if (!esReservado) {
-      // Actualizar la cantidad para productos "En Camión - Disponible"
-      const inventarioDisponible = camion.inventario.find(
-        (item) =>
-          item.id_producto === id_producto &&
-          item.estado === "En Camión - Disponible"
-      );
-      if (inventarioDisponible) {
-        inventarioDisponible.cantidad += cantidad;
-        await inventarioDisponible.save();
-        return inventarioDisponible;
-      }
-    }
-
-    // Crear un nuevo registro para productos "En Camión - Reservado" o cuando no existe en estado "Disponible"
-    return await InventarioCamionRepository.create({
-      id_camion,
-      id_producto,
-      cantidad,
-      estado,
-      id_detalle_transaccion: esReservado ? id_detalle_transaccion : null,
+      estado:
+        tipo === "Reservado"
+          ? "En Camión - Reservado"
+          : "En Camión - Disponible",
+      tipo: tipo,
+      es_retornable: esRetornable,
     });
   }
 
@@ -165,9 +111,12 @@ class InventarioCamionService {
   }
 
   async getInventarioDisponible(id_camion, search = "") {
-    if (!id_camion) {
-      throw new Error("Se requiere el ID del camión.");
+    // Validar que id_camion es un número entero
+    if (!id_camion || isNaN(parseInt(id_camion))) {
+      throw new Error("Se requiere un ID de camión válido.");
     }
+
+    id_camion = parseInt(id_camion); // Convertir a número para evitar errores
 
     // Construir el filtro de búsqueda
     const searchFilter = search
@@ -179,21 +128,23 @@ class InventarioCamionService {
         }
       : {};
 
-    // Obtener productos con estado "En Camión - Disponible"
+    // Obtener productos disponibles y reservados en el camión
     const inventario = await InventarioCamionRepository.findAllProducts({
       where: {
         id_camion,
-        estado: "En Camión - Disponible",
+        estado: {
+          [Op.in]: ["En Camión - Disponible", "En Camión - Reservado"],
+        },
         ...searchFilter,
       },
       include: [
         {
           model: Camion,
-          as: "camion",
-          attributes: ["placa", "estado"], // Información básica del camión
+          as: "Camion",
+          attributes: ["placa", "estado"],
         },
         {
-          model: Producto,
+          model: ProductosRepository.getModel(),
           as: "producto",
           attributes: [
             "id_producto",
@@ -201,6 +152,11 @@ class InventarioCamionService {
             "descripcion",
             "precio",
           ],
+        },
+        {
+          model: InventarioCamionReservasRepository.getModel(),
+          as: "reservas",
+          attributes: ["id_pedido", "cantidad_reservada"],
         },
       ],
     });
@@ -213,11 +169,197 @@ class InventarioCamionService {
       descripcion: item.producto.descripcion,
       cantidad: item.cantidad,
       estado: item.estado,
+      cantidad_reservada: item.reservas
+        ? item.reservas.reduce((sum, res) => sum + res.cantidad_reservada, 0)
+        : 0,
       camion: {
         placa: item.camion.placa,
         estado: item.camion.estado,
       },
     }));
+  }
+
+  async getEstadoInventario(id_camion) {
+    if (!id_camion || isNaN(parseInt(id_camion))) {
+      throw new Error("Se requiere un ID de camión válido.");
+    }
+
+    id_camion = parseInt(id_camion);
+
+    // Obtener la capacidad total del camión
+    const camion = await CamionRepository.findById(id_camion);
+    if (!camion) {
+      throw new Error(`Camión con id ${id_camion} no encontrado.`);
+    }
+
+    // Obtener inventario del camión desde el repositorio
+    const inventario = await InventarioCamionRepository.findByCamionId(
+      id_camion
+    );
+
+    // Caso 1: El camión no tiene productos cargados aún (capacidad total disponible)
+    if (!inventario || inventario.length === 0) {
+      return {
+        id_camion,
+        capacidad_total: camion.capacidad,
+        en_uso: 0,
+        disponible: camion.capacidad,
+      };
+    }
+
+    // Caso 2: Calcular productos "En Uso" y "Disponibles"
+    let enUso = 0;
+    let disponible = 0;
+
+    for (const item of inventario) {
+      if (item.estado === "En Camión - Reservado") {
+        enUso += item.cantidad;
+      } else if (item.estado === "En Camión - Disponible") {
+        disponible += item.cantidad;
+      }
+    }
+
+    // Ajuste para evitar valores negativos en caso de sobrecarga
+    const capacidadRestante = camion.capacidad - enUso - disponible;
+    if (capacidadRestante < 0) {
+      disponible = Math.max(0, disponible + capacidadRestante);
+    }
+
+    return {
+      id_camion,
+      capacidad_total: camion.capacidad,
+      en_uso: enUso,
+      disponible,
+    };
+  }
+
+  async getProductoEnCamion(id_camion, id_producto) {
+    return await InventarioCamionRepository.findOneProduct(
+      id_camion,
+      id_producto
+    );
+  }
+
+  async getInventarioByCamion(id_camion) {
+    try {
+      if (!id_camion) {
+        throw new Error("Se requiere el ID del camión.");
+      }
+      const inventario = await InventarioCamionRepository.findAllByCamionId(
+        id_camion
+      );
+      return inventario.map((item) => ({
+        id_inventario_camion: item.id_inventario_camion,
+        id_producto: item.producto.id_producto,
+        nombre_producto: item.producto.nombre_producto,
+        cantidad: item.cantidad,
+        estado: item.estado, // "Disponible" o "Reservado"
+      }));
+    } catch (error) {
+      return error;
+    }
+  }
+
+  async retirarProductoDelCamion(id_camion, id_producto, cantidad) {
+    const productoEnCamion =
+      await InventarioCamionRepository.findByCamionAndProduct(
+        id_camion,
+        id_producto
+      );
+    if (!productoEnCamion) throw new Error("El producto no está en el camión.");
+
+    if (cantidad > productoEnCamion.cantidad) {
+      throw new Error(
+        "Cantidad a retirar mayor que la disponible en el camión."
+      );
+    }
+
+    const producto = await ProductosRepository.findById(id_producto);
+    if (!producto) throw new Error("Producto no encontrado.");
+
+    if (producto.es_retornable) {
+      // Si es retornable, lo marcamos en `ProductoRetornable`
+      await this.registrarRetornables(id_camion, [
+        { id_producto, cantidad, estado: "reutilizable" },
+      ]);
+    } else {
+      // Si no es retornable, solo descontamos del camión
+      await InventarioCamionRepository.update(
+        { cantidad: productoEnCamion.cantidad - cantidad, estado: "Regresado" },
+        { where: { id_camion, id_producto }, transaction }
+      );
+
+      if (productoEnCamion.cantidad - cantidad === 0) {
+        await InventarioCamionRepository.deleteProductInCamion(
+          id_camion,
+          id_producto
+        );
+      }
+    }
+  }
+
+  async registrarRetornables(id_camion, retornables) {
+    for (const retorno of retornables) {
+      const { id_producto, cantidad, estado, tipo_defecto } = retorno;
+
+      if (estado === "reutilizable") {
+        // Agregar los retornables al inventario de bodega
+        await InventarioService.incrementStock(id_producto, cantidad);
+      } else {
+        // Registrar los retornables defectuosos
+        await ProductoRetornableRepository.create({
+          id_producto,
+          cantidad,
+          estado: "defectuoso",
+          tipo_defecto,
+          fecha_retorno: new Date(),
+        });
+      }
+
+      // Eliminar de InventarioCamion
+      await InventarioCamionRepository.deleteProductInCamion(
+        id_camion,
+        id_producto
+      );
+    }
+  }
+
+  async actualizarProductoEnCamion(id_camion, id_producto, cantidad) {
+    const productoEnCamion = await this.getProductoEnCamion(
+      id_camion,
+      id_producto
+    );
+
+    if (!productoEnCamion) {
+      throw new Error(
+        `El producto con ID ${id_producto} no está en el camión.`
+      );
+    }
+
+    // Actualizar cantidad
+    await InventarioCamionRepository.updateCantidad(
+      id_camion,
+      id_producto,
+      productoEnCamion.cantidad + cantidad
+    );
+    return await this.getProductoEnCamion(id_camion, id_producto);
+  }
+
+  async getInventarioPorChofer(id_chofer) {
+    if (!id_chofer) {
+      throw new Error("Se requiere un ID de chofer válido.");
+    }
+
+    // Obtener el camión asignado al chofer
+    const camion = await CamionRepository.findByChoferId(id_chofer);
+    if (!camion) {
+      throw new Error(
+        `No se encontró un camión asignado al chofer con id ${id_chofer}.`
+      );
+    }
+
+    // Obtener el inventario del camión
+    return await InventarioCamionRepository.findByCamionId(camion.id_camion);
   }
 }
 

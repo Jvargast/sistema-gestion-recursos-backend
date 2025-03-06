@@ -14,7 +14,7 @@ import Entrega from "./models/Entrega.js";
 import HistorialVentasChofer from "./models/HistorialVentasChofer.js";
 import InventarioCamion from "./models/InventarioCamion.js";
 import InventarioCamionLogs from "./models/InventarioCamionLogs.js";
-import Pedido from "./models/Pedido.js";
+import InventarioCamionReservas from "./models/InventarioCamionReservas.js";
 import VentasChofer from "./models/VentasChofer.js";
 
 function loadEntregasAssociations(models) {
@@ -284,6 +284,14 @@ function loadEntregasAssociations(models) {
     as: "insumoCamion",
   });
 
+  InventarioCamion.hasMany(InventarioCamionReservas, {
+    foreignKey: "id_inventario_camion",
+    as: "reservas",
+  });
+  InventarioCamionReservas.belongsTo(InventarioCamion, {
+    foreignKey: "id_inventario_camion",
+  });
+
 
   /**
    *
@@ -365,25 +373,6 @@ function loadEntregasAssociations(models) {
     foreignKey: "id_venta_chofer",
     as: "documentos",
   });
-
-/*   //Pedidos
-  Pedido.belongsTo(Usuarios, { foreignKey: "id_chofer", as: "chofer" });
-  Usuarios.hasMany(Pedido, { foreignKey: "id_chofer", as: "pedidosAsignados" });
-
-  Pedido.belongsTo(Usuarios, { foreignKey: "id_creador", as: "creador" });
-  Usuarios.hasMany(Pedido, { foreignKey: "id_creador", as: "pedidosCreados" });
-
-  Pedido.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
-  Cliente.hasMany(Pedido, { foreignKey: "id_cliente", as: "pedidosCliente" });
-
-  Pedido.belongsTo(AgendaViajes, {
-    foreignKey: "id_agenda_viaje",
-    as: "viaje",
-  });
-  AgendaViajes.hasMany(Pedido, {
-    foreignKey: "id_agenda_viaje",
-    as: "pedidosViaje",
-  }); */
 
   console.log("Asociaciones del módulo de entregas cargadas correctamente.");
 }

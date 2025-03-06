@@ -1,11 +1,8 @@
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
-import Producto from "../../../inventario/domain/models/Producto.js";
-import Cliente from "../../../ventas/domain/models/Cliente.js";
-import DetalleTransaccion from "../../../ventas/domain/models/DetalleTransaccion.js";
-import Transaccion from "../../../ventas/domain/models/Transaccion.js";
 import AgendaCarga from "../../domain/models/AgendaCarga.js";
+import AgendaCargaDetalle from "../../domain/models/AgendaCargaDetalle.js";
 import Camion from "../../domain/models/Camion.js";
-import InventarioCamion from "../../domain/models/InventarioCamion.js";
+
 
 class AgendaCargaRepository {
   async create(data) {
@@ -28,45 +25,18 @@ class AgendaCargaRepository {
     return await AgendaCarga.findByPk(id, {
       include: [
         {
-          model: DetalleTransaccion,
-          as: "detalles",
-          include: [
-            {
-              model: Transaccion,
-              as: "transaccion",
-              include: [
-                {
-                  model: Cliente,
-                  as: "cliente",
-                },
-              ],
-            },
-            {
-              model: Producto,
-              as: "producto",
-            },
-          ],
-        },
-        {
           model: Usuarios,
-          as: "usuario", // Información del chofer
-          attributes: ["rut", "nombre", "email"],
+          as: "chofer",
+          attributes: ["rut", "nombre", "apellido", "email"],
         },
         {
           model: Camion,
-          as: "camion", // Información del camión
-          include: [
-            {
-              model: InventarioCamion,
-              as: "inventario", // Incluye el inventario del camión
-              include: [
-                {
-                  model: Producto,
-                  as: "producto", // Incluye datos del producto en el inventario
-                },
-              ],
-            },
-          ],
+          as: "camion",
+          attributes: ["id_camion", "placa", "capacidad", "estado"],
+        },
+        {
+          model: AgendaCargaDetalle,
+          as: "detalles",
         },
       ],
     });

@@ -3,10 +3,13 @@ import InventarioCamionController from "../controllers/InventarioCamionControlle
 
 const router = Router();
 
-router.post("/", InventarioCamionController.addProduct);
-router.get("/disponible", InventarioCamionController.getInventarioDisponible);
-router.get("/disponible/chofer", InventarioCamionController.getInventarioDisponiblePorChofer);
-router.get("/:id", InventarioCamionController.getProductsByCamion);
-router.post("/return/:id", InventarioCamionController.returnProducts);
+router.post("/", InventarioCamionController.addProduct); 
+router.get("/disponible/chofer", InventarioCamionController.getInventarioDisponiblePorChofer); 
+router.get("/disponible/:id_camion", InventarioCamionController.getInventarioDisponible); 
+router.get("/inventario/chofer/:id_chofer", InventarioCamionController.getInventarioPorChofer);
+router.get("/estado/:id_camion", InventarioCamionController.getEstadoInventarioCamion);
+router.post("/return/:id", InventarioCamionController.returnProducts); 
+router.get("/:id", InventarioCamionController.getProductsByCamion); 
+
 
 export default router;

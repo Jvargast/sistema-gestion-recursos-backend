@@ -5,7 +5,6 @@ import MetodoPago from "../../../ventas/domain/models/MetodoPago.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
 import Camion from "./Camion.js";
 
-// models/VentasChofer.js
 
 const VentasChofer = sequelize.define(
   "VentasChofer",

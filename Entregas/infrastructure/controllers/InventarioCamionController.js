@@ -35,24 +35,23 @@ class InventarioCamionController {
   }
   async getInventarioDisponible(req, res) {
     try {
-      const { id_camion, search = "" } = req.query;
-
-      if (!id_camion) {
-        return res
-          .status(400)
-          .json({ message: "El ID del camión es requerido." });
+      let { id_camion } = req.params; 
+  
+      if (!id_camion || isNaN(parseInt(id_camion))) {
+        return res.status(400).json({ message: "El ID del camión es requerido y debe ser un número." });
       }
-
-      const inventario = await InventarioCamionService.getInventarioDisponible(
-        id_camion, search
-      );
-
+  
+      id_camion = parseInt(id_camion); 
+  
+      const inventario = await InventarioCamionService.getInventarioDisponible(id_camion);
+  
       res.status(200).json({ data: inventario });
     } catch (error) {
       console.error("Error al obtener el inventario disponible:", error);
       res.status(500).json({ message: error.message });
     }
   }
+  
 
   async getInventarioDisponiblePorChofer(req, res) {
     try {
@@ -82,6 +81,44 @@ class InventarioCamionController {
       return res.status(500).json({ error: error.message });
     }
   }
+  async getEstadoInventarioCamion(req, res) {
+    try {
+      let { id_camion } = req.params;
+  
+      if (!id_camion || isNaN(parseInt(id_camion))) {
+        return res.status(400).json({ message: "El ID del camión es requerido y debe ser un número." });
+      }
+  
+      id_camion = parseInt(id_camion);
+  
+      // Llamar al servicio para obtener el inventario en uso y disponible
+      const inventarioEstado = await InventarioCamionService.getEstadoInventario(id_camion);
+  
+      res.status(200).json({ data: inventarioEstado });
+    } catch (error) {
+      console.error("Error al obtener el estado del inventario del camión:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  async getInventarioPorChofer(req, res) {
+    try {
+      const { id_chofer } = req.params;
+  
+      if (!id_chofer) {
+        return res.status(400).json({ message: "El ID del chofer es requerido y debe ser un número." });
+      }
+  
+      const inventario = await InventarioCamionService.getInventarioPorChofer(id_chofer);
+  
+      res.status(200).json({ data: inventario });
+    } catch (error) {
+      console.error("Error al obtener el inventario del camión:", error);
+      res.status(500).json({ message: error.message });
+    }
+  }
+  
+  
 }
 
 export default new InventarioCamionController();

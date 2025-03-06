@@ -3,12 +3,100 @@ import PedidoService from "../../application/PedidoService.js";
 class PedidoController {
   async createPedido(req, res) {
     try {
-      const pedido = await PedidoService.createPedido(req.body);
+      const data = req.body;
+      data.id_creador = req.user.id;
+      const pedido = await PedidoService.createPedido(data);
       res.status(201).json({ message: "Pedido creado exitosamente", pedido });
     } catch (error) {
       res
         .status(500)
         .json({ message: `Error al crear pedido: ${error.message}` });
+    }
+  }
+
+  async confirmarPedido(req, res) {
+    try {
+      const { id_pedido } = req.params;
+      const { estado } = req.body;
+      const id_chofer = req.user?.id;
+
+      if (!id_chofer || !["Aceptado", "Rechazado"].includes(estado)) {
+        return res.status(400).json({ error: "Datos inválidos" });
+      }
+      id_chofer;
+
+      const resultado = await PedidoService.confirmarPedido(
+        id_pedido,
+        id_chofer,
+        estado
+      );
+
+      return res
+        .status(200)
+        .json({
+          message: `Pedido ${estado.toLowerCase()} correctamente.`,
+          data: resultado,
+        });
+    } catch (error) {
+      console.log(error);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async obtenerPedidosAsignados(req, res) {
+    try {
+      const { id_chofer } = req.params;
+      const pedidos = await PedidoService.obtenerPedidosAsignados(
+        id_chofer,
+        req.query
+      );
+
+      return res.status(200).json({
+        data: pedidos.data,
+        total: pedidos.pagination,
+      });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async obtenerPedidosSinAsignar(req, res) {
+    try {
+      const pedidos = await PedidoService.obtenerPedidosSinAsignar(req.query);
+      return res.status(200).json({
+        data: pedidos.data,
+        total: pedidos.pagination,
+      });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async obtenerMisPedidos(req, res) {
+    try {
+      const id_chofer = req.user.id;
+      const pedidos = await PedidoService.obtenerPedidosAsignados(
+        id_chofer,
+        req.query
+      );
+      res.status(200).json({
+        data: pedidos.data,
+        total: pedidos.pagination,
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async obtenerPedidosConfirmados(req, res) {
+    try {
+      const id_chofer = req.user.id;
+      const pedidos = await PedidoService.getPedidosConfirmadosPorChofer(
+        id_chofer
+      );
+      res.status(200).json(pedidos);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
   }
 
@@ -37,7 +125,7 @@ class PedidoController {
       delete filters.page;
       delete filters.limit;
 
-      const pedidos = await PedidoService.getAllPedidos(filters, options);
+      const pedidos = await PedidoService.getPedidos(filters, options);
 
       res.status(200).json({
         data: pedidos.data,
@@ -63,12 +151,10 @@ class PedidoController {
       if (!pedidoActualizado)
         return res.status(404).json({ message: "Pedido no encontrado" });
 
-      res
-        .status(200)
-        .json({
-          message: "Estado del pedido actualizado",
-          pedido: pedidoActualizado,
-        });
+      res.status(200).json({
+        message: "Estado del pedido actualizado",
+        pedido: pedidoActualizado,
+      });
     } catch (error) {
       res
         .status(500)

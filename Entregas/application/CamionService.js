@@ -1,3 +1,4 @@
+import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import CamionRepository from "../infrastructure/repositories/CamionRepository.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
 
@@ -20,6 +21,13 @@ class CamionService {
     return camion;
   }
 
+  async getCapacityByChoferId(id_chofer) {
+    const capacidad = await CamionRepository.findByChoferId(id_chofer);
+    console.log(capacidad)
+    return capacidad
+
+  }
+
   async getCurrentCapacity(id_camion) {
     // Obtener el inventario actual del camión por su ID
     const inventario = await InventarioCamionRepository.findByCamionId(
@@ -31,7 +39,7 @@ class CamionService {
       if (!camion) {
         throw new Error(`Camión con id ${id_camion} no encontrado`);
       }
-  
+
       return {
         capacidadTotal: camion.capacidad,
         capacidadUtilizada: 0,
@@ -63,6 +71,29 @@ class CamionService {
       capacidadUtilizada,
       capacidadDisponible: camion.capacidad - capacidadUtilizada,
     };
+  }
+
+  async asignarChofer(id_camion, id_chofer) {
+    const camion = await CamionRepository.findById(id_camion);
+    if (!camion) {
+      throw new Error("El camión no existe.");
+    }
+
+    const chofer = await UsuariosRepository.findByRut(id_chofer);
+    if (!chofer) {
+      throw new Error("El chofer no existe.");
+    }
+
+    const camionAsignado = await CamionRepository.findByChofer(id_chofer);
+    if (camionAsignado) {
+      throw new Error("Este chofer ya está asignado a otro camión.");
+    }
+
+    await CamionRepository.update(id_camion, {
+      id_chofer_asignado: id_chofer,
+    });
+
+    return await CamionRepository.findById(id_camion);
   }
 
   async getAllCamiones() {

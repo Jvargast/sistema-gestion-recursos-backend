@@ -6,6 +6,8 @@ import morgan from "morgan";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import { createServer } from "http";
+import { Server } from "socket.io"; 
 
 /**
  * Implementación de tareas
@@ -38,6 +40,7 @@ import CotizacionesRoutes from "./ventas/infrastructure/routes/CotizacionRoutes.
 import CajaRoutes from "./ventas/infrastructure/routes/CajaRoutes.js";
 import MovimientoCajaRoutes from "./ventas/infrastructure/routes/MovimientoCajaRoutes.js";
 import LogVentasRoutes from "./ventas/infrastructure/routes/LogVentasRoutes.js";
+import EstadosVentasRoutes from "./ventas/infrastructure/routes/EstadoVentaRoutes.js";
 /* 
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
 import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js"; */
@@ -47,9 +50,9 @@ import managementRoutes from "./management/infrastructure/routes/managementRoute
 import proveedoresRoutes from "./proveedores/infrastructure/routes/proveedoesrRoutes.js";
  */
 /* MÓDULO DE ENTREGAS */
-/* import CamionRoutes from "./Entregas/infrastructure/routes/CamionRoutes.js"; */
-/* import AgendaCargaRoutes from "./Entregas/infrastructure/routes/AgendaCargaRoutes.js"; */
-/* import InventarioCamionRoutes from "./Entregas/infrastructure/routes/InvetarioCamionRoutes.js"; */
+import CamionRoutes from "./Entregas/infrastructure/routes/CamionRoutes.js";
+import AgendaCargaRoutes from "./Entregas/infrastructure/routes/AgendaCargaRoutes.js";
+import InventarioCamionRoutes from "./Entregas/infrastructure/routes/InvetarioCamionRoutes.js";
 /* import EntregaRoutes from "./Entregas/infrastructure/routes/EntregaRoutes.js";
 import VentaChoferRoutes from "./Entregas/infrastructure/routes/VentaChoferRoutes.js"; */
 /* MÓDULO ANÁLISIS */
@@ -60,6 +63,15 @@ import VentasEstadisticasRoutes from "./analisis/infrastructure/routes/VentasEst
 
 dotenv.config();
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:3000", // Configurar CORS
+    methods: ["GET", "POST"],
+  },
+});
+
+// Middleware
 app.use(express.json());
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
@@ -84,8 +96,7 @@ app.use(
 /* const allowedOrigins = [
   "http://localhost:3000", // Para desarrollo local
   "https://jvargast.github.io", // Dominio base de tu frontend
-];
-
+];*/
 
 /* Rutas*/
 /* MÓDULO AUTH */
@@ -119,6 +130,7 @@ app.use("/api/cotizaciones", CotizacionesRoutes);
 app.use("/api/cajas", CajaRoutes);
 app.use("/api/movimientos", MovimientoCajaRoutes);
 app.use("/api/log-ventas", LogVentasRoutes);
+app.use("/api/estados-ventas", EstadosVentasRoutes);
 /* app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
 app.use("/api/logs-transaccion", LogTransaccionRoutes);
 app.use("/api/transacciones", TransaccionRoutes);
@@ -134,11 +146,19 @@ app.use("/api/documentos", DocumentosRoutes) */
 app.use("/api/analisis/ventas", VentasEstadisticasRoutes); */
 
 /* MÓDULO DE ENTREGAS */
-/* app.use("/api/camiones", CamionRoutes);
-app.use("/api/inventario-camion", InventarioCamionRoutes); */
-/* app.use("/api/agendas", AgendaCargaRoutes); */
+app.use("/api/camiones", CamionRoutes);
+app.use("/api/inventario-camion", InventarioCamionRoutes);
+app.use("/api/agendas", AgendaCargaRoutes);
 /* app.use("/api/entregas", EntregaRoutes);
 app.use("/api/ventas-chofer", VentaChoferRoutes); */
+
+io.on("connection", (socket) => {
+  console.log("⚡ Cliente conectado:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("❌ Cliente desconectado:", socket.id);
+  });
+});
 
 const PORT = process.env.PORT || 9000;
 
@@ -155,3 +175,5 @@ initializeDatabase()
     console.error("No se pudo iniciar la aplicación:", error);
     process.exit(1);
   });
+
+  export { io };

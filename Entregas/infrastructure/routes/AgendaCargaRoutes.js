@@ -7,14 +7,16 @@ import { checkRoles } from "../../../shared/middlewares/CheckRole.js";
 
 const router = Router();
 
-router.post("/", AgendaController.create);
-router.get("/", authenticate, AgendaController.getAll);
+
+router.post("/", authenticate, AgendaController.createAgenda);
+router.get("/:id", authenticate, AgendaController.getAgendaById);
+/* router.get("/", authenticate, AgendaController.getAll);
 router.get("/agendaChofer", authenticate, checkRoles(["chofer"]), AgendaController.getAgendasByChofer);
 router.get("/activa/chofer", authenticate,AgendaController.getAgendaActiva);
 router.put("/start/:id", authenticate, AgendaController.startAgenda);
 router.put("/finalizar/:id", authenticate, AgendaController.finalizeAgenda);
 router.get('/:id', AgendaController.getById);
-router.put('/:id', AgendaController.update); // Actualizar una agenda
-router.delete('/:id', AgendaController.delete); 
+router.put('/:id', AgendaController.update); 
+router.delete('/:id', AgendaController.delete);  */
 
 export default router;
