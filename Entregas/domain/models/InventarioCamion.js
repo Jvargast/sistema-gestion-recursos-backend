@@ -14,7 +14,7 @@ const InventarioCamion = sequelize.define(
     },
     id_camion: {
       type: DataTypes.INTEGER,
-      allowNull: false, 
+      allowNull: false,
       references: {
         model: Camion,
         key: "id_camion",
@@ -50,10 +50,19 @@ const InventarioCamion = sequelize.define(
       allowNull: false,
       defaultValue: "En Camión - Disponible",
     },
+    tipo: {
+      type: DataTypes.ENUM("Disponible", "Reservado"),
+      allowNull: false,
+      defaultValue: "Disponible",
+    },
+    es_retornable: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     fecha_actualizacion: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
-    }
+    },
   },
   {
     tableName: "InventarioCamion",

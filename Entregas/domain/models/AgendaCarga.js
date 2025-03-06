@@ -38,7 +38,7 @@ const AgendaCarga = sequelize.define(
       references: { model: Camion, key: "id_camion" },
     },
     estado: {
-      type: DataTypes.ENUM("Pendiente", "Completada", "Cancelada"),
+      type: DataTypes.ENUM("Pendiente", "Completada", "Cancelada", "Cargado"),
       allowNull: false,
       defaultValue: "Pendiente",
     },

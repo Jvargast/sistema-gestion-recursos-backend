@@ -1,13 +1,17 @@
 import { Router } from "express";
 import CamionController from "../controllers/CamionController.js";
+import authenticate from "../../../shared/middlewares/authenticate.js";
+import { checkRoles } from "../../../shared/middlewares/CheckRole.js";
 
 const router = Router();
 
-router.post("/", CamionController.create);
-router.get("/", CamionController.getAll);
-router.get("/capacidad/:id_camion", CamionController.getCamionCapacity)
-router.get("/:id", CamionController.getById);
-router.put("/:id", CamionController.update);
-router.delete("/:id", CamionController.delete);
+router.post("/", authenticate, CamionController.create);
+router.get("/", authenticate, CamionController.getAll);
+router.get("/capacidad/chofer/:id_chofer", authenticate, CamionController.getCamionCapacityByChoferId)
+router.get("/capacidad/:id_camion", authenticate, CamionController.getCamionCapacity)
+router.get("/:id", authenticate, CamionController.getById);
+router.put("/:id", authenticate, CamionController.update);
+router.patch("/:id/asignar-chofer", authenticate, checkRoles(["administrador"]), CamionController.asignarChofer);
+router.delete("/:id", authenticate, CamionController.delete);
 
 export default router;

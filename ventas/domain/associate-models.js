@@ -1,5 +1,6 @@
 import Sucursal from "../../auth/domain/models/Sucursal.js";
 import Usuarios from "../../auth/domain/models/Usuarios.js";
+import InventarioCamionReservas from "../../Entregas/domain/models/InventarioCamionReservas.js";
 import Insumo from "../../inventario/domain/models/Insumo.js";
 import Producto from "../../inventario/domain/models/Producto.js";
 import Caja from "./models/Caja.js";
@@ -48,6 +49,14 @@ function loadPOSAssociations() {
   EstadoVenta.hasMany(Pedido, {
     foreignKey: "id_estado_pedido",
     as: "Pedidos",
+  });
+
+  Pedido.hasMany(InventarioCamionReservas, {
+    foreignKey: "id_pedido",
+    as: "reservas",
+  });
+  InventarioCamionReservas.belongsTo(Pedido, {
+    foreignKey: "id_pedido",
   });
 
   // Relación: Un Pedido tiene muchos Detalles de Pedido (productos)
