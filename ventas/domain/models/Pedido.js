@@ -55,6 +55,14 @@ const Pedido = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    estado_pago: {
+      type: DataTypes.ENUM('Pagado', 'Pendiente'),
+      defaultValue: 'Pendiente',
+    },
+    pagado: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
     notas: {
       type: DataTypes.STRING,
       allowNull: true,

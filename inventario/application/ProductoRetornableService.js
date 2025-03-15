@@ -1,5 +1,7 @@
+import InventarioCamionRepository from "../../Entregas/infrastructure/repositories/InventarioCamionRepository.js";
 import ClienteService from "../../ventas/application/ClienteService.js";
 import ProductoRetornableRepository from "../infrastructure/repositories/ProductoRetornableRepository.js";
+import InventarioService from "./InventarioService.js";
 import ProductosService from "./ProductosService.js";
 
 class ProductoRetornableService {
@@ -36,6 +38,36 @@ class ProductoRetornableService {
       await ProductoRetornableRepository.delete(id);
       return true;
     }
+
+    async inspeccionarRetornables(id_camion, retornablesInspeccionados, transaction) {
+      for (const item of retornablesInspeccionados) {
+        // item: { id_producto, cantidad, estado (reutilizable/defectuoso), tipo_defecto? }
+    
+        // Actualiza el registro existente en ProductoRetornable
+        await ProductoRetornableRepository.updateByCamionAndProducto(
+          id_camion,
+          item.id_producto,
+          {
+            estado: item.estado,
+            tipo_defecto: item.estado === "defectuoso" ? item.tipo_defecto : null,
+          },
+          { transaction }
+        );
+    
+        if (item.estado === "reutilizable") {
+          await InventarioService.incrementStock(item.id_producto, item.cantidad, { transaction });
+        }
+    
+        // Elimina del inventario del camión
+        await InventarioCamionRepository.deleteProductInCamion(
+          id_camion,
+          item.id_producto,
+          "En Camión - Retorno",
+          transaction
+        );
+      }
+    }
+
   }
   
   export default new ProductoRetornableService();

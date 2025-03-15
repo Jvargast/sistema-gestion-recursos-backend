@@ -16,8 +16,4 @@ router.post("/", authenticate, PedidoController.createPedido);
 router.patch("/:id_pedido/confirmacion", authenticate, checkRoles(['chofer']), PedidoController.confirmarPedido);
 
 
-/* router.put("/:id_pedido/estado", authenticate, PedidoController.actualizarEstado);
-router.put("/:id_pedido/asignar", authenticate, PedidoController.asignarPedido);
-router.delete("/:id_pedido", authenticate, PedidoController.eliminarPedido); */
-
 export default router;

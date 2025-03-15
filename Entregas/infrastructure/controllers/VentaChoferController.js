@@ -8,43 +8,29 @@ class VentaChoferController {
    */
   async realizarVentaRapida(req, res) {
     try {
-      const { id_camion, cliente_rut, productos, metodo_pago, monto, referencia } =
-        req.body;
-      const rut = req.user.id;
-      // Validar datos de entrada
-      if (
-        !id_camion ||
-        !cliente_rut ||
-        !productos ||
-        productos.length === 0 ||
-        !metodo_pago ||
-        !referencia
-      ) {
-        return res.status(400).json({
-          error: "Faltan datos obligatorios para realizar la venta rápida.",
-        });
-      }
-
-      // Llamar al servicio
-      const resultado = await VentaChoferService.realizarVentaRapida(
-        id_camion,
-        cliente_rut,
+      const {
+        id_cliente,
         productos,
-        metodo_pago,
-        monto,
-        referencia,
-        rut
+        id_metodo_pago,
+        retornables_recibidos,
+        estadoPago,
+        monto_recibido,
+      } = req.body;
+      const rut = req.user.id;
+      // Llamar al servicio
+      const resultado = await VentaChoferService.realizarVentaChofer(
+        rut,
+        id_cliente,
+        id_metodo_pago,
+        productos,
+        retornables_recibidos,
+        estadoPago,
+        monto_recibido
       );
 
-      // Responder al cliente
-      return res.status(201).json({
-        message: resultado.message,
-        venta: resultado.venta,
-        documento: resultado.documento,
-        boleta: resultado.boleta,
-      });
+      return res.status(201).json(resultado);
     } catch (error) {
-      console.error("Error en realizarVentaRapida:", error.message);
+      console.error("Error en realizar Venta Rapida:", error.message);
       return res.status(500).json({
         error: "Ocurrió un error al realizar la venta rápida.",
         detalle: error.message,
@@ -54,7 +40,7 @@ class VentaChoferController {
   async getVentasChofer(req, res) {
     try {
       const filters = req.query; // Filtros enviados en los query params
-      const rut  = req.user.id; // Obtener el RUT del chofer autenticado
+      const rut = req.user.id; // Obtener el RUT del chofer autenticado
       const rol = req.user.rol; // Obtener el rol del usuario autenticado
       let options = {
         page: parseInt(req.query.page, 10) || 1,

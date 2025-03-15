@@ -71,8 +71,16 @@ function loadPOSAssociations() {
     foreignKey: "id_producto",
     as: "Producto",
   });
+  DetallePedido.belongsTo(Insumo, {
+    foreignKey: "id_insumo",
+    as: "Insumo",
+  });
   Producto.hasMany(DetallePedido, {
     foreignKey: "id_producto",
+    as: "Detalles",
+  });
+  Insumo.hasMany(DetallePedido, {
+    foreignKey: "id_insumo",
     as: "Detalles",
   });
   

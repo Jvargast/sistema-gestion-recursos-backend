@@ -18,7 +18,11 @@ class PedidoRepository {
         },
         { model: Usuarios, as: "Creador", attributes: ["rut", "nombre"] },
         { model: MetodoPago, as: "MetodoPago", attributes: ["nombre"] },
-        { model: EstadoVenta, as: "EstadoPedido", attributes: ["nombre_estado"] },
+        {
+          model: EstadoVenta,
+          as: "EstadoPedido",
+          attributes: ["nombre_estado"],
+        },
         {
           model: DetallePedido,
           as: "DetallesPedido",
@@ -49,6 +53,15 @@ class PedidoRepository {
           include: [{ model: Producto, as: "Producto" }],
         },
       ],
+    });
+  }
+
+  async findAllByChoferAndEstado(id_chofer, id_estado_pedido) {
+    return await Pedido.findAll({
+      where: {
+        id_chofer,
+        id_estado_pedido,
+      },
     });
   }
 

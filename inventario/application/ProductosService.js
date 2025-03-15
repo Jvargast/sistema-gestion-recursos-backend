@@ -4,7 +4,6 @@ import paginate from "../../shared/utils/pagination.js";
 import EstadoProductoService from "./EstadoProductoService.js";
 import InventarioService from "./InventarioService.js";
 import CategoriaProductoService from "./CategoriaProductoService.js";
-import TransicionEstadoProductoService from "./TransicionEstadoProductoService.js";
 import EstadoProductoRepository from "../infrastructure/repositories/EstadoProductoRepository.js";
 import CategoriaProductoRepository from "../infrastructure/repositories/CategoriaProductoRepository.js";
 import { Op } from "sequelize";
@@ -195,21 +194,6 @@ class ProductoService {
       message: "Estado del producto actualizado con éxito",
       producto: updated,
     };
-  }
-
-  // Cambiar el estado de varios productos a la vez.
-  async cambiarEstadoMasivo(productos, estadoDestino) {
-    for (const producto of productos) {
-      await TransicionEstadoProductoService.validarTransicion(
-        producto.id_estado_producto,
-        estadoDestino
-      );
-      await ProductosRepository.updateEstadoProducto(
-        producto.id_producto,
-        estadoDestino
-      );
-    }
-    return true;
   }
 
   // Buscar productos según un estado específico.

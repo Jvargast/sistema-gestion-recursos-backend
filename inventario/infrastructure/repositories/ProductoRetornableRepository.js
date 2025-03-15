@@ -2,7 +2,6 @@ import ProductoRetornable from "../../domain/models/ProductoRetornable.js";
 import Producto from "../../domain/models/Producto.js";
 import Cliente from "../../../ventas/domain/models/Cliente.js";
 
-
 class ProductoRetornableRepository {
   async findById(id) {
     return await ProductoRetornable.findByPk(id, {
@@ -23,7 +22,12 @@ class ProductoRetornableRepository {
   }
 
   async create(data) {
-    return await ProductoRetornable.create(data);
+    try {
+      return await ProductoRetornable.create(data);
+    } catch (error) {
+      console.log("Error en el repositorio: ",error.message);
+      throw error;
+    }
   }
 
   async update(id, data) {
@@ -43,7 +47,9 @@ class ProductoRetornableRepository {
   }
 
   async findByCliente(clienteId) {
-    return await ProductoRetornable.findAll({ where: { id_cliente: clienteId } });
+    return await ProductoRetornable.findAll({
+      where: { id_cliente: clienteId },
+    });
   }
 
   getModel() {

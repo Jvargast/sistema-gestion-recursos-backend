@@ -36,7 +36,7 @@ class AgendaCargaRepository {
         },
         {
           model: AgendaCargaDetalle,
-          as: "detalles",
+          as: "detallesCarga",
         },
       ],
     });

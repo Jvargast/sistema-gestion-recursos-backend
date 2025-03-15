@@ -54,7 +54,12 @@ class DocumentoRepository {
   }
 
   async create(data) {
-    return await Documento.create(data);
+    try {
+      return await Documento.create(data);
+    } catch (error) {
+      console.log("Error en documento repositorio: ", error.message)
+      throw error
+    }
   }
 
   async update(id, updates) {

@@ -3,16 +3,10 @@ import EntregaService from "../../application/EntregaService.js";
 class EntregaController {
   async createEntrega(req, res) {
     try {
-      const { id_camion, detalles, fechaHoraEntrega } = req.body;
-      const rut = req.user.id;
-      // Crear la entrega
-      console.log(req.body);
-      const result = await EntregaService.createEntrega(
-        id_camion,
-        detalles,
-        rut,
-        fechaHoraEntrega
-      );
+      const id_chofer = req.user.id; // Se obtiene el id del chofer del token/sesión
+      const payload = { ...req.body, id_chofer };
+
+      const result = await EntregaService.processDelivery(payload);
 
       res.status(201).json(result);
     } catch (error) {

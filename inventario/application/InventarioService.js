@@ -1,11 +1,16 @@
 import InventarioRepository from "../infrastructure/repositories/InventarioRepository.js";
 import LogInventarioRepository from "../infrastructure/repositories/LogInventarioRepository.js";
 import ProductosService from "./ProductosService.js";
-import TransicionEstadoProductoService from "./TransicionEstadoProductoService.js";
 
 class InventarioService {
   async getInventarioByProductoId(id_producto) {
     const inventario = await InventarioRepository.findByProductoId(id_producto);
+    if (!inventario) throw new Error("Inventario no encontrado.");
+    return inventario;
+  }
+
+  async getInventarioByInsumoId(id_insumo) {
+    const inventario = await InventarioRepository.findByInsumoId(id_insumo);
     if (!inventario) throw new Error("Inventario no encontrado.");
     return inventario;
   }
@@ -65,75 +70,6 @@ class InventarioService {
 
     return nuevoInventario;
   }
-  /**
-   *
-   *
-   *  AJUSTAR INVENTARIO POR TRANSACCION, PERO CREANDO TRANSICION
-   *
-   *
-   */
-  // Actualizar el inventario basado en los productos y cantidades de una transacción concreta.
-  async ajustarInventarioPorTransaccion(id_usuario, id_transaccion, detalles) {
-    if (!id_transaccion) {
-      throw new Error("Se requiere un ID de transacción válido.");
-    }
-    for (const detalle of detalles) {
-      // Ajustar cantidad en inventario
-      await this.ajustarCantidadInventario(
-        detalle.id_producto,
-        -detalle.cantidad
-      );
-
-      // Registrar la transición de estado del producto
-      await TransicionEstadoProductoService.crearTransicionEstado(
-        detalle.id_producto,
-        "Disponible - Bodega",
-        "En tránsito - Reservado",
-        id_transaccion // Relacionar la transición con la transacción
-      );
-
-      let prodAct = await this.getInventarioByProductoId(detalle.id_producto);
-      // Registrar un log de inventario para el producto
-      await InventarioLog.registrarCambio({
-        id_producto: detalle.id_producto,
-        id_transaccion: id_transaccion,
-        cambio: -detalle.cantidad,
-        cantidad_final: prodAct.cantidad,
-        motivo: "Transacción asociada",
-        realizado_por: id_usuario,
-        fecha: new Date(),
-      });
-    }
-
-    return {
-      message: `Inventario ajustado para la transacción ${id_transaccion}.`,
-    };
-  }
-
-  // Registrar productos que han sido devueltos (ej., fallas, contaminación).
-  async registrarDevolucionProducto(
-    id_producto,
-    id_usuario,
-    id_estado_destino,
-    cantidad
-  ) {
-    const inventario = await this.getInventarioByProductoId(id_producto);
-    if (!inventario) throw new Error("Inventario no encontrado.");
-
-    await this.ajustarCantidadInventario(id_producto, cantidad);
-
-    await TransicionEstadoProductoService.crearTransicionEstado(
-      id_usuario,
-      id_producto,
-      inventario.estado,
-      id_estado_destino,
-      (condicion = "Cambio de estado a retornado")
-    );
-
-    return {
-      message: `Devolución registrada para el producto ${id_producto}.`,
-    };
-  }
 
   async incrementStock(id_producto, cantidad) {
     const inventario = await this.getInventarioByProductoId(id_producto);
@@ -176,6 +112,25 @@ class InventarioService {
 
     inventario.cantidad -= cantidad;
     await InventarioRepository.update(id_producto, {
+      cantidad: inventario.cantidad,
+    });
+
+    return inventario;
+  }
+
+  async decrementarStockInsumo(id_insumo, cantidad) {
+    if (cantidad <= 0) {
+      throw new Error("Cantidad debe ser un número positivo.");
+    }
+    const inventario = await this.getInventarioByInsumoId(id_insumo);
+    if (!inventario) throw new Error("Insumo no encontrado en inventario.");
+    
+    if (Math.floor(inventario.cantidad) < Math.floor(cantidad)) {
+      throw new Error("Stock insuficiente en  InventarioService");
+    }
+
+    inventario.cantidad -= cantidad;
+    await InventarioRepository.updateInsumo(id_insumo, {
       cantidad: inventario.cantidad,
     });
 
