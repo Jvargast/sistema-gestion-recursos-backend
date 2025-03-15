@@ -4,7 +4,6 @@ import AgendaViajes from "../../domain/models/AgendaViaje.js";
 import Camion from "../../domain/models/Camion.js";
 import InventarioCamion from "../../domain/models/InventarioCamion.js";
 
-
 class AgendaViajesRepository {
   async getChoferesEnTransito() {
     try {
@@ -44,7 +43,9 @@ class AgendaViajesRepository {
       return choferes;
     } catch (error) {
       console.error("Error al obtener choferes en tránsito:", error);
-      throw new Error("No se pudo obtener la información de los choferes en tránsito.");
+      throw new Error(
+        "No se pudo obtener la información de los choferes en tránsito."
+      );
     }
   }
 
@@ -52,7 +53,7 @@ class AgendaViajesRepository {
     if (!id_chofer || !estado) {
       throw new Error("Se requiere el ID del chofer y el estado del viaje.");
     }
-  
+
     const viaje = await AgendaViajes.findOne({
       where: {
         id_chofer,
@@ -62,14 +63,23 @@ class AgendaViajesRepository {
         {
           model: Camion,
           as: "camion",
-          attributes: ["id_camion", "placa", "estado"],
+          attributes: ["id_camion", "placa", "estado", "capacidad"],
         },
       ],
     });
-  
+
     return viaje ? viaje.toJSON() : null;
   }
-  
+
+  async findByAgendaViajeId(id_agenda_viaje) {
+    return await AgendaViajes.findOne({
+      where: { id_agenda_viaje },
+    });
+  }
+
+  async create(data) {
+    return await AgendaViajes.create(data);
+  }
 }
 
 export default new AgendaViajesRepository();

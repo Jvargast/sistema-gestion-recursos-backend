@@ -1,12 +1,15 @@
+import Insumo from "../../../inventario/domain/models/Insumo.js";
 import Producto from "../../../inventario/domain/models/Producto.js";
 import DetallePedido from "../../domain/models/DetallePedido.js";
-
 
 class DetallePedidoRepository {
   async findByPedidoId(id_pedido) {
     return await DetallePedido.findAll({
       where: { id_pedido },
-      include: [{ model: Producto, as: "Producto" }],
+      include: [
+        { model: Producto, as: "Producto" },
+        { model: Insumo, as: "Insumo" },
+      ],
     });
   }
 

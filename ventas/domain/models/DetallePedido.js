@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Pedido from "./Pedido.js";
 import Producto from "../../../inventario/domain/models/Producto.js";
+import Insumo from "../../../inventario/domain/models/Insumo.js";
 
 
 const DetallePedido = sequelize.define(
@@ -28,6 +29,18 @@ const DetallePedido = sequelize.define(
         key: "id_producto",
       },
     },
+    id_insumo: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: Insumo,
+        key: "id_insumo",
+      },
+    },
+    tipo: {
+      type: DataTypes.ENUM('producto', 'insumo'),
+      allowNull: true,
+    },    
     cantidad: {
       type: DataTypes.INTEGER,
       allowNull: false,

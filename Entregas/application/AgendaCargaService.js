@@ -10,7 +10,12 @@ import InventarioCamionRepository from "../infrastructure/repositories/Inventari
 import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
 import AgendaCargaDetalleRepository from "../infrastructure/repositories/AgendaCargaDetalleRepository.js";
 import sequelize from "../../database/database.js";
-
+import DetallePedidoRepository from "../../ventas/infrastructure/repositories/DetallePedidoRepository.js";
+import PedidoRepository from "../../ventas/infrastructure/repositories/PedidoRepository.js";
+import EstadoVentaRepository from "../../ventas/infrastructure/repositories/EstadoVentaRepository.js";
+import InsumoRepository from "../../inventario/infrastructure/repositories/InsumoRepository.js";
+import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
+import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteRepository.js";
 
 class AgendaCargaService {
   async createAgenda(
@@ -25,166 +30,389 @@ class AgendaCargaService {
     const transaction = await sequelize.transaction();
 
     try {
-      // 1. Validar datos obligatorios
       if (!id_usuario_chofer || !id_camion) {
         throw new Error(
           "Faltan datos obligatorios para crear la agenda de carga."
         );
       }
-      // 2. Verificar si el chofer existe
       const chofer = await UsuariosRepository.findByRut(id_usuario_chofer);
       if (!chofer) {
         throw new Error("El chofer seleccionado no existe.");
       }
-
       const camion = await CamionRepository.findById(id_camion);
       if (!camion || camion.estado !== "Disponible") {
         throw new Error("El camión seleccionado no está disponible.");
       }
-
       if (camion.id_chofer_asignado !== id_usuario_chofer) {
         throw new Error("El chofer no está asignado a este camión.");
       }
 
-      const capacidadMaxima = camion.capacidad;
-
-      // 4. Obtener inventario actual del camión
-      const inventarioActual =
-        await InventarioCamionService.getInventarioByCamion(id_camion);
-
-      let cantidadActualEnCamion = inventarioActual.reduce(
-        (total, item) => total + item.cantidad,
-        0
+      const estadoConfirmado = await EstadoVentaRepository.findByNombre(
+        "Confirmado"
       );
+      const pedidosConfirmados =
+        await PedidoRepository.findAllByChoferAndEstado(
+          id_usuario_chofer,
+          estadoConfirmado.id_estado_venta
+        );
 
-      let espacioDisponible = capacidadMaxima - cantidadActualEnCamion;
+      if (!pedidosConfirmados.length)
+        throw new Error("Sin pedidos confirmados.");
 
-      // 5. Opcionalmente descargar productos sobrantes**
-      if (descargarRetornables) {
-        for (const item of inventarioActual) {
-          if (item.estado === "Retornable") {
-            await InventarioCamionService.retirarProductoDelCamion(
-              id_camion,
-              item.id_producto,
-              item.cantidad,
-              { transaction }
-            );
-            espacioDisponible += item.cantidad;
-          }
-        }
-      }
-      // 8. Ajustar carga del camión según la capacidad y pedidos confirmados
-      let productosParaCargar = [];
-
-      for (const producto of productos) {
-        if (producto.cantidad > espacioDisponible) {
-          throw new Error(
-            `No hay suficiente espacio en el camión para cargar: ${producto.notas} - disponible: ${espacioDisponible}.`
-          );
-        }
-        productosParaCargar.push({
-          id_producto: producto.id_producto,
-          cantidad: producto.cantidad,
-          unidad_medida: producto.unidad_medida,
-          estado: "Disponible",
-          notas: producto.notas,
-        });
-
-        espacioDisponible -= producto.cantidad;
-      }
-
-      // 7. Crear la agenda de carga
-      const fechaHora = new Date();
       const nuevaAgenda = await AgendaCargaRepository.create(
         {
           id_usuario_chofer,
           id_usuario_creador: rut,
           id_camion,
           prioridad,
-          estado: "Cargado",
+          estado: "Pendiente",
           notas,
-          fecha_hora: fechaHora,
+          fecha_hora: new Date(),
         },
         { transaction }
       );
 
-      // 8. Actualizar el inventario del camión
-      for (const producto of productosParaCargar) {
-        const inventarioBodega =
-          await InventarioService.getInventarioByProductoId(
-            producto.id_producto
-          );
-        if (
-          !inventarioBodega ||
-          inventarioBodega.cantidad < producto.cantidad
-        ) {
-          throw new Error(
-            `Stock insuficiente en bodega para el producto ${producto.id_producto}.`
-          );
-        }
-        await InventarioService.decrementarStock(
-          producto.id_producto,
-          producto.cantidad,
-          { transaction }
-        );
-
-        const productoInfo = await ProductosRepository.findById(
-          producto.id_producto
-        );
-        const tipoProducto = productoInfo.es_retornable
-          ? "Retornable"
-          : "Disponible";
-
-        const productoEnCamion =
-          await InventarioCamionService.getProductoEnCamion(
-            id_camion,
-            producto.id_producto
-          );
-
-        if (productoEnCamion) {
-          await InventarioCamionService.actualizarProductoEnCamion(
-            id_camion,
-            producto.id_producto,
-            producto.cantidad,
-            { transaction }
-          );
-        } else {
-          await InventarioCamionService.addProductToCamion(
-            {
+      if (descargarRetornables) {
+        const inventarioActual =
+          await InventarioCamionService.getInventarioByCamion(id_camion);
+        for (const item of inventarioActual) {
+          if (item.es_retornable && item.cantidad > 0) {
+            await InventarioCamionService.retirarProductoDelCamion(
               id_camion,
-              id_producto: producto.id_producto,
-              cantidad: producto.cantidad,
-              tipo: tipoProducto,
-            },
-            {
-              transaction,
-            }
-          );
+              item.id_producto,
+              item.cantidad,
+              "En Camión - Retorno",
+              { transaction }
+            );
+          }
         }
       }
 
-      // 9. Guardar detalles de la agenda de carga
-      await AgendaCargaDetalleRepository.bulkCreate(
-        productosParaCargar.map((producto) => ({
-          id_agenda_carga: nuevaAgenda.id_agenda_carga,
-          id_producto: producto.id_producto,
-          cantidad: producto.cantidad,
-          unidad_medida: producto.unidad_medida,
-          estado: "Pendiente",
-          notas: producto.notas || null,
-        })),
-        { transaction }
-      );
+      const inventarioActualizado =
+        await InventarioCamionService.getInventarioByCamion(id_camion);
+      const espacioUsado = inventarioActualizado
+        .filter((p) => p.es_retornable)
+        .reduce((sum, item) => sum + item.cantidad, 0);
+      let espacioDisponible = camion.capacidad - espacioUsado;
 
-      // 14. Confirmar la transacción
+      const detallesCarga = [];
+
+      for (const pedido of pedidosConfirmados) {
+        const detallesPedido = await DetallePedidoRepository.findByPedidoId(
+          pedido.id_pedido
+        );
+        for (const item of detallesPedido) {
+          const esProducto =
+            item.id_producto !== null && item.id_insumo === null;
+          let productoInfo = null;
+          let insumoInfo = null;
+          let es_retornable = false;
+          let unidad_medida = "unidad";
+
+          if (esProducto) {
+            productoInfo = await ProductosRepository.findById(item.id_producto);
+            es_retornable = productoInfo.es_retornable;
+            unidad_medida = productoInfo.unidad_medida || "unidad";
+            if (es_retornable && item.cantidad > espacioDisponible) {
+              throw new Error(
+                `Espacio insuficiente para ${productoInfo.nombre_producto}`
+              );
+            }
+            await InventarioService.decrementarStock(
+              item.id_producto,
+              item.cantidad,
+              { transaction }
+            );
+            await InventarioCamionService.addOrUpdateProductoCamion(
+              {
+                id_camion,
+                id_producto: item.id_producto,
+                cantidad: item.cantidad,
+                estado: "En Camión - Reservado",
+                tipo: "Reservado",
+                es_retornable,
+              },
+              transaction
+            );
+            if (es_retornable) espacioDisponible -= item.cantidad;
+            unidad_medida = productoInfo.unidad_medida || "unidad";
+          } else {
+            insumoInfo = await InsumoRepository.findById(item.id_insumo);
+            if (!insumoInfo) {
+              throw new Error(
+                `Producto/Insumo ID ${item.id_producto} no existe.`
+              );
+            }
+            unidad_medida = insumoInfo.unidad_de_medida || "unidad";
+            await InventarioService.decrementarStockInsumo(
+              item.id_insumo,
+              item.cantidad,
+              { transaction }
+            );
+
+            await InventarioCamionService.addOrUpdateProductoCamion(
+              {
+                id_camion,
+                id_insumo: item.id_insumo,
+                cantidad: item.cantidad,
+                estado: "En Camión - Reservado",
+                tipo: "Reservado",
+                es_retornable: false,
+              },
+              transaction
+            );
+          }
+
+          detallesCarga.push({
+            id_agenda_carga: nuevaAgenda.id_agenda_carga,
+            id_producto: productoInfo ? productoInfo.id_producto : null,
+            id_insumo: insumoInfo ? insumoInfo.id_insumo : null,
+            cantidad: item.cantidad,
+            unidad_medida: unidad_medida,
+            estado: "Pendiente",
+            notas: `Pedido ID ${pedido.id_pedido}`,
+          });
+
+          if (es_retornable) espacioDisponible -= item.cantidad;
+        }
+      }
+
+      for (const adicional of productos) {
+        const esProducto = adicional.id_producto ? true : false;
+        let es_retornable = false;
+        let unidad_medida = "unidad";
+
+        if (esProducto) {
+          const productoInfo = await ProductosRepository.findById(
+            adicional.id_producto
+          );
+          es_retornable = productoInfo.es_retornable;
+
+          if (es_retornable && adicional.cantidad > espacioDisponible) {
+            throw new Error(
+              `Espacio insuficiente para adicional ${productoInfo.nombre_producto}`
+            );
+          }
+
+          await InventarioService.decrementarStock(
+            adicional.id_producto,
+            adicional.cantidad,
+            { transaction }
+          );
+
+          await InventarioCamionService.addOrUpdateProductoCamion(
+            {
+              id_camion,
+              id_producto: adicional.id_producto,
+              cantidad: adicional.cantidad,
+              estado: "En Camión - Disponible",
+              tipo: "Disponible",
+              es_retornable,
+            },
+            transaction
+          );
+
+          if (es_retornable) espacioDisponible -= adicional.cantidad;
+
+          detallesCarga.push({
+            id_agenda_carga: nuevaAgenda.id_agenda_carga,
+            id_producto: adicional.id_producto,
+            cantidad: adicional.cantidad,
+            unidad_medida: unidad_medida,
+            estado: "Pendiente",
+            notas: adicional.notas || null,
+          });
+        } else if (adicional.id_insumo) {
+          const insumoInfo = await InsumoRepository.findById(
+            adicional.id_insumo
+          );
+          if (!insumoInfo) {
+            throw new Error(
+              `Insumo adicional con ID ${adicional.id_insumo} no encontrado.`
+            );
+          }
+          await InventarioService.decrementarStockInsumo(
+            adicional.id_insumo,
+            adicional.cantidad,
+            { transaction }
+          );
+
+          await InventarioCamionService.addOrUpdateProductoCamion(
+            {
+              id_camion,
+              id_insumo: adicional.id_insumo,
+              cantidad: adicional.cantidad,
+              estado: "En Camión - Disponible",
+              tipo: "Disponible",
+              es_retornable: false,
+            },
+            transaction
+          );
+
+          detallesCarga.push({
+            id_agenda_carga: nuevaAgenda.id_agenda_carga,
+            id_insumo: adicional.id_insumo,
+            cantidad: adicional.cantidad,
+            unidad_medida: adicional.unidad_medida || "unidad",
+            estado: "Pendiente",
+            notas: adicional.notas || null,
+          });
+        }
+      }
+
+      await AgendaCargaDetalleRepository.bulkCreate(detallesCarga, {
+        transaction,
+      });
+
       await transaction.commit();
-
       return nuevaAgenda;
     } catch (error) {
       if (transaction.finished !== "commit") {
         await transaction.rollback();
       }
       throw new Error(`Error al crear la agenda: ${error.message}`);
+    }
+  }
+
+  async confirmarCargaCamion(
+    id_agenda_carga,
+    id_chofer,
+    productosCargados,
+    notasChofer = ""
+  ) {
+    const transaction = await sequelize.transaction();
+
+    try {
+      // 1. Validar la agenda de carga
+      const agendaCarga = await AgendaCargaRepository.findById(id_agenda_carga);
+      if (!agendaCarga) throw new Error("Agenda de carga no encontrada.");
+      if (agendaCarga.estado !== "Pendiente")
+        throw new Error("Esta agenda ya fue confirmada o cancelada.");
+
+      if (agendaCarga.id_usuario_chofer !== id_chofer)
+        throw new Error("Este chofer no está asignado a la agenda.");
+
+      const camion = await CamionRepository.findById(agendaCarga.id_camion);
+      if (!camion) throw new Error("Camión asignado no encontrado.");
+      if (camion.estado !== "Disponible")
+        throw new Error("Camión no disponible para iniciar ruta.");
+
+      // 2. Validar los productos cargados (Físico vs Virtual)
+      const detallesAgenda = await AgendaCargaDetalleRepository.findByAgendaId(
+        id_agenda_carga
+      );
+
+      // Primero crear un resumen agrupado del detalle de la agenda
+      const resumenDetalleAgenda = detallesAgenda.reduce((acc, item) => {
+        const key = item.id_producto
+          ? `producto_${item.id_producto}`
+          : `insumo_${item.id_insumo}`;
+
+        if (!acc[key]) {
+          acc[key] = 0;
+        }
+
+        acc[key] += item.cantidad;
+        return acc;
+      }, {});
+
+      // Ahora crear resumen de cantidades cargadas por producto/insumo
+      const resumenCargado = productosCargados.reduce((acc, item) => {
+        const key = item.id_producto
+          ? `producto_${item.id_producto}`
+          : `insumo_${item.id_insumo}`;
+
+        if (!acc[key]) {
+          acc[key] = 0;
+        }
+
+        acc[key] += item.cantidad;
+        return acc;
+      }, {});
+
+      // Finalmente, comparar ambos resúmenes agrupados
+      for (const key of Object.keys(resumenDetalleAgenda)) {
+        if (
+          !resumenCargado[key] ||
+          resumenCargado[key] !== resumenDetalleAgenda[key]
+        ) {
+          const [tipo, id] = key.split("_");
+          throw new Error(
+            `Diferencia en cantidades para ${tipo} ID ${id}: Esperado ${
+              resumenDetalleAgenda[key]
+            }, cargado ${resumenCargado[key] || 0}.`
+          );
+        }
+      }
+
+      // 3. Actualizar estado de la AgendaCarga
+      await AgendaCargaRepository.update(
+        agendaCarga.id_agenda_carga,
+        {
+          estado: "Completada",
+          validada_por_chofer: true,
+          notas: notasChofer || agendaCarga.notas,
+          hora_estimacion_fin: new Date(),
+        },
+        { transaction }
+      );
+
+      // 4. Actualizar estado del Camión a "En Ruta"
+      await CamionRepository.update(
+        camion.id_camion,
+        { estado: "En Ruta" },
+        { transaction }
+      );
+
+      // Aquí obtienes claramente los destinos de los pedidos confirmados para este viaje
+      const estadoConfirmado = await EstadoVentaRepository.findByNombre(
+        "Confirmado"
+      );
+      const pedidosConfirmados =
+        await PedidoRepository.findAllByChoferAndEstado(
+          id_chofer,
+          estadoConfirmado.id_estado_venta
+        );
+
+      const destinos = [];
+
+      for (const pedido of pedidosConfirmados) {
+        const cliente = await ClienteRepository.findById(pedido.id_cliente);
+      
+        destinos.push({
+          id_pedido: pedido.id_pedido,
+          id_cliente: cliente.id_cliente,
+          nombre_cliente: cliente.nombre_cliente,
+          direccion: pedido.direccion_entrega,
+          notas: pedido.notas || "",
+        });
+      }
+
+      // 5. Crear nueva Agenda de Viaje
+      const nuevaAgendaViaje = await AgendaViajesRepository.create(
+        {
+          id_agenda_carga,
+          id_camion: camion.id_camion,
+          id_chofer,
+          inventario_inicial: productosCargados,
+          destinos,
+          estado: "En Tránsito",
+          fecha_inicio: new Date(),
+          notas: `Viaje iniciado. Agenda carga: ${id_agenda_carga}`,
+          validado_por_chofer: true,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+
+      return {
+        message: "Carga confirmada y viaje iniciado con éxito.",
+        agendaViaje: nuevaAgendaViaje,
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw new Error(`Error al confirmar carga: ${error.message}`);
     }
   }
 
@@ -302,6 +530,109 @@ class AgendaCargaService {
       distinctCol: "id_agenda_carga",
     });
     return result;
+  }
+
+  async generarAgendaCargaParaPedidos(id_camion, id_chofer, pedidosIds, rut) {
+    const transaction = await sequelize.transaction();
+    try {
+      const nuevaAgenda = await AgendaCargaRepository.create(
+        {
+          id_usuario_chofer: id_chofer,
+          id_usuario_creador: rut,
+          id_camion,
+          estado: "Pendiente",
+        },
+        { transaction }
+      );
+
+      for (const id_pedido of pedidosIds) {
+        const pedido = await PedidoRepository.findById(id_pedido);
+        const detallesPedido = await DetallePedidoRepository.findByPedidoId(
+          id_pedido
+        );
+
+        for (const detalle of detallesPedido) {
+          await AgendaCargaDetalleRepository.create(
+            {
+              id_agenda_carga: nuevaAgenda.id_agenda_carga,
+              id_producto: detalle.id_producto || null,
+              id_insumo: detalle.id_insumo || null,
+              cantidad: detalle.cantidad,
+              estado: "Pendiente",
+              notas: pedido.notas || null,
+            },
+            { transaction }
+          );
+        }
+      }
+
+      await transaction.commit();
+
+      return nuevaAgenda;
+    } catch (error) {
+      await transaction.rollback();
+      throw new Error(`Error al generar agenda de carga: ${error.message}`);
+    }
+  }
+
+  async confirmarCarga(id_agenda_carga) {
+    const transaction = await sequelize.transaction();
+    try {
+      const agenda = await AgendaCargaRepository.findById(id_agenda_carga);
+      const detalles = await AgendaCargaDetalleRepository.findByAgendaId(
+        id_agenda_carga
+      );
+
+      for (const detalle of detalles) {
+        const producto = detalle.id_producto
+          ? await ProductosRepository.findById(detalle.id_producto)
+          : null;
+
+        // Solo reservas físicamente botellones retornables.
+        if (producto && producto.es_retornable) {
+          await InventarioCamionRepository.create(
+            {
+              id_camion: agenda.id_camion,
+              id_producto: producto.id_producto,
+              cantidad: detalle.cantidad,
+              estado: "En Camión - Reservado",
+              es_retornable: true,
+            },
+            { transaction }
+          );
+        } else {
+          // productos no retornables o insumos solo los cargas sin reserva específica.
+          await InventarioCamionRepository.create(
+            {
+              id_camion: agenda.id_camion,
+              id_producto: detalle.id_producto,
+              id_insumo: detalle.id_insumo,
+              cantidad: detalle.cantidad,
+              estado: "En Camión - Disponible",
+              es_retornable: false,
+            },
+            { transaction }
+          );
+        }
+        await AgendaCargaDetalleRepository.updateEstado(
+          detalle.id_agenda_carga_detalle,
+          "Cargado",
+          transaction
+        );
+      }
+
+      await AgendaCargaRepository.updateEstado(
+        id_agenda_carga,
+        "Cargado",
+        transaction
+      );
+
+      await transaction.commit();
+      return agenda;
+    } catch (error) {
+      await transaction.rollback();
+      throw new Error(`Error al confirmar carga: ${error.message}`);
+    }
   }
 
   /*  async getAgendasByChofer(rut, fecha) {

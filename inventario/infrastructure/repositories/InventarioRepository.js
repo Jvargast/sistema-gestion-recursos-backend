@@ -7,6 +7,10 @@ class InventarioRepository extends IInventarioRepository {
     return await Inventario.findOne({ where: { id_producto } });
   }
 
+  async findByInsumoId(id_insumo) {
+    return await Inventario.findOne({ where: { id_insumo } });
+  }
+
   async findAll() {
     return await Inventario.findAll({
       include: { model: Producto, as: "producto" },
@@ -19,6 +23,10 @@ class InventarioRepository extends IInventarioRepository {
 
   async update(id_producto, data) {
     return await Inventario.update(data, { where: { id_producto } });
+  }
+
+  async updateInsumo(id_insumo, data) {
+    return await Inventario.update(data, { where: { id_insumo } });
   }
 
   async delete(ids) {

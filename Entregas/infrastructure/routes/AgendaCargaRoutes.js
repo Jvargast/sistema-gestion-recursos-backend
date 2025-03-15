@@ -1,13 +1,12 @@
 import { Router } from "express";
 import AgendaController from "../controllers/AgendaController.js";
 import authenticate from "../../../shared/middlewares/authenticate.js";
-import checkPermissions from "../../../shared/middlewares/CheckPermissionsMiddleware.js";
 import { checkRoles } from "../../../shared/middlewares/CheckRole.js";
 
 
 const router = Router();
 
-
+router.post("/confirmar-carga", authenticate, checkRoles(["chofer"]), AgendaController.confirmarCargaCamion)
 router.post("/", authenticate, AgendaController.createAgenda);
 router.get("/:id", authenticate, AgendaController.getAgendaById);
 /* router.get("/", authenticate, AgendaController.getAll);

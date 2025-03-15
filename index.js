@@ -53,8 +53,9 @@ import proveedoresRoutes from "./proveedores/infrastructure/routes/proveedoesrRo
 import CamionRoutes from "./Entregas/infrastructure/routes/CamionRoutes.js";
 import AgendaCargaRoutes from "./Entregas/infrastructure/routes/AgendaCargaRoutes.js";
 import InventarioCamionRoutes from "./Entregas/infrastructure/routes/InvetarioCamionRoutes.js";
-/* import EntregaRoutes from "./Entregas/infrastructure/routes/EntregaRoutes.js";
-import VentaChoferRoutes from "./Entregas/infrastructure/routes/VentaChoferRoutes.js"; */
+import EntregaRoutes from "./Entregas/infrastructure/routes/EntregaRoutes.js";
+import VentaChoferRoutes from "./Entregas/infrastructure/routes/VentaChoferRoutes.js";
+import AgendaViajesRoutes from "./Entregas/infrastructure/routes/AgendaViajeRoutes.js";
 /* MÓDULO ANÁLISIS */
 // Rutas del módulo de análisis
 /* import ProductoEstadisticaRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
@@ -149,8 +150,9 @@ app.use("/api/analisis/ventas", VentasEstadisticasRoutes); */
 app.use("/api/camiones", CamionRoutes);
 app.use("/api/inventario-camion", InventarioCamionRoutes);
 app.use("/api/agendas", AgendaCargaRoutes);
-/* app.use("/api/entregas", EntregaRoutes);
-app.use("/api/ventas-chofer", VentaChoferRoutes); */
+app.use("/api/entregas", EntregaRoutes);
+app.use("/api/agenda-viajes", AgendaViajesRoutes)
+app.use("/api/ventas-chofer", VentaChoferRoutes);
 
 io.on("connection", (socket) => {
   console.log("⚡ Cliente conectado:", socket.id);

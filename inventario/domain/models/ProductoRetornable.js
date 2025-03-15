@@ -1,5 +1,4 @@
 import { DataTypes } from "sequelize";
-import Cliente from "../../../ventas/domain/models/Cliente.js";
 import Producto from "./Producto.js";
 import sequelize from "../../../database/database.js";
 import Entrega from "../../../Entregas/domain/models/Entrega.js";
@@ -42,7 +41,7 @@ const ProductoRetornable = sequelize.define(
       allowNull: true,
     },
     estado: {
-      type: DataTypes.ENUM("reutilizable", "defectuoso"),
+      type: DataTypes.ENUM("reutilizable", "defectuoso", "pendiente_inspeccion"),
       allowNull: true,
     },
     tipo_defecto: {

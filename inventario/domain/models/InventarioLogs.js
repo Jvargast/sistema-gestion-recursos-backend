@@ -27,10 +27,6 @@ const InventarioLog = sequelize.define(
       },
       allowNull: true,
     },
-    id_transaccion: {
-      type: DataTypes.INTEGER,
-      allowNull: true, // Podría ser opcional si el cambio no está relacionado con una transacción
-    },
     cambio: {
       type: DataTypes.INTEGER,
       allowNull: false,

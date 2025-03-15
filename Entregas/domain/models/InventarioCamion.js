@@ -44,6 +44,7 @@ const InventarioCamion = sequelize.define(
       type: DataTypes.ENUM(
         "En Camión - Disponible",
         "En Camión - Reservado",
+        "En Camión - Retorno",
         "Regresado",
         "Entregado"
       ),
@@ -51,7 +52,7 @@ const InventarioCamion = sequelize.define(
       defaultValue: "En Camión - Disponible",
     },
     tipo: {
-      type: DataTypes.ENUM("Disponible", "Reservado"),
+      type: DataTypes.ENUM("Disponible", "Reservado", "Retorno"),
       allowNull: false,
       defaultValue: "Disponible",
     },

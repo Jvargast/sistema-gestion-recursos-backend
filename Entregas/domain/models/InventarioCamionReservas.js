@@ -42,6 +42,10 @@ const InventarioCamionReservas = sequelize.define(
       allowNull: false,
       defaultValue: "Pendiente",
     },
+    tipo: {
+      type: DataTypes.ENUM('producto_retornable', 'producto_no_retornable'),
+      defaultValue: 'producto_retornable'
+    },    
     fecha_reserva: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,

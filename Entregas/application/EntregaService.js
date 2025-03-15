@@ -3,19 +3,19 @@ import sequelize from "../../database/database.js";
 import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
 import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
+import VentaService from "../../ventas/application/VentaService.js";
+import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteRepository.js";
-import DetalleTransaccionRepository from "../../ventas/infrastructure/repositories/DetalleTransaccionRepository.js";
+import DetallePedidoRepository from "../../ventas/infrastructure/repositories/DetallePedidoRepository.js";
 import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
 import PagoRepository from "../../ventas/infrastructure/repositories/PagoRepository.js";
-import AgendaCargaRepository from "../infrastructure/repositories/AgendaCargaRepository.js";
+import PedidoRepository from "../../ventas/infrastructure/repositories/PedidoRepository.js";
+import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import EntregaRepository from "../infrastructure/repositories/EntregaRepository.js";
-import InventarioCamionLogsRepository from "../infrastructure/repositories/InventarioCamionLogsRepository.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
-import AgendaCargaService from "./AgendaCargaService.js";
-import CamionService from "./CamionService.js";
 
 class EntregaService {
-  async createEntrega(id_camion, detalles, rut, fechaHoraEntrega) {
+  /* async createEntrega(id_camion, detalles, rut, fechaHoraEntrega) {
     if (!detalles || detalles.length === 0 || !rut || !fechaHoraEntrega) {
       throw new Error("Faltan datos para continuar con la entrega");
     }
@@ -129,29 +129,201 @@ class EntregaService {
         `Error durante la creación de entregas: ${error.message}`
       );
     }
-  }
+  } */
 
-  async registrarVentaAdicional({ id_camion, id_producto, cantidad }) {
-    if (!id_camion || !id_producto || !cantidad) {
-      throw new Error("Faltan datos para registrar la venta adicional");
+  async processDelivery(payload) {
+    const {
+      id_agenda_viaje,
+      id_pedido,
+      id_chofer,
+      productos_entregados,
+      insumo_entregados,
+      botellones_retorno,
+      monto_total,
+      id_metodo_pago,
+      payment_reference,
+      tipo_documento = "boleta",
+      notas,
+      impuesto,
+      descuento_total_porcentaje,
+    } = payload;
+
+    const transaction = await sequelize.transaction();
+
+    try {
+      const pedido = await PedidoRepository.findById(id_pedido, {
+        transaction,
+      });
+      if (!pedido) {
+        throw new Error("Pedido no encontrado");
+      }
+
+      const detalles = await DetallePedidoRepository.findByPedidoId(id_pedido, {
+        transaction,
+      });
+
+      const cajaChofer = await CajaRepository.findCajaEstadoByUsuario(
+        id_chofer,
+        "abierta",
+        { transaction }
+      );
+      if (!cajaChofer) {
+        throw new Error(`Chofer ${id_chofer} no tiene caja abierta.`);
+      }
+
+      const agendaViaje = await AgendaViajesRepository.findByAgendaViajeId(
+        id_agenda_viaje,
+        {
+          transaction,
+        }
+      );
+      if (!agendaViaje) {
+        throw new Error("Agenda de viaje no encontrada");
+      }
+
+      const isPaid = pedido.pagado;
+      let ventaRegistrada = null;
+
+      if (!isPaid) {
+        const data = {
+          id_cliente: pedido.id_cliente,
+          id_vendedor: id_chofer,
+          id_caja: cajaChofer.id_caja,
+          tipo_entrega: "despacho_a_domicilio",
+          direccion_entrega: pedido.direccion_entrega,
+          productos: detalles,
+          productos_retornables: botellones_retorno,
+          id_metodo_pago,
+          notas,
+          impuesto: impuesto || 0,
+          descuento_total_porcentaje: descuento_total_porcentaje || 0,
+          tipo_documento,
+          referencia: payment_reference,
+        };
+        ventaRegistrada = await VentaService.createVenta(data, id_chofer, {
+          transaction,
+        });
+
+        pedido.pagado = true;
+        pedido.estado_pago = "Pagado";
+        //Agregar estado del pedido a uno que sea Entregado quizás
+
+        await pedido.save({ transaction });
+      }
+      if (productos_entregados && Array.isArray(productos_entregados)) {
+        for (const item of productos_entregados) {
+          const reserva =
+            await InventarioCamionRepository.findByCamionProductoAndEstado(
+              agendaViaje.id_camion,
+              item.id_producto,
+              "En Camión - Reservado",
+
+              { transaction }
+            );
+          if (!reserva) {
+            throw new Error(
+              `No se encontró reserva para el producto ${item.id_producto} en el camión ${agendaViaje.id_camion}`
+            );
+          }
+          if (reserva.cantidad < item.cantidad) {
+            throw new Error(
+              `Cantidad insuficiente en reserva para el producto ${item.id_producto}`
+            );
+          }
+          if (reserva) {
+            reserva.cantidad -= item.cantidad;
+            if (reserva.cantidad === 0) {
+              await reserva.destroy({ transaction });
+            } else {
+              await reserva.save({ transaction });
+            }
+          }
+        }
+      }
+      if (insumo_entregados && Array.isArray(insumo_entregados)) {
+        for (const item of insumo_entregados) {
+          const reserva =
+            await InventarioCamionRepository.findByCamionProductoAndEstado(
+              agendaViaje.id_camion,
+              item.id_insumo,
+              "En Camión - Reservado",
+              { transaction }
+            );
+
+          if (reserva) {
+            reserva.cantidad -= item.cantidad;
+            if (reserva.cantidad === 0) {
+              await reserva.destroy({ transaction });
+            } else {
+              await reserva.save({ transaction });
+            }
+          }
+        }
+      }
+      if (
+        botellones_retorno &&
+        botellones_retorno.pasados === true &&
+        botellones_retorno.items &&
+        Array.isArray(botellones_retorno.items)
+      ) {
+        for (const item of botellones_retorno.items) {
+          const registro =
+            await InventarioCamionRepository.findByCamionProductoAndEstado(
+              agendaViaje.id_camion,
+              item.id_producto,
+              "En Camión - Retorno",
+              { transaction }
+            );
+          if (!registro) {
+            // Si no existe, se crea uno (esto asume que InventarioCamionRepository tiene un método create)
+            await InventarioCamionRepository.create(
+              {
+                id_camion: agendaViaje.id_camion,
+                id_producto: item.id_producto,
+                cantidad: item.cantidad,
+                estado: "En Camión - Retorno",
+              },
+              { transaction }
+            );
+          } else {
+            registro.cantidad += item.cantidad;
+            await registro.save({ transaction });
+          }
+          /*  registro.cantidad += item.cantidad;
+          await registro.save({ transaction }); */
+        }
+      }
+
+      const nuevaEntrega = await EntregaRepository.create(
+        {
+          id_agenda_viaje,
+          id_camion: agendaViaje.id_camion,
+          id_cliente: pedido.id_cliente,
+          productos_entregados: productos_entregados || null,
+          insumo_entregados: insumo_entregados || null,
+          botellones_retorno: botellones_retorno || null,
+          es_entrega_directa: false, // según tu lógica de negocio, podrías modificarlo
+          monto_total,
+          estado_entrega: "completada",
+          fecha_hora: new Date(),
+          id_documento: isPaid
+            ? pedido.id_documento
+            : ventaRegistrada.documento.id_documento, // si ya estaba pagado, se asocia el documento
+          motivo_fallo: null,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+      return {
+        mensaje: "Entrega registrada con éxito",
+        entrega: nuevaEntrega,
+        venta: ventaRegistrada,
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
-
-    const productoEnCamion = await InventarioCamionRepository.findOne({
-      where: { id_camion, id_producto, estado: "En Camión - Disponible" },
-    });
-
-    if (!productoEnCamion || productoEnCamion.cantidad < cantidad) {
-      throw new Error("Stock insuficiente en el inventario del camión");
-    }
-
-    // Actualizar el inventario del camión
-    const nuevaCantidad = productoEnCamion.cantidad - cantidad;
-    await InventarioCamionRepository.update(productoEnCamion.id, {
-      cantidad: nuevaCantidad,
-      estado: nuevaCantidad === 0 ? "Vendido" : "En Camión - Disponible",
-    });
-
-    return { message: "Venta adicional registrada" };
   }
 
   async getEntregaById(id) {
@@ -183,7 +355,13 @@ class EntregaService {
               {
                 model: ClienteRepository.getModel(),
                 as: "cliente",
-                attributes: ["id_cliente", "rut", "nombre", "apellido", "direccion"],
+                attributes: [
+                  "id_cliente",
+                  "rut",
+                  "nombre",
+                  "apellido",
+                  "direccion",
+                ],
               },
             ],
           },
@@ -302,18 +480,18 @@ class EntregaService {
       const idTransaccion =
         entrega.detalleTransaccion.transaccion.id_transaccion;
       const total = entrega.detalleTransaccion.transaccion.total;
-      const documentos = entrega.detalleTransaccion.transaccion.documentos || [];
+      const documentos =
+        entrega.detalleTransaccion.transaccion.documentos || [];
       const pagos = documentos
-      ? documentos.flatMap((doc) =>
-          doc.pagos.map((pago) => ({
-            id_pago: pago.id_pago,
-            monto: pago.monto,
-            fecha: pago.fecha,
-            referencia: pago.referencia,
-          }))
-        )
-      : [];
-
+        ? documentos.flatMap((doc) =>
+            doc.pagos.map((pago) => ({
+              id_pago: pago.id_pago,
+              monto: pago.monto,
+              fecha: pago.fecha,
+              referencia: pago.referencia,
+            }))
+          )
+        : [];
 
       // Agrupar entregas dentro de la transacción correspondiente
       if (!acc[choferKey].transacciones[idTransaccion]) {

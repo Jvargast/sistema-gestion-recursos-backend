@@ -13,6 +13,8 @@ import DetallePedidoRepository from "../infrastructure/repositories/DetallePedid
 import EstadoVentaRepository from "../infrastructure/repositories/EstadoVentaRepository.js";
 import MetodoPagoRepository from "../infrastructure/repositories/MetodoPagoRepository.js";
 import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
+import InventarioCamionRepository from "../../Entregas/infrastructure/repositories/InventarioCamionRepository.js";
+import InsumoRepository from "../../inventario/infrastructure/repositories/InsumoRepository.js";
 
 class PedidoService {
   async createPedido(data) {
@@ -21,11 +23,11 @@ class PedidoService {
       const {
         id_cliente,
         id_creador,
-        id_chofer,
         direccion_entrega,
         metodo_pago,
         productos,
         notas,
+        pagado,
       } = data;
 
       let cliente = await ClienteRepository.findById(id_cliente);
@@ -34,111 +36,70 @@ class PedidoService {
       const creador = await UsuariosRepository.findByRut(id_creador);
       if (!creador) throw new Error("Usuario creador no encontrado.");
 
-      let chofer = null;
-      if (id_chofer) {
-        chofer = await UsuariosRepository.findByRut(id_chofer);
-        if (!chofer) throw new Error("Chofer asignado no encontrado.");
-      }
-
       let metodoPago = null;
       if (metodo_pago) {
         metodoPago = await MetodoPagoRepository.findById(metodo_pago);
         if (!metodoPago) throw new Error("Método de pago inválido.");
       }
 
-      let estadoPedido = await EstadoVentaRepository.findByNombre(
-        id_chofer ? "Pendiente de Confirmación" : "Pendiente"
+      const estadoInicial = await EstadoVentaRepository.findByNombre(
+        "Pendiente"
       );
-      if (!estadoPedido) throw new Error("Estado inicial no encontrado.");
+      if (!estadoInicial) throw new Error("Estado inicial no configurado.");
 
       const nuevoPedido = await PedidoRepository.create(
         {
           id_cliente: cliente.id_cliente,
           id_creador,
-          id_chofer: chofer ? chofer.rut : null,
           direccion_entrega,
           id_metodo_pago: metodoPago ? metodoPago.id_metodo_pago : null,
-          id_estado_pedido: estadoPedido.id_estado_venta,
+          id_estado_pedido: estadoInicial.id_estado_venta,
           notas: notas ? notas : null,
           total: 0,
+          estado_pago: pagado ? "Pagado" : "Pendiente",
         },
         { transaction }
       );
 
       let totalPedido = 0;
 
-      let inventarioCamion = null;
-      if (chofer) {
-        const agendaViaje = await AgendaViajesRepository.findByChoferAndEstado(
-          id_chofer,
-          "En Tránsito"
-        );
-        if (agendaViaje) {
-          inventarioCamion =
-            await InventarioCamionService.getInventarioDisponible(
-              agendaViaje.id_camion
-            );
-        }
-      }
-
       for (const item of productos) {
-        const producto = await ProductosRepository.findById(item.id_producto);
-        if (!producto)
-          throw new Error(`Producto con ID ${item.id_producto} no encontrado.`);
+        if (item.tipo === "producto") {
+          const producto = await ProductosRepository.findById(item.id_producto);
+          if (!producto)
+            throw new Error(`Producto no encontrado ID ${item.id_producto}`);
+          totalPedido += producto.precio * item.cantidad;
 
-        const subtotal = producto.precio * item.cantidad;
-        totalPedido += subtotal;
-
-        if (inventarioCamion) {
-          const productoDisponible = inventarioCamion.find(
-            (p) => p.id_producto === item.id_producto
-          );
-          if (
-            !productoDisponible ||
-            productoDisponible.cantidad < item.cantidad
-          ) {
-            throw new Error(
-              `El chofer no tiene suficiente stock de ${producto.nombre}`
-            );
-          }
-          await InventarioCamionReservasRepository.create(
+          await DetallePedidoRepository.create(
             {
-              id_inventario_camion: productoDisponible.id_inventario_camion,
               id_pedido: nuevoPedido.id_pedido,
-              cantidad_reservada: item.cantidad,
-              estado: "Pendiente",
+              id_producto: item.id_producto,
+              cantidad: item.cantidad,
+              precio_unitario: producto.precio,
+              subtotal: producto.precio * item.cantidad,
+              tipo: "producto",
             },
             { transaction }
           );
-        } else {
-          await InventarioCamionReservasRepository.create(
+        } else if (item.tipo === "insumo") {
+          const insumo = await InsumoRepository.findById(item.id_insumo);
+          if (!insumo || !insumo.es_para_venta)
+            throw new Error(
+              `Insumo ${item.id_insumo} no válido o no vendible.`
+            );
+          totalPedido += insumo.precio * item.cantidad;
+
+          await DetallePedidoRepository.create(
             {
-              id_inventario_camion: null,
               id_pedido: nuevoPedido.id_pedido,
-              cantidad_reservada: item.cantidad,
-              estado: "Pendiente",
+              id_insumo: item.id_insumo,
+              cantidad: item.cantidad,
+              precio_unitario: insumo.precio,
+              subtotal: insumo.precio * item.cantidad,
             },
             { transaction }
           );
         }
-
-        await DetallePedidoRepository.create(
-          {
-            id_pedido: nuevoPedido.id_pedido,
-            id_producto: item.id_producto,
-            cantidad: item.cantidad,
-            precio_unitario: producto.precio,
-            subtotal,
-          },
-          { transaction }
-        );
-      }
-      if (chofer) {
-        await NotificacionService.enviarNotificacion({
-          id_usuario: id_chofer,
-          mensaje: `Nuevo pedido asignado: ID ${nuevoPedido.id_pedido}`,
-          tipo: "pedido_asignado",
-        });
       }
 
       await PedidoRepository.update(
@@ -154,6 +115,107 @@ class PedidoService {
         await transaction.rollback();
       }
       throw new Error(`Error al crear pedido: ${error.message}`);
+    }
+  }
+
+  async asignarPedido(id_pedido, id_chofer) {
+    try {
+      const pedido = await PedidoRepository.findById(id_pedido);
+      if (!pedido) throw new Error("Pedido no encontrado.");
+
+      const chofer = await UsuariosRepository.findByRut(id_chofer);
+      if (!chofer) throw new Error("Chofer no encontrado.");
+
+      const estado = await EstadoVentaRepository.findByNombre(
+        "Pendiente Confirmación Chofer"
+      );
+      if (!estado)
+        throw new Error("Estado Pendiente Confirmación no configurado.");
+
+      await PedidoRepository.update(id_pedido, {
+        id_chofer,
+        id_estado_pedido: estado.id_estado_venta,
+      });
+
+      await NotificacionService.enviarNotificacion({
+        id_usuario: id_chofer,
+        mensaje: `Nuevo pedido asignado: ID ${id_pedido}`,
+        tipo: "pedido_asignado",
+      });
+
+      return PedidoRepository.findById(id_pedido);
+    } catch (error) {
+      throw new Error(`Error al asignar pedido: ${error.message}`);
+    }
+  }
+
+  async confirmarPedidoChofer(id_pedido, id_chofer) {
+    const transaction = await sequelize.transaction();
+    try {
+      const pedido = await PedidoRepository.findById(id_pedido);
+      if (!pedido || pedido.id_chofer !== id_chofer)
+        throw new Error('Pedido no asignado a este chofer.');
+  
+      const detallesPedido = await DetallePedidoRepository.findByPedidoId(id_pedido);
+
+      const detallesPedidoProductos = detallesPedido.filter(async item => {
+        const producto = await ProductosRepository.findById(item.id_producto);
+        return producto; // solo productos, no insumos
+      });
+
+      const viajeActivo = await AgendaViajesRepository.findByChoferAndEstado(id_chofer, 'En Tránsito');
+  
+      let nuevoEstado;
+      if (viajeActivo) {
+        const inventarioDisponible = await InventarioCamionService.getInventarioDisponible(viajeActivo.id_camion);
+  
+        for (const item of detallesPedidoProductos) {
+          const producto = await ProductosRepository.findById(item.id_producto);
+          const esRetornable = producto.es_retornable;
+  
+          const disponibleEnCamion = inventarioDisponible.find(inv => inv.id_producto === item.id_producto);
+  
+          if (!disponibleEnCamion || disponibleEnCamion.cantidad < item.cantidad) {
+            nuevoEstado = await EstadoVentaRepository.findByNombre('Pendiente Asignación');
+            throw new Error(`Stock insuficiente para producto ${producto.nombre_producto}`);
+          }
+  
+          await InventarioCamionReservasRepository.create({
+            id_inventario_camion: disponibleEnCamion.id_inventario_camion,
+            id_pedido,
+            cantidad_reservada: item.cantidad,
+            estado: 'Pendiente',
+            tipo: esRetornable ? 'producto_retornable' : 'producto_no_retornable',
+          }, { transaction });
+  
+          // Actualizar InventarioCamion restando la cantidad reservada
+          await InventarioCamionRepository.update(disponibleEnCamion.id_inventario_camion, {
+            cantidad: disponibleEnCamion.cantidad - item.cantidad,
+            estado: 'En Camión - Reservado',
+            fecha_actualizacion: new Date()
+          }, { transaction });
+        }
+        nuevoEstado = await EstadoVentaRepository.findByNombre('Confirmado');
+      } else {
+        // Si no hay viaje activo, no reservas inmediatamente
+        nuevoEstado = await EstadoVentaRepository.findByNombre('Confirmado');
+      }
+  
+      await PedidoRepository.update(id_pedido, {
+        id_estado_pedido: nuevoEstado.id_estado_venta,
+      }, { transaction });
+  
+      await NotificacionService.enviarNotificacion({
+        id_usuario: id_chofer,
+        mensaje: `Pedido ${id_pedido} confirmado correctamente.`,
+        tipo: 'pedido_confirmado',
+      });
+  
+      await transaction.commit();
+      return PedidoRepository.findById(id_pedido);
+    } catch (error) {
+      await transaction.rollback();
+      throw new Error(`Error al confirmar pedido: ${error.message}`);
     }
   }
 

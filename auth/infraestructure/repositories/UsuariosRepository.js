@@ -1,3 +1,4 @@
+import { literal } from "sequelize";
 import Empresa from "../../domain/models/Empresa.js";
 import Permisos from "../../domain/models/Permisos.js";
 import Roles from "../../domain/models/Roles.js";
@@ -45,7 +46,40 @@ class UsuarioRepository extends IUsuariosRepository {
   async findAllByRolId(rolId) {
     return await Usuario.findAll({
       where: { rolId },
-      attributes: ["rut", "nombre", "apellido", "email", "rolId"],
+      attributes: [
+        "rut",
+        "nombre",
+        "apellido",
+        "email",
+        "rolId",
+        [
+          literal(`(
+            SELECT COUNT(*)
+            FROM "Pedido"
+            WHERE "Pedido".id_chofer = "Usuarios".rut
+          )`),
+          "pedidosCount",
+        ],
+        // Sumar las cantidades de los items que ya están en el camión.
+        [
+          literal(`(
+            SELECT COALESCE(SUM(ic.cantidad), 0)
+            FROM "InventarioCamion" AS ic
+            INNER JOIN "Camion" AS c ON c.id_camion = ic.id_camion
+            WHERE c.id_chofer_asignado = "Usuarios".rut
+          )`),
+          "inventarioActual",
+        ],
+        // Sumar la capacidad de los camiones asignados al chofer.
+        [
+          literal(`(
+            SELECT COALESCE(SUM(c.capacidad), 0)
+            FROM "Camion" AS c
+            WHERE c.id_chofer_asignado = "Usuarios".rut
+          )`),
+          "camionCapacidad",
+        ],
+      ],
       include: {
         model: Roles,
         as: "rol",

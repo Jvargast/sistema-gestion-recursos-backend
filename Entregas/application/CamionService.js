@@ -21,6 +21,21 @@ class CamionService {
     return camion;
   }
 
+  //Cambio de estado del camión para cuando se vuelve a planta
+  async actualizarEstadoCamion(id_camion, nuevoEstado) {
+    try {
+      const camion = await CamionRepository.findById(id_camion);
+      if (!camion) {
+        throw new Error("Camión no encontrado");
+      }
+      camion.estado = nuevoEstado; 
+      await camion.save();
+      return camion;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async getCapacityByChoferId(id_chofer) {
     const capacidad = await CamionRepository.findByChoferId(id_chofer);
     console.log(capacidad)

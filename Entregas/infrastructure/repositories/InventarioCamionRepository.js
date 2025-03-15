@@ -153,15 +153,39 @@ class InventarioCamionRepository {
     });
   }
 
-  async findByCamionAndProduct(id_camion, id_producto) {
+  async findByCamionAndProduct(
+    id_camion,
+    id_producto,
+    estado,
+    transaction = null
+  ) {
     return await InventarioCamion.findOne({
-      where: { id_camion, id_producto },
+      where: { id_camion, id_producto, estado },
+      transaction,
     });
   }
 
-  async deleteProductInCamion(id_camion, id_producto) {
+  async findByCamionAndInsumo(
+    id_camion,
+    id_insumo,
+    estado,
+    transaction = null
+  ) {
+    return await InventarioCamion.findOne({
+      where: { id_camion, id_insumo, estado },
+      transaction,
+    });
+  }
+
+  async deleteProductInCamion(id_camion, id_producto, estado) {
     return await InventarioCamion.destroy({
-      where: { id_camion, id_producto },
+      where: { id_camion, id_producto, estado },
+    });
+  }
+
+  async deleteInsumoInCamion(id_camion, id_insumo, estado) {
+    return await InventarioCamion.destroy({
+      where: { id_camion, id_insumo, estado },
     });
   }
 

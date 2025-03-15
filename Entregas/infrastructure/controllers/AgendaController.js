@@ -3,8 +3,14 @@ import AgendaCargaService from "../../application/AgendaCargaService.js";
 class AgendaCargaController {
   async createAgenda(req, res) {
     try {
-      const { id_usuario_chofer, id_camion, prioridad, notas, productos, descargarRetornables } =
-        req.body;
+      const {
+        id_usuario_chofer,
+        id_camion,
+        prioridad,
+        notas,
+        productos,
+        descargarRetornables,
+      } = req.body;
       const rut = req.user.id;
 
       const nuevaAgenda = await AgendaCargaService.createAgenda(
@@ -14,9 +20,25 @@ class AgendaCargaController {
         prioridad,
         notas,
         productos,
-        descargarRetornables 
+        descargarRetornables
       );
       res.status(201).json(nuevaAgenda);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
+  async confirmarCargaCamion(req, res) {
+    try {
+      const { id_agenda_carga, productosCargados, notasChofer } = req.body;
+      const id_chofer = req.user.id;
+      const carga = await AgendaCargaService.confirmarCargaCamion(
+        id_agenda_carga,
+        id_chofer,
+        productosCargados,
+        notasChofer
+      );
+      res.status(201).json(carga);
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -160,8 +182,6 @@ class AgendaCargaController {
       res.status(400).json({ error: error.message });
     }
   }
-
-
 }
 
 export default new AgendaCargaController();

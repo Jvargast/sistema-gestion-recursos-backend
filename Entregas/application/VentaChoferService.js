@@ -1,235 +1,23 @@
 import { Op } from "sequelize";
-import sequelize from "../../database/database.js";
-import BoletaRepository from "../../ventas/infrastructure/repositories/BoletaRepository.js";
 import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteRepository.js";
-import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
-import PagoRepository from "../../ventas/infrastructure/repositories/PagoRepository.js";
-import DetallesVentaChoferRepository from "../infrastructure/repositories/DetallesVentaChoferRepository.js";
-import HistorialVentasChoferRepository from "../infrastructure/repositories/HistorialVentasChoferRepository.js";
-import InventarioCamionLogsRepository from "../infrastructure/repositories/InventarioCamionLogsRepository.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
 import VentasChoferRepository from "../infrastructure/repositories/VentasChoferRepository.js";
 import CamionRepository from "../infrastructure/repositories/CamionRepository.js";
 import MetodoPagoRepository from "../../ventas/infrastructure/repositories/MetodoPagoRepository.js";
 import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
-import AgendaCargaRepository from "../infrastructure/repositories/AgendaCargaRepository.js";
-import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
+import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
+import DetallesVentaChoferRepository from "../infrastructure/repositories/DetallesVentaChoferRepository.js";
+import InventarioCamionService from "./InventarioCamionService.js";
+import ProductoRetornableRepository from "../../inventario/infrastructure/repositories/ProductoRetornableRepository.js";
+import HistorialVentasChoferRepository from "../infrastructure/repositories/HistorialVentasChoferRepository.js";
+import PagoRepository from "../../ventas/infrastructure/repositories/PagoRepository.js";
+import MovimientoCajaService from "../../ventas/application/MovimientoCajaService.js";
+import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
+import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
+import sequelize from "../../database/database.js";
 
 class VentaChoferService {
-  async realizarVentaRapida(
-    id_camion,
-    cliente_rut,
-    productos,
-    metodo_pago,
-    monto,
-    referencia,
-    rut
-  ) {
-    let transaction;
-  
-    try {
-      // Inicia una única transacción
-      transaction = await sequelize.transaction();
-  
-      // Validar cliente
-      const cliente = await ClienteRepository.findById(cliente_rut);
-      if (!cliente) {
-        throw new Error(`Cliente con RUT ${cliente_rut} no encontrado.`);
-      }
-  
-      // Validar que el camión esté asociado a una agenda en tránsito
-      const agenda = await AgendaCargaRepository.findByCamionAndEstado(
-        id_camion,
-        "En tránsito"
-      );
-      if (!agenda) {
-        throw new Error(
-          `El camión con ID ${id_camion} no está asociado a una agenda en tránsito.`
-        );
-      }
-  
-      // Obtener precios desde la base de datos
-      const productIds = productos.map((p) => p.id_producto);
-      const productPrices = await ProductosRepository.findByIds(productIds);
-  
-      if (!productPrices || productPrices.length !== productos.length) {
-        throw new Error(
-          "No se pudieron obtener los precios de todos los productos solicitados."
-        );
-      }
-  
-      // Crear un mapa de precios para facilitar la búsqueda
-      const priceMap = productPrices.reduce((acc, product) => {
-        acc[product.id_producto] = product.precio; // Asegúrate de que "precio" es el campo correcto en la tabla
-        return acc;
-      }, {});
-  
-      let totalVenta = 0;
-  
-      for (const producto of productos) {
-        const inventario =
-          await InventarioCamionRepository.findByCamionProductoAndEstado(
-            id_camion,
-            producto.id_producto,
-            "En Camión - Disponible"
-          );
-  
-        if (!inventario || inventario.cantidad < producto.cantidad) {
-          throw new Error(
-            `Stock insuficiente para el producto con ID ${producto.id_producto}.`
-          );
-        }
-  
-        // Asegurarse de que el producto tenga un precio en el mapa
-        const precioUnitario = priceMap[producto.id_producto];
-        if (!precioUnitario) {
-          throw new Error(
-            `El producto con ID ${producto.id_producto} no tiene un precio definido.`
-          );
-        }
-  
-        // Usar el precio obtenido de la base de datos
-        producto.precioUnitario = precioUnitario;
-  
-        totalVenta += producto.cantidad * precioUnitario;
-      }
-  
-      // Validar que el monto proporcionado coincida con el total calculado
-      if (monto !== totalVenta) {
-        throw new Error(
-          `El monto proporcionado (${monto}) no coincide con el total calculado (${totalVenta}).`
-        );
-      }
-  
-      // Crear la venta con el total calculado
-      const venta = await VentasChoferRepository.create(
-        {
-          id_camion,
-          id_cliente: cliente.rut,
-          id_chofer: rut,
-          id_metodo_pago: metodo_pago,
-          total_venta: totalVenta,
-          estadoPago: "pagado",
-          fechaHoraVenta: new Date(),
-        },
-        { transaction }
-      );
-  
-      if (!venta || !venta.id_venta_chofer) {
-        throw new Error("Error al crear la venta. El ID no se generó.");
-      }
-  
-      // Procesar los productos
-      for (const producto of productos) {
-        const inventario =
-          await InventarioCamionRepository.findByCamionProductoAndEstado(
-            id_camion,
-            producto.id_producto,
-            "En Camión - Disponible"
-          );
-  
-        const nuevaCantidad = inventario.cantidad - producto.cantidad;
-  
-        // Crear el detalle de la venta
-        await DetallesVentaChoferRepository.create(
-          {
-            id_venta_chofer: venta.id_venta_chofer,
-            id_inventario_camion: inventario.id_inventario_camion,
-            cantidad: producto.cantidad,
-            precioUnitario: producto.precioUnitario, // Usar el precio de la base de datos
-          },
-          { transaction }
-        );
-  
-        // Actualizar inventario
-        if (nuevaCantidad === 0) {
-          await InventarioCamionRepository.delete(
-            inventario.id_inventario_camion,
-            { transaction }
-          );
-        } else {
-          await InventarioCamionRepository.updateById(
-            inventario.id_inventario_camion,
-            { cantidad: nuevaCantidad },
-            { transaction }
-          );
-        }
-  
-        // Registrar en logs
-        await InventarioCamionLogsRepository.create(
-          {
-            id_camion,
-            id_producto: producto.id_producto,
-            cantidad: producto.cantidad,
-            estado: "Vendido",
-            fecha: new Date(),
-          },
-          { transaction }
-        );
-      }
-  
-      // Crear el documento
-      const documento = await DocumentoRepository.create(
-        {
-          id_venta_chofer: venta.id_venta_chofer,
-          id_cliente: cliente.rut,
-          tipo_documento: "boleta",
-          id_estado_pago: 2,
-          fecha_emision: new Date(),
-          total: totalVenta,
-          monto_pagado: totalVenta,
-        },
-        { transaction }
-      );
-  
-      // Crear la boleta
-      const boleta = await BoletaRepository.create(
-        {
-          id_documento: documento.id_documento,
-        },
-        { transaction }
-      );
-  
-      // Registrar el pago
-      await PagoRepository.create(
-        {
-          id_documento: documento.id_documento,
-          tipo_documento: "boleta",
-          id_metodo_pago: metodo_pago,
-          monto: totalVenta,
-          fecha: new Date(),
-          referencia,
-        },
-        { transaction }
-      );
-  
-      // Registrar historial de la venta
-      await HistorialVentasChoferRepository.create(
-        {
-          id_venta_chofer: venta.id_venta_chofer,
-          id_chofer: rut,
-          fechaSincronizacion: new Date(),
-          estadoSincronizacion: "sincronizado",
-        },
-        { transaction }
-      );
-  
-      // Confirmar transacción
-      await transaction.commit();
-  
-      return {
-        message: "Venta rápida registrada con éxito",
-        venta,
-        documento,
-        boleta,
-      };
-    } catch (error) {
-      if (transaction) await transaction.rollback();
-      throw new Error(`Error en la venta rápida: ${error.message}`);
-    }
-  }
-
   async getVentasChofer(filters = {}, options) {
     const allowedFields = [
       "id_cliente",
@@ -278,6 +66,206 @@ class VentaChoferService {
     });
 
     return result;
+  }
+
+  async realizarVentaChofer(
+    id_chofer,
+    id_cliente,
+    id_metodo_pago,
+    productos,
+    retornables_recibidos = [],
+    estadoPago = "pendiente",
+    monto_recibido
+  ) {
+    const transaction = await sequelize.transaction();
+    try {
+      const viajeActivo = await AgendaViajesRepository.findByChoferAndEstado(
+        id_chofer,
+        "En Tránsito"
+      );
+
+      if (!viajeActivo) throw new Error("El chofer no tiene viaje activo.");
+
+      const id_camion = viajeActivo.id_camion;
+
+      for (const item of productos) {
+        const productoCamion =
+          await InventarioCamionRepository.findByCamionAndProduct(
+            id_camion,
+            item.id_producto,
+            "En Camión - Disponible"
+          );
+
+        if (!productoCamion || productoCamion.cantidad < item.cantidad) {
+          throw new Error(
+            `Producto ID ${item.id_producto} sin stock suficiente.`
+          );
+        }
+      }
+
+      const totalVenta = productos.reduce(
+        (acc, p) => acc + p.precioUnitario * p.cantidad,
+        0
+      );
+      if (monto_recibido) {
+        if (id_metodo_pago === 1 && monto_recibido < totalVenta) {
+          throw new Error("Monto recibido insuficiente.");
+        }
+      }
+
+      const nuevaVenta = await VentasChoferRepository.create(
+        {
+          id_camion,
+          id_cliente,
+          id_chofer,
+          id_metodo_pago,
+          total_venta: totalVenta,
+          tipo_venta: "productos",
+          estadoPago,
+        },
+        { transaction }
+      );
+
+      for (const item of productos) {
+        await DetallesVentaChoferRepository.create(
+          {
+            id_venta_chofer: nuevaVenta.id_venta_chofer,
+            id_producto: item.id_producto,
+            cantidad: item.cantidad,
+            precioUnitario: item.precioUnitario,
+            subtotal: item.precioUnitario * item.cantidad,
+          },
+          { transaction }
+        );
+
+        await InventarioCamionService.retirarProductoDelCamion(
+          id_camion,
+          item.id_producto,
+          item.cantidad,
+          "En Camión - Disponible",
+          transaction
+        );
+      }
+
+      for (const retornable of retornables_recibidos) {
+        await InventarioCamionService.addOrUpdateProductoCamion(
+          {
+            id_camion,
+            id_producto: retornable.id_producto,
+            cantidad: retornable.cantidad,
+            estado: "En Camión - Retorno",
+            tipo: "Retorno",
+            es_retornable: true,
+          },
+          transaction
+        );
+
+        // Registrar botellón retornable reutilizable recibido
+        await ProductoRetornableRepository.create(
+          {
+            id_producto: retornable.id_producto,
+            id_venta: nuevaVenta.id_venta_chofer,
+            cantidad: retornable.cantidad,
+            estado: null,
+            fecha_retorno: new Date(),
+          },
+          { transaction }
+        );
+      }
+
+      const documento = await DocumentoRepository.create(
+        {
+          id_venta: nuevaVenta.id_venta_chofer,
+          tipo_documento: "boleta",
+          numero: `B-C-${nuevaVenta.id_venta_chofer}`,
+          fecha_emision: new Date(),
+          id_cliente: id_cliente ? id_cliente : null,
+          id_usuario_creador: id_chofer,
+          subtotal: totalVenta,
+          monto_neto: totalVenta / 1.19,
+          iva: totalVenta - totalVenta / 1.19,
+          total: totalVenta,
+          id_estado_pago: estadoPago === "pagado" ? 2 : 1,
+          estado: "emitido",
+          observaciones: "Venta rápida chofer",
+          id_venta_chofer: nuevaVenta.id_venta_chofer
+        },
+        { transaction }
+      );
+      // Luego registrar el Pago asociado al documento
+      const cajaChofer = await CajaRepository.findCajaEstadoByUsuario(
+        id_chofer,
+        "abierta"
+      );
+      if (!cajaChofer) {
+        throw new Error(`Chofer ${id_chofer} no tiene caja abierta.`);
+      }
+
+      await PagoRepository.create(
+        {
+          id_venta: nuevaVenta.id_venta_chofer,
+          id_documento: documento.id_documento,
+          id_caja: cajaChofer.id_caja,
+          id_metodo_pago,
+          id_estado_pago: estadoPago === "pagado" ? 2 : 1,
+          monto: totalVenta,
+          fecha_pago: new Date(),
+          referencia: `Chofer-${id_chofer}-Venta-${nuevaVenta.id_venta_chofer}`,
+        },
+        { transaction }
+      );
+
+      if (id_metodo_pago === 1) {
+        const vuelto = monto_recibido - totalVenta;
+
+        await MovimientoCajaService.registrarMovimiento(
+          {
+            id_caja: cajaChofer.id_caja,
+            tipo_movimiento: "ingreso",
+            monto: monto_recibido,
+            descripcion: `Venta chofer #${nuevaVenta.id_venta_chofer}`,
+            id_metodo_pago,
+          },
+          { transaction }
+        );
+
+        if (vuelto > 0) {
+          await MovimientoCajaService.registrarMovimiento(
+            {
+              id_caja: cajaChofer.id_caja,
+              tipo_movimiento: "egreso",
+              monto: vuelto,
+              descripcion: `Vuelto Venta chofer #${nuevaVenta.id_venta_chofer}`,
+            },
+            { transaction }
+          );
+        }
+      }
+
+      await HistorialVentasChoferRepository.create(
+        {
+          id_historial_venta_chofer: nuevaVenta.id_venta_chofer,
+          id_venta_chofer: nuevaVenta.id_venta_chofer,
+          id_agenda_viaje: viajeActivo.id_agenda_viaje,
+          fecha_sincronizacion: new Date(),
+          estado_sincronizacion: "sincronizado",
+        },
+        { transaction }
+      );
+      await transaction.commit();
+
+      return {
+        message: "Venta rápida realizada exitosamente.",
+        totalVenta,
+        vuelto: id_metodo_pago === 1 ? monto_recibido - totalVenta : 0,
+        id_venta: nuevaVenta.id_venta_chofer,
+      };
+    } catch (error) {
+      if (transaction && !transaction.finished) {
+        await transaction.rollback();
+      }
+      throw new Error(`Error al registrar venta del chofer: ${error.message}`);
+    }
   }
 }
 
