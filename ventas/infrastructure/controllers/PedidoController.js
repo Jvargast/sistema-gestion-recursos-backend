@@ -17,26 +17,17 @@ class PedidoController {
   async confirmarPedido(req, res) {
     try {
       const { id_pedido } = req.params;
-      const { estado } = req.body;
       const id_chofer = req.user?.id;
 
-      if (!id_chofer || !["Aceptado", "Rechazado"].includes(estado)) {
-        return res.status(400).json({ error: "Datos inválidos" });
-      }
-      id_chofer;
-
-      const resultado = await PedidoService.confirmarPedido(
+      const resultado = await PedidoService.confirmarPedidoChofer(
         id_pedido,
-        id_chofer,
-        estado
+        id_chofer
       );
 
-      return res
-        .status(200)
-        .json({
-          message: `Pedido ${estado.toLowerCase()} correctamente.`,
-          data: resultado,
-        });
+      return res.status(200).json({
+        message: `Pedido aceptado correctamente.`,
+        data: resultado,
+      });
     } catch (error) {
       console.log(error);
       return res.status(500).json({ error: error.message });
@@ -75,9 +66,22 @@ class PedidoController {
   async obtenerMisPedidos(req, res) {
     try {
       const id_chofer = req.user.id;
+      let fecha = req.query.fecha;
+
+      // 🔹 Validar si la fecha no existe o es inválida
+      if (!fecha || isNaN(Date.parse(fecha))) {
+        return res
+          .status(400)
+          .json({ error: "Fecha inválida o no proporcionada." });
+      }
+      const options = {
+        page: parseInt(req.query.page, 10) || 1,
+        limit: parseInt(req.query.limit, 10) || 10,
+        fecha,
+      };
       const pedidos = await PedidoService.obtenerPedidosAsignados(
         id_chofer,
-        req.query
+        options
       );
       res.status(200).json({
         data: pedidos.data,
@@ -85,6 +89,34 @@ class PedidoController {
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  }
+
+  async obtenerHistorialPedidos(req, res) {
+    try {
+      const id_chofer = req.user?.id;
+      if (!id_chofer) {
+        return res.status(401).json({ mensaje: "Usuario no autenticado" });
+      }
+
+      const { fecha, page = 1, limit = 10 } = req.query;
+
+      if (!fecha) {
+        return res
+          .status(400)
+          .json({ mensaje: "Debe proporcionar una fecha válida" });
+      }
+
+      const historialPedidos = await PedidoService.obtenerHistorialPedidos(
+        id_chofer,
+        fecha,
+        { page: parseInt(page, 10), limit: parseInt(limit, 10) }
+      );
+
+      res.json(historialPedidos);
+    } catch (error) {
+      console.error("Error al obtener historial de pedidos:", error);
+      res.status(500).json({ mensaje: "Error interno del servidor" });
     }
   }
 
@@ -172,7 +204,7 @@ class PedidoController {
           .status(400)
           .json({ message: "El ID del chofer es requerido" });
 
-      const pedidoAsignado = await PedidoService.asignarPedidoAChofer(
+      const pedidoAsignado = await PedidoService.asignarPedido(
         id_pedido,
         id_chofer
       );
@@ -182,6 +214,27 @@ class PedidoController {
       res
         .status(200)
         .json({ message: "Pedido asignado al chofer", pedido: pedidoAsignado });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: `Error al asignar pedido: ${error.message}` });
+    }
+  }
+
+  async desasignarPedido(req, res) {
+    try {
+      const { id_pedido } = req.params;
+
+      const pedidoDesasignado = await PedidoService.desasignarPedidoAChofer(
+        id_pedido
+      );
+      if (!pedidoDesasignado)
+        return res.status(404).json({ message: "Pedido no encontrado" });
+
+      res.status(200).json({
+        message: "Pedido desasignado del chofer",
+        pedido: pedidoDesasignado,
+      });
     } catch (error) {
       res
         .status(500)

@@ -8,6 +8,8 @@ const router = Router();
 // Obtener todos los insumos
 router.get("/", authenticate, checkPermissions("ver_insumos"), InsumoController.getAllInsumos);
 
+router.get("/vendibles", authenticate, checkPermissions("ver_insumos"), InsumoController.getAllInsumosVendibles);
+
 // Obtener un insumo por ID
 router.get("/:id", authenticate, checkPermissions("ver_insumo"), InsumoController.getInsumoById);
 

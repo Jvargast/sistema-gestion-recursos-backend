@@ -199,55 +199,58 @@ class InventarioCamionService {
     if (!id_camion || isNaN(parseInt(id_camion))) {
       throw new Error("Se requiere un ID de camión válido.");
     }
-
+  
     id_camion = parseInt(id_camion);
-
+  
     // Obtener la capacidad total del camión
     const camion = await CamionRepository.findById(id_camion);
     if (!camion) {
       throw new Error(`Camión con id ${id_camion} no encontrado.`);
     }
-
-    // Obtener inventario del camión desde el repositorio
-    const inventario = await InventarioCamionRepository.findByCamionId(
-      id_camion
-    );
-
-    // Caso 1: El camión no tiene productos cargados aún (capacidad total disponible)
+  
+    // Obtener el inventario del camión desde el repositorio
+    const inventario = await InventarioCamionRepository.findByCamionId(id_camion);
+  
+    // Si el camión no tiene productos registrados, toda la capacidad está vacía y disponible es 0.
     if (!inventario || inventario.length === 0) {
       return {
         id_camion,
         capacidad_total: camion.capacidad,
-        en_uso: 0,
-        disponible: camion.capacidad,
+        disponible: 0, // 🔹 No hay productos vendibles
+        reservados: 0,
+        retorno: 0,
+        vacios: camion.capacidad, // 🔹 Toda la capacidad está vacía
       };
     }
-
-    // Caso 2: Calcular productos "En Uso" y "Disponibles"
-    let enUso = 0;
+  
+    let reservados = 0;
     let disponible = 0;
-
+    let retorno = 0;
+  
     for (const item of inventario) {
       if (item.estado === "En Camión - Reservado") {
-        enUso += item.cantidad;
+        reservados += item.cantidad;
       } else if (item.estado === "En Camión - Disponible") {
         disponible += item.cantidad;
+      } else if (item.estado === "En Camión - Retorno") {
+        retorno += item.cantidad;
       }
     }
-
-    // Ajuste para evitar valores negativos en caso de sobrecarga
-    const capacidadRestante = camion.capacidad - enUso - disponible;
-    if (capacidadRestante < 0) {
-      disponible = Math.max(0, disponible + capacidadRestante);
-    }
-
+  
+    // La cantidad de espacios vacíos ahora se calcula correctamente:
+    let vacios = camion.capacidad - (reservados + disponible + retorno);
+    if (vacios < 0) vacios = 0; // Evitar valores negativos
+  
     return {
       id_camion,
       capacidad_total: camion.capacidad,
-      en_uso: enUso,
-      disponible,
+      disponible, // 🔹 Productos que pueden ser vendidos
+      reservados, // 🔹 Productos asignados a pedidos
+      retorno, // 🔹 Productos retornables
+      vacios, // 🔹 Espacios libres en el camión
     };
-  }
+  }  
+  
 
   async getProductoEnCamion(id_camion, id_producto) {
     return await InventarioCamionRepository.findOneProduct(
@@ -382,41 +385,41 @@ class InventarioCamionService {
     return await this.getProductoEnCamion(id_camion, id_producto);
   }
 
-  async addOrUpdateProductoCamion(
-    {
-      id_camion,
-      id_producto,
-      id_insumo,
-      cantidad,
-      estado,
-      tipo,
-      es_retornable,
-    },
-    transaction
-  ) {
-    let itemEnCamion = null;
+  async addOrUpdateProductoCamion({
+    id_camion,
+    id_producto,
+    id_insumo,
+    cantidad,
+    estado,
+    tipo,
+    es_retornable,
+    
+  }, {transaction}= {}) {
+    try {
+      let itemEnCamion = null;
 
-    if (id_producto) {
-      itemEnCamion = await InventarioCamionRepository.findByCamionAndProduct(
-        id_camion,
-        id_producto,
-        estado
-      );
-    } else if (id_insumo) {
-      itemEnCamion = await InventarioCamionRepository.findByCamionAndInsumo(
-        id_camion,
-        id_insumo,
-        estado
-      );
-    }
+      if (id_producto) {
+        itemEnCamion = await InventarioCamionRepository.findByCamionAndProduct(
+          id_camion,
+          id_producto,
+          estado,
+          { transaction }
+        );
+      } else if (id_insumo) {
+        itemEnCamion = await InventarioCamionRepository.findByCamionAndInsumo(
+          id_camion,
+          id_insumo,
+          estado,
+          { transaction }
+        );
+      }
 
-    if (itemEnCamion) {
-      itemEnCamion.cantidad += cantidad;
-      itemEnCamion.fecha_actualizacion = new Date();
-      await itemEnCamion.save({ transaction });
-    } else {
-      await InventarioCamionRepository.create(
-        {
+      if (itemEnCamion) {
+        itemEnCamion.cantidad += cantidad;
+        itemEnCamion.fecha_actualizacion = new Date();
+        await itemEnCamion.save( { transaction });
+      } else {
+        await InventarioCamionRepository.create({
           id_camion,
           id_producto,
           id_insumo,
@@ -425,9 +428,12 @@ class InventarioCamionService {
           tipo,
           es_retornable,
           fecha_actualizacion: new Date(),
-        },
-        { transaction }
-      );
+        }, { transaction });
+      }
+      return itemEnCamion;
+    } catch (error) {
+      console.log(error)
+      throw error;
     }
   }
 

@@ -26,12 +26,12 @@ class PedidoRepository {
         {
           model: DetallePedido,
           as: "DetallesPedido",
-          attributes: ["cantidad", "precio_unitario", "subtotal"],
+          attributes: ["cantidad", "precio_unitario", "subtotal", "id_detalle_pedido"],
           include: [
             {
               model: Producto,
               as: "Producto",
-              attributes: ["nombre_producto", "precio"],
+              attributes: ["nombre_producto", "precio", "codigo_barra", "image_url"],
             },
           ],
         },

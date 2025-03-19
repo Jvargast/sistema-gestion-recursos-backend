@@ -30,6 +30,25 @@ class InsumoController {
     }
   }
 
+  async getAllInsumosVendibles(req, res) {
+    try {
+      const filters = req.query;
+      let options = {
+        page: parseInt(req.query.page, 10) || 1,
+        limit: parseInt(req.query.limit, 20) || 20,
+        search: req.query.search,
+        tipo: req.query.tipo,
+      };
+      delete filters.limit;
+      delete filters.offset;
+
+      const insumos = await InsumoService.getAllInsumosVendibles(filters, options);
+      res.status(200).json({ data: insumos });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   async createInsumo(req, res) {
     try {
       const data = req.body;
