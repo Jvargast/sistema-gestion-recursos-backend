@@ -158,6 +158,22 @@ class EntregaService {
         throw new Error("Pedido no encontrado");
       }
 
+      const estadoActual = await EstadoVentaRepository.findById(
+        pedido.id_estado_pedido
+      );
+      const estadoEnEntrega = await EstadoVentaRepository.findByNombre(
+        "En Entrega"
+      );
+      const estadoCompletada = await EstadoVentaRepository.findByNombre(
+        "Completada"
+      );
+
+      if (!estadoEnEntrega || !estadoCompletada)
+        throw new Error("Estados no configurados correctamente.");
+
+      if (estadoActual.nombre_estado !== "En Entrega")
+        throw new Error("El pedido no está en estado 'En Entrega'.");
+
       const detalles = await DetallePedidoRepository.findByPedidoId(id_pedido, {
         transaction,
       });
@@ -198,7 +214,7 @@ class EntregaService {
           impuesto: impuesto || 0,
           descuento_total_porcentaje: descuento_total_porcentaje || 0,
           tipo_documento,
-          referencia: payment_reference,
+          tipo_referencia: payment_reference,
         };
         ventaRegistrada = await VentaService.createVenta(data, id_chofer, {
           transaction,
@@ -206,10 +222,12 @@ class EntregaService {
 
         pedido.pagado = true;
         pedido.estado_pago = "Pagado";
-        //Agregar estado del pedido a uno que sea Entregado quizás
-
-        await pedido.save({ transaction });
       }
+
+      pedido.id_estado_pedido = estadoCompletada.id_estado_venta;
+
+      await pedido.save({ transaction });
+
       if (productos_entregados && Array.isArray(productos_entregados)) {
         for (const item of productos_entregados) {
           const reserva =
@@ -220,24 +238,15 @@ class EntregaService {
 
               { transaction }
             );
-          if (!reserva) {
+          if (!reserva || reserva.cantidad < item.cantidad)
             throw new Error(
-              `No se encontró reserva para el producto ${item.id_producto} en el camión ${agendaViaje.id_camion}`
+              `Inventario insuficiente en camión para producto ${item.id_producto}`
             );
-          }
-          if (reserva.cantidad < item.cantidad) {
-            throw new Error(
-              `Cantidad insuficiente en reserva para el producto ${item.id_producto}`
-            );
-          }
-          if (reserva) {
-            reserva.cantidad -= item.cantidad;
-            if (reserva.cantidad === 0) {
-              await reserva.destroy({ transaction });
-            } else {
-              await reserva.save({ transaction });
-            }
-          }
+
+          reserva.cantidad -= item.cantidad;
+          reserva.cantidad === 0
+            ? await reserva.destroy({ transaction })
+            : await reserva.save({ transaction });
         }
       }
       if (insumo_entregados && Array.isArray(insumo_entregados)) {
@@ -250,23 +259,25 @@ class EntregaService {
               { transaction }
             );
 
-          if (reserva) {
-            reserva.cantidad -= item.cantidad;
-            if (reserva.cantidad === 0) {
-              await reserva.destroy({ transaction });
-            } else {
-              await reserva.save({ transaction });
-            }
-          }
+          if (!reserva || reserva.cantidad < item.cantidad)
+            throw new Error(
+              `Inventario insuficiente en camión para insumo: ${item.id_producto}`
+            );
+
+          reserva.cantidad -= item.cantidad;
+          reserva.cantidad === 0
+            ? await reserva.destroy({ transaction })
+            : await reserva.save({ transaction });
         }
       }
+
       if (
         botellones_retorno &&
         botellones_retorno.pasados === true &&
         botellones_retorno.items &&
         Array.isArray(botellones_retorno.items)
       ) {
-        for (const item of botellones_retorno.items) {
+        for (const item of botellones_retorno?.items) {
           const registro =
             await InventarioCamionRepository.findByCamionProductoAndEstado(
               agendaViaje.id_camion,
@@ -282,6 +293,7 @@ class EntregaService {
                 id_producto: item.id_producto,
                 cantidad: item.cantidad,
                 estado: "En Camión - Retorno",
+                tipo: "Retorno",
               },
               { transaction }
             );
@@ -289,8 +301,7 @@ class EntregaService {
             registro.cantidad += item.cantidad;
             await registro.save({ transaction });
           }
-          /*  registro.cantidad += item.cantidad;
-          await registro.save({ transaction }); */
+
         }
       }
 
@@ -306,9 +317,7 @@ class EntregaService {
           monto_total,
           estado_entrega: "completada",
           fecha_hora: new Date(),
-          id_documento: isPaid
-            ? pedido.id_documento
-            : ventaRegistrada.documento.id_documento, // si ya estaba pagado, se asocia el documento
+          id_documento: ventaRegistrada?.documento?.id_documento || null,
           motivo_fallo: null,
         },
         { transaction }

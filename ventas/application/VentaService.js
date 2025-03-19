@@ -20,6 +20,7 @@ import DocumentoService from "./DocumentoService.js";
 import PagoService from "./PagoService.js";
 import PedidoService from "./PedidoService.js";
 import sequelize from "../../database/database.js";
+import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
 
 class VentaService {
   async getVentaById(id) {
@@ -119,6 +120,9 @@ class VentaService {
       impuesto = 0,
       descuento_total_porcentaje = 0,
       tipo_documento = "boleta",
+      pago_recibido,
+      referencia,
+      id_pedido_asociado = null,
     } = data;
 
     const transaction = await sequelize.transaction();
@@ -194,23 +198,19 @@ class VentaService {
       const impuestos_totales = totalAntesImpuestos * (impuesto / 100); // 19% por defecto
       const totalConImpuesto = totalAntesImpuestos + impuestos_totales;
 
-      let estado_venta;
-      if (
+      // 2. Estado Venta
+      const estadoVentaNombre =
         tipo_documento === "boleta" &&
-        tipo_entrega != "despacho_a_domicilio"
-      ) {
-        estado_venta = await EstadoVentaRepository.findByNombre("Pagada", {
-          transaction,
-        });
-      } else if (
-        tipo_documento === "factura" ||
-        (tipo_entrega === "despacho_a_domicilio" && tipo_documento === "boleta")
-      ) {
-        estado_venta = await EstadoVentaRepository.findByNombre(
-          "Pendiente de Pago",
-          { transaction }
-        );
-      }
+        (tipo_entrega === "retiro_en_sucursal" ||
+          tipo_entrega === "pedido_pagado_anticipado")
+          ? "Pagada"
+          : "Pendiente de Pago";
+
+      const estadoVenta = await EstadoVentaRepository.findByNombre(
+        estadoVentaNombre,
+        { transaction }
+      );
+
       // 3. Registrar la venta
       const venta = await VentaRepository.create(
         {
@@ -220,11 +220,14 @@ class VentaService {
           id_sucursal: sucursal,
           tipo_entrega,
           direccion_entrega:
-            tipo_entrega === "despacho_a_domicilio" ? direccion_entrega : null,
+            tipo_entrega === "despacho_a_domicilio" ||
+            tipo_entrega === "pedido_pagado_anticipado"
+              ? direccion_entrega
+              : null,
           fecha: new Date(),
           total: totalConImpuesto,
           impuestos_totales,
-          id_estado_venta: estado_venta.id_estado_venta,
+          id_estado_venta: estadoVenta.id_estado_venta,
           descuento_total: descuentoTotal,
           id_metodo_pago,
           notas,
@@ -233,7 +236,6 @@ class VentaService {
       );
 
       // 4. Registrar los detalles de la venta
-
       for (const detalle of detalles) {
         await DetalleVentaRepository.create(
           {
@@ -264,13 +266,6 @@ class VentaService {
         }
       }
 
-      const estado_pago_documento =
-        tipo_documento === "boleta" && tipo_entrega === "retiro_en_sucursal"
-          ? await EstadoPagoRepository.findByNombre("Pagado", { transaction })
-          : await EstadoPagoRepository.findByNombre("Pendiente", {
-              transaction,
-            });
-
       if (productos_retornables && productos_retornables.length > 0) {
         for (const retornable of productos_retornables) {
           await ProductoRetornableRepository.create(
@@ -291,56 +286,56 @@ class VentaService {
         }
       }
 
-      let estado_pago,
-        documento = null,
-        vuelto = 0;
+      const estadoPagoDocumento =
+        estadoVentaNombre === "Pagada" ? "Pagado" : "Pendiente";
+      const estadoPagoDoc = await EstadoPagoRepository.findByNombre(
+        estadoPagoDocumento,
+        { transaction }
+      );
 
-      // 7. Registrar el pago si es boleta (pago inmediato)
+      let vuelto = 0;
 
-      if (
-        tipo_documento === "boleta" &&
-        tipo_entrega === "retiro_en_sucursal" &&
-        (data.tipo_referencia || data.monto_recibido)
-      ) {
-        documento = await DocumentoRepository.create(
-          {
-            id_venta: venta.id_venta,
-            tipo_documento,
-            numero: `${tipo_documento === "boleta" ? "B" : "F"}-${
-              venta.id_venta
-            }`,
-            fecha_emision: new Date(),
-            id_cliente,
-            id_usuario_creador,
-            subtotal,
-            monto_neto: totalAntesImpuestos,
-            iva: impuestos_totales,
-            total: totalConImpuesto,
-            id_estado_pago: estado_pago_documento.id_estado_pago,
-            estado: "emitido",
-            observaciones: notas,
-          },
-          { transaction }
-        );
+      const documento = await DocumentoRepository.create(
+        {
+          id_venta: venta.id_venta,
+          tipo_documento,
+          numero: `${tipo_documento === "boleta" ? "B" : "F"}-${
+            venta.id_venta
+          }`,
+          fecha_emision: new Date(),
+          id_cliente,
+          id_usuario_creador,
+          subtotal,
+          monto_neto: totalAntesImpuestos,
+          iva: impuestos_totales,
+          total: totalConImpuesto,
+          id_estado_pago: estadoPagoDoc.id_estado_pago,
+          estado: "emitido",
+          observaciones: notas,
+        },
+        { transaction }
+      );
 
-        estado_pago = await EstadoPagoRepository.findByNombre("Pagado", {
-          transaction,
-        });
-        await PagoRepository.create(
-          {
-            id_venta: venta.id_venta,
-            id_documento: documento.id_documento,
-            id_metodo_pago,
-            id_estado_pago: estado_pago.id_estado_pago, // Estado "acreditado" para boletas
-            monto: totalConImpuesto,
-            fecha_pago: new Date(),
-            id_caja: caja.id_caja,
-            referencia:
-              data.referencia || `AUTO-${tipo_documento}-${venta.id_venta}`, // Por defecto nulo, se puede actualizar después
-          },
-          { transaction }
-        );
+      const estadoPago = await EstadoPagoRepository.findByNombre(
+        tipo_documento === "boleta" ? "Pagado" : "Pendiente",
+        { transaction }
+      );
 
+      await PagoRepository.create(
+        {
+          id_venta: venta.id_venta,
+          id_documento: documento.id_documento,
+          id_metodo_pago,
+          id_estado_pago: estadoPago.id_estado_pago,
+          monto: totalConImpuesto,
+          fecha_pago: tipo_documento === "boleta" ? new Date() : null,
+          id_caja: caja.id_caja,
+          referencia: referencia || null,
+        },
+        { transaction }
+      );
+
+      if (tipo_documento === "boleta") {
         // Registrar movimiento en caja solo si es efectivo
         const metodo = await MetodoPagoRepository.findById(id_metodo_pago, {
           transaction,
@@ -382,33 +377,35 @@ class VentaService {
             );
           }
         }
-      } else if (tipo_documento === "factura") {
-        estado_pago = await EstadoPagoRepository.findByNombre("Pendiente");
-        await PagoRepository.create(
+      } 
+
+      // Crear pedido automáticamente solo si es despacho
+      if (tipo_entrega === "despacho_a_domicilio") {
+        await PedidoService.createPedido(
           {
-            id_venta: venta.id_venta,
-            id_documento: documento.id_documento,
-            id_metodo_pago,
-            id_estado_pago: estado_pago.id_estado_pago,
-            monto: totalConImpuesto,
-            fecha_pago: null,
-            referencia: null,
+            id_cliente,
+            id_creador: id_usuario_creador,
+            direccion_entrega,
+            productos,
+            metodo_pago: id_metodo_pago,
+            pagado: Boolean(pago_recibido || referencia),
           },
           { transaction }
         );
       }
 
-      const esEntrega = tipo_entrega === "despacho_a_domicilio";
-      if (esEntrega) {
-        const payload = {
-          id_cliente,
-          id_creador: id_usuario_creador,
-          direccion_entrega,
-          productos,
-          metodo_pago: id_metodo_pago,
-          pagado: data.pago_recibido || data.referencia ? true : false,
-        };
-        await PedidoService.createPedido(payload, { transaction });
+      // Asociar pedido anticipado ya pagado a una venta
+      if (tipo_entrega === "pedido_pagado_anticipado" && id_pedido_asociado) {
+        const pedido = await PedidoRepository.findById(id_pedido_asociado, {
+          transaction,
+        });
+        if (!pedido || pedido.estado_pago !== "Pagado")
+          throw new Error("Pedido no válido o sin pago.");
+        await PedidoRepository.update(
+          id_pedido_asociado,
+          { id_venta: venta.id_venta },
+          { transaction }
+        );
       }
 
       // 8. Registrar log de la venta
@@ -430,7 +427,7 @@ class VentaService {
       return {
         venta,
         productos: detalles,
-        documento: documento,
+        documento,
         vuelto,
         mensaje:
           vuelto > 0

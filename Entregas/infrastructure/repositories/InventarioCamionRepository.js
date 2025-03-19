@@ -157,11 +157,9 @@ class InventarioCamionRepository {
     id_camion,
     id_producto,
     estado,
-    transaction = null
   ) {
     return await InventarioCamion.findOne({
       where: { id_camion, id_producto, estado },
-      transaction,
     });
   }
 
@@ -169,12 +167,10 @@ class InventarioCamionRepository {
     id_camion,
     id_insumo,
     estado,
-    transaction = null
   ) {
     return await InventarioCamion.findOne({
       where: { id_camion, id_insumo, estado },
-      transaction,
-    });
+ƒ    });
   }
 
   async deleteProductInCamion(id_camion, id_producto, estado) {

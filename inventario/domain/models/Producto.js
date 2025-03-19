@@ -37,6 +37,11 @@ const Producto = sequelize.define(
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+    tipo: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "producto",
+    },
     activo: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

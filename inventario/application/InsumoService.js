@@ -97,6 +97,71 @@ class InsumoService {
     };
   }
 
+  async getAllInsumosVendibles(filters = {}, options) {
+    const allowedFields = [
+      "nombre_insumo",
+      "codigo_barra",
+      "descripcion",
+      "precio",
+      "id_tipo_insumo",
+      "unidad_de_medida",
+      "activo",
+      "fecha_de_creacion",
+    ];
+    const where = createFilter(filters, allowedFields);
+
+    where.es_para_venta = true;
+    
+    if (options.tipo) {
+      where["$tipo_insumo.nombre_tipo$"] = options.tipo;
+    }
+
+    if (options.search) {
+      where[Op.or] = [
+        { "$tipo_insumo.nombre_tipo$": { [Op.like]: `%${options.search}%` } }, // Buscar en tipo.nombre
+        { codigo_barra: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+        { descripcion: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+        { nombre_insumo: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+      ];
+    }
+
+    const include = [
+      {
+        model: TipoInsumoRepository.getModel(),
+        as: "tipo_insumo",
+        attributes: ["nombre_tipo"],
+      },
+      {
+        model: InventarioRepository.getModel(),
+        as: "inventario",
+        attributes: ["cantidad"],
+      },
+    ];
+    // Obtiene los tipos únicos de insumos
+    const tipos = await TipoInsumoRepository.getModel().findAll({
+      attributes: ["nombre_tipo"],
+    });
+
+    const tipoNombre = options.tipo;
+    //const tipoWhere = { ...where, "$tipo_insumo.nombre_tipo$": tipoNombre };
+
+    const result = await paginate(InsumoRepository.getModel(), options, {
+      where,
+      include,
+      order: [["id_insumo", "ASC"]],
+      subQuery: false,
+    });
+
+    return {
+      tipo: tipoNombre,
+      items: result.data,
+      totalItems: result.pagination.totalItems,
+      totalPages: result.pagination.totalPages,
+      currentPage: result.pagination.currentPage,
+      pageSize: result.pagination.pageSize,
+    };
+  }
+
   async createInsumo(data) {
     const { cantidad_inicial, ...insumoData } = data;
 

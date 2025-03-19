@@ -68,7 +68,9 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:3000", // Configurar CORS
-    methods: ["GET", "POST"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], 
+    allowedHeaders: ["Content-Type", "Authorization"], 
   },
 });
 
@@ -157,6 +159,11 @@ app.use("/api/ventas-chofer", VentaChoferRoutes);
 io.on("connection", (socket) => {
   console.log("⚡ Cliente conectado:", socket.id);
 
+  socket.on("subscribe", (id_usuario) => {
+    socket.join(`usuario_${id_usuario}`);
+    console.log(`✅ Usuario ${id_usuario} suscrito a notificaciones.`);
+  });
+
   socket.on("disconnect", () => {
     console.log("❌ Cliente desconectado:", socket.id);
   });
@@ -169,7 +176,7 @@ initializeDatabase()
   .then(() => {
     /* setupAnalysisCronJobs();  falta configurarlo*/
     /* console.log("Tareas [CRON] configuradas."); */
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Servidor escuchando en el puerto [${PORT}]`);
     });
   })

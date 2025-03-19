@@ -1080,74 +1080,85 @@ async function populateDatabase() {
 
     // Estados de ventas
     const estadosVentas = [
+      // Estados comunes
       {
-        // 1
-        nombre_estado: "Creada",
-        descripcion:
-          "Estado inicial para ventas. La venta ha sido registrada pero no procesada.",
-        tipo_transaccion: "venta",
+        nombre_estado: "Pendiente",
+        descripcion: "Estado inicial al registrar un pedido o venta, pendiente de procesamiento.",
+        tipo_transaccion: ["venta", "pedido"],
         es_inicial: true,
       },
       {
-        // 2
         nombre_estado: "Pendiente de Pago",
-        descripcion:
-          "La venta está registrada y pendiente de pago por parte del cliente.",
+        descripcion: "La venta o pedido está pendiente del pago del cliente.",
         tipo_transaccion: "venta",
         es_inicial: false,
       },
       {
-        // 3
         nombre_estado: "Pagada",
-        descripcion: "El pago de la venta ha sido realizado con éxito.",
+        descripcion: "El pago ha sido realizado exitosamente.",
         tipo_transaccion: "venta",
         es_inicial: false,
       },
       {
-        // 4
+        nombre_estado: "Pendiente de Confirmación",
+        descripcion: "Pedido asignado al chofer y pendiente de confirmación por su parte.",
+        tipo_transaccion: "pedido",
+        es_inicial: false,
+      },
+      {
+        nombre_estado: "Confirmado",
+        descripcion: "Pedido aceptado y confirmado por el chofer.",
+        tipo_transaccion: "pedido",
+        es_inicial: false,
+      },
+      {
+        nombre_estado: "Rechazado",
+        descripcion: "Pedido rechazado por el chofer asignado.",
+        tipo_transaccion: "pedido",
+        es_inicial: false,
+      },
+      {
         nombre_estado: "En Preparación",
-        descripcion:
-          "El pedido asociado a la venta está en preparación para su entrega o retiro.",
+        descripcion: "La venta o pedido está siendo preparado para despacho o retiro.",
         tipo_transaccion: "venta",
         es_inicial: false,
       },
       {
-        // 5
         nombre_estado: "En Entrega",
-        descripcion: "La venta está en proceso de entrega al cliente.",
-        tipo_transaccion: "venta",
+        descripcion: "La venta o pedido está en ruta hacia el cliente.",
+        tipo_transaccion: "pedido",
         es_inicial: false,
       },
       {
-        // 6
         nombre_estado: "Completada",
-        descripcion:
-          "La venta ha sido entregada o retirada por el cliente. El proceso está finalizado.",
+        descripcion: "La venta o pedido fue entregado exitosamente al cliente.",
         tipo_transaccion: "venta",
         es_inicial: false,
       },
       {
-        // 7
         nombre_estado: "Cancelada",
-        descripcion: "La venta fue cancelada antes de completarse.",
+        descripcion: "La transacción fue cancelada antes de completarse.",
         tipo_transaccion: "venta",
         es_inicial: false,
       },
       {
-        // 8
         nombre_estado: "Reembolsada",
-        descripcion: "El pago asociado a la venta fue reembolsado al cliente.",
+        descripcion: "El pago asociado fue devuelto al cliente.",
         tipo_transaccion: "venta",
         es_inicial: false,
       },
       {
-        // 9
         nombre_estado: "Rechazada",
-        descripcion:
-          "La venta fue rechazada debido a problemas con el pago o autorización.",
+        descripcion: "La transacción fue rechazada por problemas con el pago o autorización.",
         tipo_transaccion: "venta",
         es_inicial: false,
       },
+      {
+        nombre_estado: "Completada y Entregada",
+        descripcion: "El pedido ha sido entregado correctamente y cerrado.",
+        tipo_transaccion: "pedido",
+        es_inicial: false,
+      }
     ];
     await EstadoVenta.bulkCreate(estadosVentas);
     console.log("Estados de Transacción creados exitosamente.");

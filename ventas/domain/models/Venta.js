@@ -48,7 +48,7 @@ const Venta = sequelize.define(
       },
     },
     tipo_entrega: {
-      type: DataTypes.ENUM("retiro_en_sucursal", "despacho_a_domicilio"),
+      type: DataTypes.ENUM("retiro_en_sucursal", "despacho_a_domicilio", "pedido_pagado_anticipado"),
       allowNull: false,
     },
     direccion_entrega: {

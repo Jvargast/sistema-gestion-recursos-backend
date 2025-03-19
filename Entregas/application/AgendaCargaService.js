@@ -27,7 +27,7 @@ class AgendaCargaService {
     productos,
     descargarRetornables = false
   ) {
-    const transaction = await sequelize.transaction();
+    const t = await sequelize.transaction();
 
     try {
       if (!id_usuario_chofer || !id_camion) {
@@ -35,11 +35,15 @@ class AgendaCargaService {
           "Faltan datos obligatorios para crear la agenda de carga."
         );
       }
-      const chofer = await UsuariosRepository.findByRut(id_usuario_chofer);
+      const chofer = await UsuariosRepository.findByRut(id_usuario_chofer, {
+        transaction: t,
+      });
       if (!chofer) {
         throw new Error("El chofer seleccionado no existe.");
       }
-      const camion = await CamionRepository.findById(id_camion);
+      const camion = await CamionRepository.findById(id_camion, {
+        transaction: t,
+      });
       if (!camion || camion.estado !== "Disponible") {
         throw new Error("El camión seleccionado no está disponible.");
       }
@@ -48,12 +52,22 @@ class AgendaCargaService {
       }
 
       const estadoConfirmado = await EstadoVentaRepository.findByNombre(
-        "Confirmado"
+        "Confirmado",
+        { transaction: t }
       );
+      const estadoEnPreparacion = await EstadoVentaRepository.findByNombre(
+        "En Preparación",
+        { transaction: t }
+      );
+
+      if (!estadoConfirmado || !estadoEnPreparacion)
+        throw new Error("Estados necesarios no configurados correctamente.");
+
       const pedidosConfirmados =
         await PedidoRepository.findAllByChoferAndEstado(
           id_usuario_chofer,
-          estadoConfirmado.id_estado_venta
+          estadoConfirmado.id_estado_venta,
+          { transaction: t }
         );
 
       if (!pedidosConfirmados.length)
@@ -69,12 +83,14 @@ class AgendaCargaService {
           notas,
           fecha_hora: new Date(),
         },
-        { transaction }
+        { transaction: t }
       );
 
       if (descargarRetornables) {
         const inventarioActual =
-          await InventarioCamionService.getInventarioByCamion(id_camion);
+          await InventarioCamionService.getInventarioByCamion(id_camion, {
+            transaction: t,
+          });
         for (const item of inventarioActual) {
           if (item.es_retornable && item.cantidad > 0) {
             await InventarioCamionService.retirarProductoDelCamion(
@@ -82,14 +98,16 @@ class AgendaCargaService {
               item.id_producto,
               item.cantidad,
               "En Camión - Retorno",
-              { transaction }
+              { transaction: t }
             );
           }
         }
       }
 
       const inventarioActualizado =
-        await InventarioCamionService.getInventarioByCamion(id_camion);
+        await InventarioCamionService.getInventarioByCamion(id_camion, {
+          transaction: t,
+        });
       const espacioUsado = inventarioActualizado
         .filter((p) => p.es_retornable)
         .reduce((sum, item) => sum + item.cantidad, 0);
@@ -99,20 +117,23 @@ class AgendaCargaService {
 
       for (const pedido of pedidosConfirmados) {
         const detallesPedido = await DetallePedidoRepository.findByPedidoId(
-          pedido.id_pedido
+          pedido.id_pedido,
+          { transaction: t }
         );
         for (const item of detallesPedido) {
-          const esProducto =
-            item.id_producto !== null && item.id_insumo === null;
-          let productoInfo = null;
-          let insumoInfo = null;
-          let es_retornable = false;
-          let unidad_medida = "unidad";
+          const esProducto = item.id_producto !== null;
+          let productoInfo,
+            insumoInfo,
+            es_retornable = false,
+            unidad_medida = "unidad";
 
           if (esProducto) {
-            productoInfo = await ProductosRepository.findById(item.id_producto);
+            productoInfo = await ProductosRepository.findById(
+              item.id_producto,
+              { transaction: t }
+            );
             es_retornable = productoInfo.es_retornable;
-            unidad_medida = productoInfo.unidad_medida || "unidad";
+
             if (es_retornable && item.cantidad > espacioDisponible) {
               throw new Error(
                 `Espacio insuficiente para ${productoInfo.nombre_producto}`
@@ -121,7 +142,7 @@ class AgendaCargaService {
             await InventarioService.decrementarStock(
               item.id_producto,
               item.cantidad,
-              { transaction }
+              { transaction: t }
             );
             await InventarioCamionService.addOrUpdateProductoCamion(
               {
@@ -132,22 +153,23 @@ class AgendaCargaService {
                 tipo: "Reservado",
                 es_retornable,
               },
-              transaction
+              t
             );
             if (es_retornable) espacioDisponible -= item.cantidad;
             unidad_medida = productoInfo.unidad_medida || "unidad";
           } else {
-            insumoInfo = await InsumoRepository.findById(item.id_insumo);
+            insumoInfo = await InsumoRepository.findById(item.id_insumo, {
+              transaction: t,
+            });
             if (!insumoInfo) {
               throw new Error(
                 `Producto/Insumo ID ${item.id_producto} no existe.`
               );
             }
-            unidad_medida = insumoInfo.unidad_de_medida || "unidad";
             await InventarioService.decrementarStockInsumo(
               item.id_insumo,
               item.cantidad,
-              { transaction }
+              { transaction: t }
             );
 
             await InventarioCamionService.addOrUpdateProductoCamion(
@@ -159,8 +181,9 @@ class AgendaCargaService {
                 tipo: "Reservado",
                 es_retornable: false,
               },
-              transaction
+              { transaction: t }
             );
+            unidad_medida = insumoInfo.unidad_de_medida || "unidad";
           }
 
           detallesCarga.push({
@@ -168,13 +191,19 @@ class AgendaCargaService {
             id_producto: productoInfo ? productoInfo.id_producto : null,
             id_insumo: insumoInfo ? insumoInfo.id_insumo : null,
             cantidad: item.cantidad,
-            unidad_medida: unidad_medida,
+            unidad_medida,
             estado: "Pendiente",
             notas: `Pedido ID ${pedido.id_pedido}`,
           });
-
-          if (es_retornable) espacioDisponible -= item.cantidad;
         }
+        // Actualizar pedido a estado 'En Preparación'
+        await PedidoRepository.update(
+          pedido.id_pedido,
+          {
+            id_estado_pedido: estadoEnPreparacion.id_estado_venta,
+          },
+          { transaction: t }
+        );
       }
 
       for (const adicional of productos) {
@@ -184,7 +213,8 @@ class AgendaCargaService {
 
         if (esProducto) {
           const productoInfo = await ProductosRepository.findById(
-            adicional.id_producto
+            adicional.id_producto,
+            { transaction: t }
           );
           es_retornable = productoInfo.es_retornable;
 
@@ -197,7 +227,7 @@ class AgendaCargaService {
           await InventarioService.decrementarStock(
             adicional.id_producto,
             adicional.cantidad,
-            { transaction }
+            { transaction: t }
           );
 
           await InventarioCamionService.addOrUpdateProductoCamion(
@@ -209,7 +239,7 @@ class AgendaCargaService {
               tipo: "Disponible",
               es_retornable,
             },
-            transaction
+            { transaction: t }
           );
 
           if (es_retornable) espacioDisponible -= adicional.cantidad;
@@ -224,7 +254,8 @@ class AgendaCargaService {
           });
         } else if (adicional.id_insumo) {
           const insumoInfo = await InsumoRepository.findById(
-            adicional.id_insumo
+            adicional.id_insumo,
+            { transaction: t }
           );
           if (!insumoInfo) {
             throw new Error(
@@ -234,7 +265,7 @@ class AgendaCargaService {
           await InventarioService.decrementarStockInsumo(
             adicional.id_insumo,
             adicional.cantidad,
-            { transaction }
+            { transaction: t }
           );
 
           await InventarioCamionService.addOrUpdateProductoCamion(
@@ -246,7 +277,7 @@ class AgendaCargaService {
               tipo: "Disponible",
               es_retornable: false,
             },
-            transaction
+            { transaction: t }
           );
 
           detallesCarga.push({
@@ -261,14 +292,14 @@ class AgendaCargaService {
       }
 
       await AgendaCargaDetalleRepository.bulkCreate(detallesCarga, {
-        transaction,
+        transaction: t,
       });
 
-      await transaction.commit();
+      await t.commit();
       return nuevaAgenda;
     } catch (error) {
-      if (transaction.finished !== "commit") {
-        await transaction.rollback();
+      if (t.finished !== "commit") {
+        await t.rollback();
       }
       throw new Error(`Error al crear la agenda: ${error.message}`);
     }
@@ -307,12 +338,7 @@ class AgendaCargaService {
         const key = item.id_producto
           ? `producto_${item.id_producto}`
           : `insumo_${item.id_insumo}`;
-
-        if (!acc[key]) {
-          acc[key] = 0;
-        }
-
-        acc[key] += item.cantidad;
+        acc[key] = (acc[key] || 0) + item.cantidad;
         return acc;
       }, {});
 
@@ -321,12 +347,7 @@ class AgendaCargaService {
         const key = item.id_producto
           ? `producto_${item.id_producto}`
           : `insumo_${item.id_insumo}`;
-
-        if (!acc[key]) {
-          acc[key] = 0;
-        }
-
-        acc[key] += item.cantidad;
+        acc[key] = (acc[key] || 0) + item.cantidad;
         return acc;
       }, {});
 
@@ -345,6 +366,12 @@ class AgendaCargaService {
         }
       }
 
+      // Actualizar estado de los detalles a "Cargado"
+      await AgendaCargaDetalleRepository.updateEstadoByAgendaId(
+        id_agenda_carga,
+        "Cargado",
+        { transaction }
+      );
       // 3. Actualizar estado de la AgendaCarga
       await AgendaCargaRepository.update(
         agendaCarga.id_agenda_carga,
@@ -365,20 +392,37 @@ class AgendaCargaService {
       );
 
       // Aquí obtienes claramente los destinos de los pedidos confirmados para este viaje
-      const estadoConfirmado = await EstadoVentaRepository.findByNombre(
+      /* const estadoConfirmado = await EstadoVentaRepository.findByNombre(
         "Confirmado"
+      ); */
+      // 5. Obtener pedidos en estado "En Preparación" (modificado aquí)
+      const estadoEnPreparacion = await EstadoVentaRepository.findByNombre(
+        "En Preparación",
+        { transaction }
       );
-      const pedidosConfirmados =
+      if (!estadoEnPreparacion)
+        throw new Error("Estado 'En Preparación' no configurado.");
+
+      const pedidosEnPreparacion =
         await PedidoRepository.findAllByChoferAndEstado(
           id_chofer,
-          estadoConfirmado.id_estado_venta
+          estadoEnPreparacion.id_estado_venta
         );
+      if (!pedidosEnPreparacion.length)
+        throw new Error("No hay pedidos en preparación para este viaje.");
 
       const destinos = [];
+      // Actualizar cada pedido a estado "En Entrega"
+      const estadoEnEntrega = await EstadoVentaRepository.findByNombre(
+        "En Entrega",
+        { transaction }
+      );
+      if (!estadoEnEntrega)
+        throw new Error("Estado 'En Entrega' no configurado.");
 
-      for (const pedido of pedidosConfirmados) {
+      for (const pedido of pedidosEnPreparacion) {
         const cliente = await ClienteRepository.findById(pedido.id_cliente);
-      
+
         destinos.push({
           id_pedido: pedido.id_pedido,
           id_cliente: cliente.id_cliente,
@@ -386,6 +430,13 @@ class AgendaCargaService {
           direccion: pedido.direccion_entrega,
           notas: pedido.notas || "",
         });
+        await PedidoRepository.update(
+          pedido.id_pedido,
+          {
+            id_estado_pedido: estadoEnEntrega.id_estado_venta,
+          },
+          { transaction }
+        );
       }
 
       // 5. Crear nueva Agenda de Viaje

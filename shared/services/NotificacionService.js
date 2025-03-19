@@ -2,34 +2,10 @@ import UsuariosRepository from "../../auth/infraestructure/repositories/Usuarios
 import { io } from "../../index.js";
 import NotificacionRepository from "../repositories/NotificacionRepository.js";
 
-let ioInstance = null;
-
 class NotificacionService {
   /**
    * 📌 Inicializa el servidor de WebSockets
    */
-  static init(server) {
-    ioInstance = io(server, {
-      cors: {
-        origin: "*", // Configurar según tu frontend
-      },
-    });
-
-    ioInstance.on("connection", (socket) => {
-      console.log(`⚡ Cliente conectado: ${socket.id}`);
-
-      // Manejar la suscripción de usuarios a sus notificaciones
-      socket.on("subscribe", (id_usuario) => {
-        socket.join(`usuario_${id_usuario}`);
-        console.log(`✅ Usuario ${id_usuario} suscrito a notificaciones.`);
-      });
-
-      socket.on("disconnect", () => {
-        console.log(`❌ Cliente desconectado: ${socket.id}`);
-      });
-    });
-  }
-
   /**
    * 📌 Enviar una notificación genérica a un usuario
    */
@@ -48,15 +24,24 @@ class NotificacionService {
         fecha: new Date(),
       });
 
-      // Emitir notificación en tiempo real usando WebSockets
-      if (ioInstance) {
-        ioInstance.to(`usuario_${id_usuario}`).emit("nueva_notificacion", {
+      console.log(
+        "Emitiendo notificación a la sala:",
+        `usuario_${id_usuario}`,
+        "con datos:",
+        {
           id: nuevaNotificacion.id_notificacion,
           mensaje,
           tipo,
           fecha: nuevaNotificacion.fecha,
-        });
-      }
+        }
+      );
+
+      io.to(`usuario_${id_usuario}`).emit("nueva_notificacion", {
+        id: nuevaNotificacion.id_notificacion,
+        mensaje,
+        tipo,
+        fecha: nuevaNotificacion.fecha,
+      });
     } catch (error) {
       console.error("❌ Error al enviar notificación:", error);
     }
@@ -95,7 +80,9 @@ class NotificacionService {
    */
   static async marcarComoLeida(id_notificacion) {
     try {
-      return await NotificacionRepository.update(id_notificacion, { leida: true });
+      return await NotificacionRepository.update(id_notificacion, {
+        leida: true,
+      });
     } catch (error) {
       console.error("❌ Error al marcar notificación como leída:", error);
       throw error;
@@ -121,15 +108,14 @@ class NotificacionService {
       await NotificacionRepository.bulkCreate(notificaciones);
 
       // Enviar notificaciones en tiempo real
-      if (ioInstance) {
-        usuarios.forEach((id_usuario) => {
-          ioInstance.to(`usuario_${id_usuario}`).emit("nueva_notificacion", {
-            mensaje,
-            tipo,
-            fecha: new Date(),
-          });
+
+      usuarios.forEach((id_usuario) => {
+        io.to(`usuario_${id_usuario}`).emit("nueva_notificacion", {
+          mensaje,
+          tipo,
+          fecha: new Date(),
         });
-      }
+      });
     } catch (error) {
       console.error("❌ Error al enviar notificaciones masivas:", error);
     }
