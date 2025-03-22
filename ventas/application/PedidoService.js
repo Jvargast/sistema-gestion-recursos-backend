@@ -18,6 +18,7 @@ import InsumoRepository from "../../inventario/infrastructure/repositories/Insum
 import VentaService from "./VentaService.js";
 
 class PedidoService {
+  // Se crea en Pendiente
   async createPedido(data) {
     const transaction = await sequelize.transaction();
     try {
@@ -154,7 +155,7 @@ class PedidoService {
       throw new Error(`Error al crear pedido: ${error.message}`);
     }
   }
-
+  // Asignar de Pendiente -> Pendiente de Confirmación
   async asignarPedido(id_pedido, id_chofer) {
     try {
       const pedido = await PedidoRepository.findById(id_pedido);
@@ -195,7 +196,46 @@ class PedidoService {
       throw new Error(`Error al asignar pedido: ${error.message}`);
     }
   }
+  // Desasignar de Pendiente de Confirmación -> Pendiente
+  async desasignarPedidoAChofer(id_pedido) {
+    const transaction = await sequelize.transaction();
+    try {
+      const pedido = await PedidoRepository.findById(id_pedido, {
+        transaction,
+      });
+      if (!pedido) throw new Error("Pedido no encontrado.");
 
+      const estadoActual = await EstadoVentaRepository.findById(
+        pedido.id_estado_pedido
+      );
+      const estadoPendienteConfirmacion =
+        await EstadoVentaRepository.findByNombre("Pendiente de Confirmación");
+      const estadoPendiente = await EstadoVentaRepository.findByNombre(
+        "Pendiente"
+      );
+
+      if (!estadoPendienteConfirmacion || !estadoPendiente)
+        throw new Error("Estados necesarios no configurados correctamente.");
+
+      // Solo permitir desasignar si el pedido está en 'Pendiente de Confirmación'
+      if (estadoActual.nombre_estado !== "Pendiente de Confirmación") {
+        throw new Error(
+          "Solo puedes desasignar pedidos en estado 'Pendiente de Confirmación'."
+        );
+      }
+      await PedidoRepository.update(id_pedido, {
+        id_chofer: null,
+        id_estado_pedido: estadoPendiente.id_estado_venta,
+      });
+
+      await transaction.commit();
+      return await PedidoRepository.findById(id_pedido);
+    } catch (error) {
+      await transaction.rollback();
+      throw new Error(`Error al desasignar pedido: ${error.message}`);
+    }
+  }
+  //Para a En Entrega o Confirmado
   async confirmarPedidoChofer(id_pedido, id_chofer) {
     const transaction = await sequelize.transaction();
     try {
@@ -244,7 +284,7 @@ class PedidoService {
             );
           }
 
-          await InventarioCamionReservasRepository.create(
+          /* await InventarioCamionReservasRepository.create(
             {
               id_inventario_camion: disponibleEnCamion.id_inventario_camion,
               id_pedido,
@@ -255,7 +295,7 @@ class PedidoService {
                 : "producto_no_retornable",
             },
             { transaction }
-          );
+          ); */
 
           // Actualizar InventarioCamion restando la cantidad reservada
           await InventarioCamionRepository.update(
@@ -264,11 +304,14 @@ class PedidoService {
               cantidad: disponibleEnCamion.cantidad - item.cantidad,
               estado: "En Camión - Reservado",
               fecha_actualizacion: new Date(),
+              tipo: "Reservado",
+              es_retornable: esRetornable
             },
             { transaction }
           );
         }
-        nuevoEstado = await EstadoVentaRepository.findByNombre("Confirmado");
+        nuevoEstado = await EstadoVentaRepository.findByNombre("En Entrega");
+        
       } else {
         // Si no hay viaje activo, no reservas inmediatamente
         nuevoEstado = await EstadoVentaRepository.findByNombre("Confirmado");
@@ -281,103 +324,16 @@ class PedidoService {
         },
         { transaction }
       );
+      const admin = UsuariosRepository.findByRol("administrador");
 
       await NotificacionService.enviarNotificacion({
-        id_usuario: id_chofer,
+        id_usuario: admin.rut,
         mensaje: `Pedido ${id_pedido} confirmado correctamente.`,
         tipo: "pedido_confirmado",
       });
 
       await transaction.commit();
       return PedidoRepository.findById(id_pedido);
-    } catch (error) {
-      await transaction.rollback();
-      throw new Error(`Error al confirmar pedido: ${error.message}`);
-    }
-  }
-
-  async confirmarPedido(id_pedido, id_chofer, estado) {
-    const transaction = await sequelize.transaction();
-
-    try {
-      const pedido = await PedidoRepository.findById(id_pedido);
-      if (!pedido) throw new Error("Pedido no encontrado.");
-      if (pedido.id_chofer !== id_chofer)
-        throw new Error("No tienes permisos para este pedido.");
-      // Validar estado
-      if (!["Aceptado", "Rechazado"].includes(estado)) {
-        throw new Error("Estado inválido. Debe ser 'Aceptado' o 'Rechazado'.");
-      }
-      const nuevoEstado = await EstadoVentaRepository.findByNombre(
-        estado === "Aceptado" ? "Confirmado" : "Rechazado"
-      );
-      await PedidoRepository.update(
-        id_pedido,
-        { id_estado_pedido: nuevoEstado.id_estado_venta },
-        { transaction }
-      );
-
-      await PedidoRepository.update(
-        id_pedido,
-        { id_estado_pedido: nuevoEstado.id_estado_venta },
-        { transaction }
-      );
-
-      if (estado === "Rechazado") {
-        await PedidoRepository.update(
-          id_pedido,
-          { id_chofer: null },
-          { transaction }
-        );
-
-        await NotificacionService.enviarNotificacion({
-          id_usuario: pedido.id_creador,
-          mensaje: `El pedido ID ${id_pedido} fue rechazado por el chofer.`,
-          tipo: "pedido_rechazado",
-        });
-
-        await transaction.commit();
-        return await PedidoRepository.findById(id_pedido);
-      }
-      // Verificar si el chofer está en ruta
-      const agendaViaje = await AgendaViajesRepository.findByChoferAndEstado(
-        id_chofer,
-        "En Tránsito"
-      );
-
-      if (agendaViaje) {
-        // Obtener inventario disponible del camión
-        const inventarioCamion =
-          await InventarioCamionService.getInventarioDisponible(
-            agendaViaje.id_camion
-          );
-
-        for (const detalle of pedido.DetallesPedido) {
-          const productoDisponible = inventarioCamion.find(
-            (p) => p.id_producto === detalle.id_producto
-          );
-
-          if (
-            !productoDisponible ||
-            productoDisponible.cantidad < detalle.cantidad
-          ) {
-            throw new Error(
-              `Stock insuficiente para el producto ${detalle.Producto.nombre_producto}.`
-            );
-          }
-
-          await InventarioCamionService.actualizarProductoEnCamion(
-            agendaViaje.id_camion,
-            detalle.id_producto,
-            -detalle.cantidad,
-            "Reservado",
-            { transaction }
-          );
-        }
-      }
-
-      await transaction.commit();
-      return await PedidoRepository.findById(id_pedido);
     } catch (error) {
       await transaction.rollback();
       throw new Error(`Error al confirmar pedido: ${error.message}`);
@@ -398,10 +354,10 @@ class PedidoService {
     }
 
     // 2️⃣ Buscar pedidos confirmados para el chofer
-    const pedidos = await PedidoRepository.findAll({
+    const pedidos = await PedidoRepository.getModel().findAll({
       where: {
         id_chofer,
-        id_estado_pedido: estadoConfirmado.id_estado_pedido,
+        id_estado_pedido: estadoConfirmado.id_estado_venta,
       },
       include: [
         {
@@ -423,6 +379,7 @@ class PedidoService {
       ],
       order: [["fecha_pedido", "ASC"]],
     });
+    console.log(pedidos)
 
     if (!pedidos || pedidos.length === 0) {
       return [];
@@ -455,52 +412,6 @@ class PedidoService {
       id_estado_pedido: estadoPedido.id_estado_venta,
     });
     return await PedidoRepository.findById(id_pedido);
-  }
-  /* 
-  async asignarPedidoAChofer(id_pedido, id_chofer) {
-    const chofer = await UsuariosRepository.findByRut(id_chofer);
-    if (!chofer) throw new Error("Chofer no encontrado.");
-
-    await PedidoRepository.update(id_pedido, { id_chofer });
-    return await PedidoRepository.findById(id_pedido);
-  } */
-  async desasignarPedidoAChofer(id_pedido) {
-    const transaction = await sequelize.transaction();
-    try {
-      const pedido = await PedidoRepository.findById(id_pedido, {
-        transaction,
-      });
-      if (!pedido) throw new Error("Pedido no encontrado.");
-
-      const estadoActual = await EstadoVentaRepository.findById(
-        pedido.id_estado_pedido
-      );
-      const estadoPendienteConfirmacion =
-        await EstadoVentaRepository.findByNombre("Pendiente de Confirmación");
-      const estadoPendiente = await EstadoVentaRepository.findByNombre(
-        "Pendiente"
-      );
-
-      if (!estadoPendienteConfirmacion || !estadoPendiente)
-        throw new Error("Estados necesarios no configurados correctamente.");
-
-      // Solo permitir desasignar si el pedido está en 'Pendiente de Confirmación'
-      if (estadoActual.nombre_estado !== "Pendiente de Confirmación") {
-        throw new Error(
-          "Solo puedes desasignar pedidos en estado 'Pendiente de Confirmación'."
-        );
-      }
-      await PedidoRepository.update(id_pedido, {
-        id_chofer: null,
-        id_estado_pedido: estadoPendiente.id_estado_venta,
-      });
-
-      await transaction.commit();
-      return await PedidoRepository.findById(id_pedido);
-    } catch (error) {
-      await transaction.rollback();
-      throw new Error(`Error al desasignar pedido: ${error.message}`);
-    }
   }
 
   async getPedidoById(id_pedido) {
@@ -535,7 +446,12 @@ class PedidoService {
     }
 
     if (options.fecha) {
-      where.fecha_pedido = { [Op.between]: [`${options.fecha} 00:00:00`, `${options.fecha} 23:59:59`] };
+      where.fecha_pedido = {
+        [Op.between]: [
+          `${options.fecha} 00:00:00`,
+          `${options.fecha} 23:59:59`,
+        ],
+      };
     }
 
     const include = [
@@ -585,9 +501,11 @@ class PedidoService {
   async obtenerHistorialPedidos(id_chofer, fecha, options = {}) {
     const where = {
       id_chofer: id_chofer,
-      fecha_pedido: { [Op.between]: [`${fecha} 00:00:00`, `${fecha} 23:59:59`] }, // Rango de día completo
+      fecha_pedido: {
+        [Op.between]: [`${fecha} 00:00:00`, `${fecha} 23:59:59`],
+      }, // Rango de día completo
     };
-    
+
     const include = [
       {
         model: EstadoVentaRepository.getModel(),
@@ -606,18 +524,16 @@ class PedidoService {
         ],
       },
     ];
-  
+
     // 🔹 Corrección: nos aseguramos de usar "id_pedido" correctamente
     const result = await paginate(PedidoRepository.getModel(), options, {
       where,
       include,
       order: [["id_pedido", "DESC"]],
     });
-  
-  
+
     return result;
   }
-  
 
   async obtenerPedidosAsignados(id_chofer, options = {}) {
     return await this.getPedidos(
@@ -641,3 +557,7 @@ class PedidoService {
 }
 
 export default new PedidoService();
+
+
+
+

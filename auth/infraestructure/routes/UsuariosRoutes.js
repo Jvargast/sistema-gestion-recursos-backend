@@ -2,6 +2,7 @@ import { Router } from 'express';
 import UsuariosController from '../controllers/UsuariosController.js';
 import checkPermissions from '../../../shared/middlewares/CheckPermissionsMiddleware.js';
 import authenticate from '../../../shared/middlewares/authenticate.js';
+import { checkRoles } from '../../../shared/middlewares/CheckRole.js';
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.post('/crear', authenticate, checkPermissions('crear_usuarios'), Usuarios
 // Obtener todos los usuarios del sistema
 router.get('/', authenticate, checkPermissions('ver_usuarios'), UsuariosController.getAllUsers);
 // Obtener todos los usuarios rol chofer
-router.get('/choferes', authenticate, checkPermissions('ver_usuarios'), UsuariosController.getAllChoferes);
+router.get('/choferes', authenticate, checkRoles(["administrador", "chofer"]), /* checkPermissions('ver_choferes'),  */UsuariosController.getAllChoferes);
 
 router.get('/vendedores', authenticate, checkPermissions('ver_usuarios'), UsuariosController.getAllVendedores);
 

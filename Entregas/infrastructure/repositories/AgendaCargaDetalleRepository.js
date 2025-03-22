@@ -1,6 +1,5 @@
 import AgendaCargaDetalle from "../../domain/models/AgendaCargaDetalle.js";
 
-
 class AgendaCargaDetalleRepository {
   async create(detalleData) {
     return await AgendaCargaDetalle.create(detalleData);
@@ -20,12 +19,24 @@ class AgendaCargaDetalleRepository {
     });
   }
 
+  async updateEstadoByAgendaId(id_agenda_carga, estado) {
+    return await AgendaCargaDetalle.update(estado, {
+      where: { id_agenda_carga },
+    });
+  }
+
   async delete(id) {
-    return await AgendaCargaDetalle.destroy({ where: { id_agenda_carga_detalle: id } });
+    return await AgendaCargaDetalle.destroy({
+      where: { id_agenda_carga_detalle: id },
+    });
   }
 
   async deleteByAgendaId(id_agenda_carga) {
     return await AgendaCargaDetalle.destroy({ where: { id_agenda_carga } });
+  }
+
+  getModel() {
+    return AgendaCargaDetalle;
   }
 }
 
