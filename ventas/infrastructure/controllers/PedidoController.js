@@ -122,7 +122,7 @@ class PedidoController {
 
   async obtenerPedidosConfirmados(req, res) {
     try {
-      const id_chofer = req.user.id;
+      const { id_chofer } = req.params;
       const pedidos = await PedidoService.getPedidosConfirmadosPorChofer(
         id_chofer
       );

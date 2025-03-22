@@ -3,7 +3,6 @@ import AgendaCarga from "../../domain/models/AgendaCarga.js";
 import AgendaCargaDetalle from "../../domain/models/AgendaCargaDetalle.js";
 import Camion from "../../domain/models/Camion.js";
 
-
 class AgendaCargaRepository {
   async create(data) {
     return await AgendaCarga.create(data);
@@ -15,6 +14,10 @@ class AgendaCargaRepository {
         id_camion,
       },
     });
+  }
+
+  async findOneByConditions(conditions) {
+    return await AgendaCarga.findOne(conditions);
   }
 
   async findByPk(id_agenda_carga) {
@@ -89,10 +92,11 @@ class AgendaCargaRepository {
       return agenda;
     } catch (error) {
       console.error("Error en findByCamionAndEstado:", error);
-      throw new Error("No se pudo obtener la agenda para el camión y estado especificados.");
+      throw new Error(
+        "No se pudo obtener la agenda para el camión y estado especificados."
+      );
     }
   }
-
 
   getModel() {
     return AgendaCarga;

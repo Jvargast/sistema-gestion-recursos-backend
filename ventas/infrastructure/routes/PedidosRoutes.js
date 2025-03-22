@@ -10,7 +10,7 @@ router.get("/asignados/:id_chofer", authenticate, PedidoController.obtenerPedido
 router.get("/sin-asignar", authenticate, PedidoController.obtenerPedidosSinAsignar);
 router.get("/mis-pedidos", authenticate, checkRoles(['chofer']), PedidoController.obtenerMisPedidos);
 router.get("/historial", authenticate, checkRoles(['chofer']), PedidoController.obtenerHistorialPedidos);
-router.get("/confirmados", authenticate, checkRoles(['chofer']), PedidoController.obtenerPedidosConfirmados);
+router.get("/confirmados/:id_chofer", authenticate, checkRoles(['chofer', 'administrador']), PedidoController.obtenerPedidosConfirmados);
 router.get("/:id_pedido", authenticate, PedidoController.getPedidoById);
 router.get("/", authenticate, PedidoController.getAllPedidos);
 router.put("/asignar/:id_pedido", authenticate, PedidoController.asignarPedido);

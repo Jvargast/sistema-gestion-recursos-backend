@@ -43,6 +43,19 @@ class UsuarioRepository extends IUsuariosRepository {
     return await Usuario.findAll();
   }
 
+  async findByRol(rol) {
+    return await Usuario.findOne({
+      include: [
+        {
+          model: Roles,
+          as: "rol",
+          attributes: ["nombre"],
+          where: { nombre: rol },
+        },
+      ],
+    });
+  }
+
   async findAllByRolId(rolId) {
     return await Usuario.findAll({
       where: { rolId },

@@ -10,6 +10,16 @@ class AgendaViajesController {
     }
   }
 
+  async getViajeChofer(req, res) {
+    try {
+      const { id_chofer } = req.params;
+      const viaje = await AgendaViajeService.getViajeByChoferId(id_chofer);
+      res.status(200).json(viaje);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   async finalizarViaje(req, res) {
     try {
       const { id_agenda_viaje } = req.params;

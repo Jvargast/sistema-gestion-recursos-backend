@@ -1,3 +1,4 @@
+import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import sequelize from "../../database/database.js";
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import CamionRepository from "../infrastructure/repositories/CamionRepository.js";
@@ -25,6 +26,16 @@ class AgendaViajesService {
       console.error("Error en AgendaViajesService:", error);
       throw new Error(error.message);
     }
+  }
+
+  async getViajeByChoferId(id_chofer) {
+    const usuario = UsuariosRepository.findByRut(id_chofer);
+    if (!usuario) throw Error(`No existe usuario con el id: ${id_chofer}`);
+
+    const viaje = await AgendaViajesRepository.findByChoferAndEstado(id_chofer, "En Tránsito");
+    if(!viaje) throw Error(`No existe viaje con el id del chofer: ${id_chofer}`);
+
+    return viaje;
   }
 
   async finalizarViaje(id_agenda_viaje, choferRut, descargarDisponibles) {
@@ -66,10 +77,9 @@ class AgendaViajesService {
 
       console.log("SI funcion");
       const inventarioCamion =
-        await InventarioCamionRepository.findAllByCamionId(
-          camion.id_camion,
-          {transaction}
-        );
+        await InventarioCamionRepository.findAllByCamionId(camion.id_camion, {
+          transaction,
+        });
       const inventarioFinal = inventarioCamion.map((item) => ({
         id_inventario_camion: item.id_inventario_camion,
         id_producto: item.id_producto,
