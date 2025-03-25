@@ -16,6 +16,7 @@ import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js
 import InventarioCamionRepository from "../../Entregas/infrastructure/repositories/InventarioCamionRepository.js";
 import InsumoRepository from "../../inventario/infrastructure/repositories/InsumoRepository.js";
 import VentaService from "./VentaService.js";
+import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
 
 class PedidoService {
   // Se crea en Pendiente
@@ -155,6 +156,112 @@ class PedidoService {
       throw new Error(`Error al crear pedido: ${error.message}`);
     }
   }
+
+  // Pedido pasa a En Entrega
+  async registrarDesdePedido({
+    id_pedido,
+    id_caja,
+    tipo_documento,
+    pago_recibido,
+    referencia,
+    notas,
+    id_usuario_creador,
+    id_metodo_pago: metodoPagoDesdeFront,
+  }) {
+    const transaction = await sequelize.transaction();
+    try {
+      // 1. Buscar el pedido
+      const pedido = await PedidoRepository.findById(id_pedido, {
+        transaction,
+      });
+      if (!pedido) throw new Error("Pedido no encontrado.");
+
+      if (pedido.estado_pago === "Pagado" || pedido.pagado === true)
+        throw new Error("El pedido ya fue pagado.");
+
+      const cliente = await ClienteRepository.findById(pedido.id_cliente, {
+        transaction,
+      });
+      const idMetodoPagoFinal = metodoPagoDesdeFront || pedido.id_metodo_pago;
+      if (!idMetodoPagoFinal)
+        throw new Error(
+          "Debe especificar un método de pago para registrar la venta."
+        );
+      const metodoPago = await MetodoPagoRepository.findById(
+        idMetodoPagoFinal,
+        {
+          transaction,
+        }
+      );
+      if (!metodoPago)
+        throw new Error("Método de pago no encontrado para el pedido.");
+      await UsuariosRepository.findByRut(id_usuario_creador, { transaction });
+      const caja = id_caja
+        ? await CajaRepository.findById(id_caja, { transaction })
+        : null;
+
+      // 2. Obtener detalles del pedido
+      const detallesPedido = await DetallePedidoRepository.findByPedidoId(
+        id_pedido,
+        { transaction }
+      );
+
+      const productos = detallesPedido.map((d) => ({
+        id_producto: d.id_producto,
+        id_insumo: d.id_insumo,
+        cantidad: d.cantidad,
+        precio_unitario: d.precio_unitario,
+        tipo: d.id_producto ? "producto" : "insumo",
+      }));
+
+      // 3. Crear venta usando el servicio ya existente
+      const ventaResult = await VentaService.createVenta(
+        {
+          id_cliente: cliente.id_cliente,
+          id_vendedor: id_usuario_creador,
+          id_caja: caja?.id_caja ?? null,
+          tipo_entrega: "pedido_pagado_anticipado",
+          direccion_entrega: pedido.direccion_entrega,
+          productos,
+          productos_retornables: [],
+          id_metodo_pago: metodoPago.id_metodo_pago,
+          notas,
+          impuesto: 0,
+          tipo_documento,
+          pago_recibido,
+          referencia,
+          id_pedido_asociado: pedido.id_pedido,
+        },
+        id_usuario_creador,
+        transaction
+      );
+
+      // 4. Asociar la venta al pedido
+
+      await PedidoRepository.update(
+        id_pedido,
+        {
+          id_venta: ventaResult.venta.id_venta,
+          estado_pago: "Pagado",
+          pagado: true,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+
+      return {
+        mensaje: "Venta registrada desde pedido exitosamente.",
+        venta: ventaResult.venta,
+        documento: ventaResult.documento,
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw new Error(
+        `Error al registrar venta desde pedido: ${error.message}`
+      );
+    }
+  }
   // Asignar de Pendiente -> Pendiente de Confirmación
   async asignarPedido(id_pedido, id_chofer) {
     try {
@@ -247,10 +354,14 @@ class PedidoService {
         id_pedido
       );
 
-      const detallesPedidoProductos = detallesPedido.filter(async (item) => {
+      const detallesPedidoProductos = [];
+
+      for (const item of detallesPedido) {
         const producto = await ProductosRepository.findById(item.id_producto);
-        return producto; // solo productos, no insumos
-      });
+        if (producto) {
+          detallesPedidoProductos.push(item);
+        }
+      }
 
       const viajeActivo = await AgendaViajesRepository.findByChoferAndEstado(
         id_chofer,
@@ -263,6 +374,7 @@ class PedidoService {
           await InventarioCamionService.getInventarioDisponible(
             viajeActivo.id_camion
           );
+        const cliente = await ClienteRepository.findById(pedido.id_cliente);
 
         for (const item of detallesPedidoProductos) {
           const producto = await ProductosRepository.findById(item.id_producto);
@@ -284,34 +396,33 @@ class PedidoService {
             );
           }
 
-          /* await InventarioCamionReservasRepository.create(
-            {
-              id_inventario_camion: disponibleEnCamion.id_inventario_camion,
-              id_pedido,
-              cantidad_reservada: item.cantidad,
-              estado: "Pendiente",
-              tipo: esRetornable
-                ? "producto_retornable"
-                : "producto_no_retornable",
-            },
-            { transaction }
-          ); */
-
-          // Actualizar InventarioCamion restando la cantidad reservada
-          await InventarioCamionRepository.update(
-            disponibleEnCamion.id_inventario_camion,
-            {
-              cantidad: disponibleEnCamion.cantidad - item.cantidad,
-              estado: "En Camión - Reservado",
-              fecha_actualizacion: new Date(),
-              tipo: "Reservado",
-              es_retornable: esRetornable
-            },
-            { transaction }
-          );
+          await InventarioCamionService.reservarDesdeDisponible({
+            id_camion: viajeActivo.id_camion,
+            id_producto: item.id_producto,
+            cantidad: item.cantidad,
+            tipo: "Reservado",
+            es_retornable: esRetornable,
+            transaction,
+          });
         }
+        const nuevoDestino = {
+          id_pedido: pedido.id_pedido,
+          id_cliente: cliente.id_cliente,
+          nombre_cliente: cliente.nombre,
+          direccion: pedido.direccion_entrega,
+          notas: pedido.notas || "",
+        };
+
+        // Agregar destino a la lista actual de destinos
+        const destinosActuales = viajeActivo.destinos || [];
+        destinosActuales.push(nuevoDestino);
+
+        await AgendaViajesRepository.update(
+          viajeActivo.id_agenda_viaje,
+          { destinos: destinosActuales },
+          { transaction }
+        );
         nuevoEstado = await EstadoVentaRepository.findByNombre("En Entrega");
-        
       } else {
         // Si no hay viaje activo, no reservas inmediatamente
         nuevoEstado = await EstadoVentaRepository.findByNombre("Confirmado");
@@ -379,7 +490,7 @@ class PedidoService {
       ],
       order: [["fecha_pedido", "ASC"]],
     });
-    console.log(pedidos)
+    console.log(pedidos);
 
     if (!pedidos || pedidos.length === 0) {
       return [];
@@ -535,6 +646,35 @@ class PedidoService {
     return result;
   }
 
+  async getDetalleConTotal(id_pedido) {
+    const pedido = await PedidoRepository.findById(id_pedido);
+    if (!pedido) throw new Error("Pedido no encontrado");
+    const detalles = await DetallePedidoRepository.findByPedidoId(id_pedido);
+    const productos = [];
+    let total = 0;
+    for (const item of detalles) {
+      const producto = await ProductosRepository.findById(item.id_producto);
+      const subtotal = producto.precio * item.cantidad;
+      total += subtotal;
+
+      productos.push({
+        id_producto: producto.id_producto,
+        nombre: producto.nombre_producto,
+        cantidad: item.cantidad,
+        precio_unitario: producto.precio,
+        subtotal,
+        es_retornable: producto.es_retornable,
+      });
+    }
+
+    return {
+      id_pedido,
+      detalle: productos,
+      monto_total: total,
+      pagado: pedido.pagado,
+    };
+  }
+
   async obtenerPedidosAsignados(id_chofer, options = {}) {
     return await this.getPedidos(
       { id_chofer: { [Op.eq]: id_chofer } },
@@ -557,7 +697,3 @@ class PedidoService {
 }
 
 export default new PedidoService();
-
-
-
-

@@ -55,14 +55,14 @@ class InventarioCamionController {
 
   async getInventarioDisponiblePorChofer(req, res) {
     try {
-      const { rut } = req.user; // Obtener el RUT del chofer desde el token o sesión
+      const { id } = req.user; // Obtener el RUT del chofer desde el token o sesión
 
-      if (!rut) {
+      if (!id) {
         return res.status(400).json({ error: "RUT del usuario es requerido." });
       }
 
       // Obtener la agenda activa del chofer
-      const agenda = await AgendaCargaService.getAgendaActivaPorChofer(rut);
+      const agenda = await AgendaCargaService.getAgendaActivaPorChofer(id);
 
       if (!agenda) {
         return res

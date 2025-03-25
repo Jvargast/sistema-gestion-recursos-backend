@@ -44,6 +44,26 @@ class EntregaController {
     }
   }
 
+  async getEntregasByAgendaId(req, res) {
+    try {
+      const { page = 1, limit = 10, id_agenda_viaje } = req.query;
+
+      const options = {
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
+      };
+
+      const entregas = await EntregaService.getEntregasByAgendaId(
+        id_agenda_viaje,
+        options
+      );
+
+      res.status(200).json(entregas);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   async update(req, res) {
     try {
       const { id } = req.params;

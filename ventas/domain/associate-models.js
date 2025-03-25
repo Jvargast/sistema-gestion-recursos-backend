@@ -30,6 +30,15 @@ function loadPOSAssociations() {
   Pedido.belongsTo(Usuarios, { foreignKey: "id_creador", as: "Creador" });
   Usuarios.hasMany(Pedido, { foreignKey: "id_creador", as: "PedidosCreados" });
 
+  Pedido.belongsTo(Venta, {
+    foreignKey: "id_venta",
+    as: "venta",
+  });
+  Venta.hasOne(Pedido, {
+    foreignKey: "id_venta",
+    as: "pedido",
+  });
+
   // Relación: Un Pedido puede estar asignado a un Chofer
   Pedido.belongsTo(Usuarios, { foreignKey: "id_chofer", as: "Chofer" });
   Usuarios.hasMany(Pedido, { foreignKey: "id_chofer", as: "PedidosAsignados" });
@@ -83,7 +92,7 @@ function loadPOSAssociations() {
     foreignKey: "id_insumo",
     as: "Detalles",
   });
-  
+
   // Relación Caja -> Sucursal
   Caja.belongsTo(Sucursal, { foreignKey: "id_sucursal", as: "sucursal" });
   Sucursal.hasMany(Caja, { foreignKey: "id_sucursal", as: "cajas" });

@@ -33,7 +33,7 @@ const Venta = sequelize.define(
     },
     id_caja: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: Caja,
         key: "id_caja",

@@ -1,3 +1,4 @@
+import Cliente from "../../../ventas/domain/models/Cliente.js";
 import Entrega from "../../domain/models/Entrega.js";
 
 
@@ -8,13 +9,16 @@ class EntregaRepository {
 
   async findById(id) {
     return await Entrega.findByPk(id, {
-      include: ['detalleTransaccion', 'usuario'],
+      include: [{
+        model: Cliente,
+        as: "cliente"
+      }],
     });
   }
 
   async findAll() {
     return await Entrega.findAll({
-      include: ['detalleTransaccion', 'usuario'],
+      include: ['usuario'],
     });
   }
 

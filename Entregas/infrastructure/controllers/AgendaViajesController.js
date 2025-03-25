@@ -37,6 +37,24 @@ class AgendaViajesController {
     }
   }
 
+  async getHistorialViajesChofer(req, res) {
+    try {
+      const { id_chofer } = req.params;
+
+      const viajes = await AgendaViajeService.getHistorialViajesChofer(
+        id_chofer
+      );
+
+      res.status(200).json({ success: true, data: viajes });
+    } catch (error) {
+      console.error("Error al obtener historial de viajes:", error);
+      res.status(500).json({
+        success: false,
+        message: "Error al obtener historial de viajes.",
+      });
+    }
+  }
+
   /* Opcionalmente, podrías agregar otros endpoints, por ejemplo:
   async iniciarViaje(req, res) {
     try {

@@ -21,6 +21,7 @@ import PagoService from "./PagoService.js";
 import PedidoService from "./PedidoService.js";
 import sequelize from "../../database/database.js";
 import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
+import DetallePedidoRepository from "../infrastructure/repositories/DetallePedidoRepository.js";
 
 class VentaService {
   async getVentaById(id) {
@@ -134,7 +135,9 @@ class VentaService {
       const vendedor = await UsuariosRepository.findByRut(id_vendedor, {
         transaction,
       });
-      const caja = await CajaRepository.findById(id_caja, { transaction });
+      const caja = id_caja
+        ? await CajaRepository.findById(id_caja, { transaction })
+        : null;
       const metodoPago = await MetodoPagoRepository.findById(id_metodo_pago, {
         transaction,
       });
@@ -145,8 +148,12 @@ class VentaService {
       if (!vendedor) {
         throw new Error(`Vendedor con RUT ${id_vendedor} no encontrado.`);
       }
-      if (!caja || caja.estado !== "abierta") {
-        throw new Error(`Caja con ID ${id_caja} no está abierta o no existe.`);
+      if (id_caja) {
+        if (!caja || caja.estado !== "abierta") {
+          throw new Error(
+            `Caja con ID ${id_caja} no está abierta o no existe.`
+          );
+        }
       }
       if (!metodoPago) {
         throw new Error(
@@ -216,7 +223,7 @@ class VentaService {
         {
           id_cliente,
           id_vendedor,
-          id_caja,
+          id_caja: caja ? caja.id_caja : null,
           id_sucursal: sucursal,
           tipo_entrega,
           direccion_entrega:
@@ -329,7 +336,6 @@ class VentaService {
           id_estado_pago: estadoPago.id_estado_pago,
           monto: totalConImpuesto,
           fecha_pago: tipo_documento === "boleta" ? new Date() : null,
-          id_caja: caja.id_caja,
           referencia: referencia || null,
         },
         { transaction }
@@ -341,21 +347,21 @@ class VentaService {
           transaction,
         });
 
-        if (metodo.nombre.toLowerCase() === "efectivo") {
-          if (data.pago_recibido < totalConImpuesto) {
+        if (metodo.nombre.toLowerCase() === "efectivo" && caja) {
+          if (pago_recibido < totalConImpuesto) {
             throw new Error(
               "El monto recibido es insuficiente para realizar la venta."
             );
           }
 
-          vuelto = data.pago_recibido - totalConImpuesto;
+          vuelto = pago_recibido - totalConImpuesto;
 
           // Registrar el movimiento en caja con el monto recibido
           await MovimientoCajaService.registrarMovimiento(
             {
               id_caja,
               tipo_movimiento: "ingreso",
-              monto: data.pago_recibido,
+              monto: pago_recibido,
               descripcion: `Venta con boleta ID ${venta.id_venta}`,
               id_venta: venta.id_venta,
               id_metodo_pago,
@@ -377,10 +383,11 @@ class VentaService {
             );
           }
         }
-      } 
+      }
 
       // Crear pedido automáticamente solo si es despacho
-      if (tipo_entrega === "despacho_a_domicilio") {
+      console.log(id_pedido_asociado)
+      if (tipo_entrega === "despacho_a_domicilio" && !id_pedido_asociado) {
         await PedidoService.createPedido(
           {
             id_cliente,
@@ -389,6 +396,7 @@ class VentaService {
             productos,
             metodo_pago: id_metodo_pago,
             pagado: Boolean(pago_recibido || referencia),
+            id_venta: venta.id_venta,
           },
           { transaction }
         );
@@ -399,8 +407,8 @@ class VentaService {
         const pedido = await PedidoRepository.findById(id_pedido_asociado, {
           transaction,
         });
-        if (!pedido || pedido.estado_pago !== "Pagado")
-          throw new Error("Pedido no válido o sin pago.");
+        if (!pedido || pedido.id_venta)
+          throw new Error("Pedido no válido o ya asociado a una venta.");
         await PedidoRepository.update(
           id_pedido_asociado,
           { id_venta: venta.id_venta },

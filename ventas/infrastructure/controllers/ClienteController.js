@@ -22,10 +22,9 @@ class ClienteController {
       delete filters.limit;
       delete filters.offset;
 
-      // Verificar el rol del usuario y modificar los filtros si es "chofer"
-    if (req.user.rol === "chofer" && req.user.id) {
-      filters.creado_por = req.user.id; // Agregar filtro por "creado_por" con el rut del usuario
-    }
+    /* if (req.user.rol === "chofer" && req.user.id) {
+      filters.creado_por = req.user.id; 
+    } */
       const clientes = await ClienteService.getAllClientes(filters, options);
       res.status(200).json({data: clientes.data, total: clientes.pagination});
     } catch (error) {

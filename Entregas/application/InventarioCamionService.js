@@ -179,6 +179,7 @@ class InventarioCamionService {
             "nombre_producto",
             "descripcion",
             "precio",
+            "es_retornable"
           ],
         },
       ],
@@ -192,6 +193,7 @@ class InventarioCamionService {
       cantidad: item.cantidad,
       estado: item.estado,
       precio: item.producto.precio,
+      es_retornable: item.es_retornable
     }));
   }
 
@@ -436,6 +438,44 @@ class InventarioCamionService {
       throw error;
     }
   }
+
+  async reservarDesdeDisponible({
+    id_camion,
+    id_producto,
+    cantidad,
+    tipo = "Reservado",
+    es_retornable = false,
+    transaction,
+  }) {
+    const estadoDisponible = "En Camión - Disponible";
+    const estadoReservado = "En Camión - Reservado";
+  
+    const disponible = await InventarioCamionRepository.findByCamionAndProduct(
+      id_camion,
+      id_producto,
+      estadoDisponible,
+      { transaction }
+    );
+  
+    if (!disponible || disponible.cantidad < cantidad) {
+      throw new Error("Inventario disponible insuficiente");
+    }
+  
+    // 1. Resta del disponible
+    disponible.cantidad -= cantidad;
+    await disponible.save({ transaction });
+  
+    // 2. Suma al reservado
+    await this.addOrUpdateProductoCamion({
+      id_camion,
+      id_producto,
+      cantidad,
+      estado: estadoReservado,
+      tipo,
+      es_retornable,
+    }, { transaction });
+  }
+  
 
   async getInventarioPorChofer(id_chofer) {
     if (!id_chofer) {

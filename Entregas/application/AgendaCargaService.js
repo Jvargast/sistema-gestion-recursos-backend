@@ -16,7 +16,6 @@ import EstadoVentaRepository from "../../ventas/infrastructure/repositories/Esta
 import InsumoRepository from "../../inventario/infrastructure/repositories/InsumoRepository.js";
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteRepository.js";
-import { model } from "mongoose";
 import InventarioRepository from "../../inventario/infrastructure/repositories/InventarioRepository.js";
 
 class AgendaCargaService {
