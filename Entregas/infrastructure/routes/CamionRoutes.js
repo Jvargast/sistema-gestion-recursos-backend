@@ -12,6 +12,7 @@ router.get("/capacidad/:id_camion", authenticate, CamionController.getCamionCapa
 router.get("/:id", authenticate, CamionController.getById);
 router.put("/:id", authenticate, CamionController.update);
 router.patch("/:id/asignar-chofer", authenticate, checkRoles(["administrador"]), CamionController.asignarChofer);
+router.patch("/:id/desasignar-chofer", authenticate, checkRoles(["administrador"]), CamionController.desasignarChofer);
 router.delete("/:id", authenticate, CamionController.delete);
 
 export default router;
