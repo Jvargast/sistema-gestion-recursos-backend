@@ -4,14 +4,9 @@ import Caja from "../../domain/models/Caja.js";
 
 class CajaRepository {
   async findById(id) {
-    try {
-      return await Caja.findByPk(id, {
-        include: [{ model: Sucursal, as: "sucursal" }],
-      });
-    } catch (error) {
-      console.error("Error en CajaRepository.findById:", error.message);
-      throw error;
-    }
+    return await Caja.findByPk(id, {
+      include: [{ model: Sucursal, as: "sucursal" }],
+    });
   }
 
   async findAll(filters = {}, options = {}) {
@@ -40,7 +35,7 @@ class CajaRepository {
 
   async findByAsignado(rut) {
     return await Caja.findOne({
-      where: { usuario_asignado: rut }, 
+      where: { usuario_asignado: rut },
       include: [{ model: Sucursal, as: "sucursal" }],
     });
   }

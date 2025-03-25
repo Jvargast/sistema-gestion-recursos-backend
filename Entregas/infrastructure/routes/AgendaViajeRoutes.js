@@ -8,6 +8,7 @@ const router = Router();
 // Obtener todos los viajes en tránsito
 router.get("/chofer/:id_chofer", authenticate, checkRoles(["administrador", "chofer"]), AgendaViajesController.getViajeChofer);
 router.get("/", authenticate, checkRoles(["administrador", "chofer"]), AgendaViajesController.getAllViajes);
+router.get("/historial/:id_chofer", authenticate, checkRoles(["administrador", "chofer"]), AgendaViajesController.getHistorialViajesChofer);
 // Finalizar un viaje (se pasa el id_agenda_viaje en la URL y se recibe el flag en el body)
 router.post("/:id_agenda_viaje/finalizar", authenticate, checkRoles(["chofer"]), AgendaViajesController.finalizarViaje);
 

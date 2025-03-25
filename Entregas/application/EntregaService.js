@@ -8,14 +8,16 @@ import CajaRepository from "../../ventas/infrastructure/repositories/CajaReposit
 import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteRepository.js";
 import DetallePedidoRepository from "../../ventas/infrastructure/repositories/DetallePedidoRepository.js";
 import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
+import EstadoVentaRepository from "../../ventas/infrastructure/repositories/EstadoVentaRepository.js";
+import MetodoPagoRepository from "../../ventas/infrastructure/repositories/MetodoPagoRepository.js";
 import PagoRepository from "../../ventas/infrastructure/repositories/PagoRepository.js";
 import PedidoRepository from "../../ventas/infrastructure/repositories/PedidoRepository.js";
+import VentaRepository from "../../ventas/infrastructure/repositories/VentaRepository.js";
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import EntregaRepository from "../infrastructure/repositories/EntregaRepository.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
 
 class EntregaService {
-
   // Pedido de En Entrega -> Completada
   async processDelivery(payload) {
     const {
@@ -86,6 +88,15 @@ class EntregaService {
       const isPaid = pedido.pagado;
       let ventaRegistrada = null;
 
+      let pago_recibido = null;
+
+      const metodo = await MetodoPagoRepository.findById(id_metodo_pago, {
+        transaction,
+      });
+      if (metodo && metodo.nombre.toLowerCase() === "efectivo") {
+        pago_recibido = monto_total;
+      }
+
       if (!isPaid) {
         const data = {
           id_cliente: pedido.id_cliente,
@@ -100,7 +111,9 @@ class EntregaService {
           impuesto: impuesto || 0,
           descuento_total_porcentaje: descuento_total_porcentaje || 0,
           tipo_documento,
-          tipo_referencia: payment_reference,
+          referencia: payment_reference,
+          pago_recibido,
+          id_pedido_asociado: pedido.id_pedido,
         };
         ventaRegistrada = await VentaService.createVenta(data, id_chofer, {
           transaction,
@@ -108,6 +121,10 @@ class EntregaService {
 
         pedido.pagado = true;
         pedido.estado_pago = "Pagado";
+      } else {
+        ventaRegistrada = pedido.id_venta
+          ? await VentaRepository.findById(pedido.id_venta, { transaction })
+          : null;
       }
 
       pedido.id_estado_pedido = estadoCompletada.id_estado_venta;
@@ -147,7 +164,7 @@ class EntregaService {
 
           if (!reserva || reserva.cantidad < item.cantidad)
             throw new Error(
-              `Inventario insuficiente en camión para insumo: ${item.id_producto}`
+              `Inventario insuficiente en camión para insumo: ${item.id_insumo}`
             );
 
           reserva.cantidad -= item.cantidad;
@@ -187,7 +204,6 @@ class EntregaService {
             registro.cantidad += item.cantidad;
             await registro.save({ transaction });
           }
-
         }
       }
 
@@ -205,6 +221,7 @@ class EntregaService {
           fecha_hora: new Date(),
           id_documento: ventaRegistrada?.documento?.id_documento || null,
           motivo_fallo: null,
+          id_pedido: pedido.id_pedido,
         },
         { transaction }
       );
@@ -221,6 +238,19 @@ class EntregaService {
     }
   }
 
+  async validarEstados(
+    pedido,
+    estadoActual,
+    estadoEnEntrega,
+    estadoCompletada
+  ) {
+    if (!estadoEnEntrega || !estadoCompletada)
+      throw new Error("Estados no configurados correctamente.");
+
+    if (estadoActual.nombre_estado !== "En Entrega")
+      throw new Error("El pedido no está en estado 'En Entrega'.");
+  }
+
   async getEntregaById(id) {
     const entrega = await EntregaRepository.findById(id);
     if (!entrega) {
@@ -230,38 +260,10 @@ class EntregaService {
   }
 
   async getAllEntregas(filters = {}, options) {
-    const allowedFields = ["id", "fechaHoraEntrega", "estadoEntrega"];
+    /* const allowedFields = ["id", "fechaHoraEntrega", "estadoEntrega"];
     const where = createFilter(filters, allowedFields);
 
     const include = [
-      {
-        model: DetalleTransaccionRepository.getModel(),
-        as: "detalleTransaccion",
-        include: [
-          {
-            model: ProductosRepository.getModel(),
-            as: "producto",
-            attributes: ["id_producto", "nombre_producto", "precio"],
-          },
-          {
-            model: TransaccionRepository.getModel(),
-            as: "transaccion",
-            include: [
-              {
-                model: ClienteRepository.getModel(),
-                as: "cliente",
-                attributes: [
-                  "id_cliente",
-                  "rut",
-                  "nombre",
-                  "apellido",
-                  "direccion",
-                ],
-              },
-            ],
-          },
-        ],
-      },
       {
         model: UsuariosRepository.getModel(),
         as: "usuario",
@@ -311,124 +313,66 @@ class EntregaService {
     return {
       data: Object.values(groupedByTransaction),
       pagination: result.pagination,
-    };
+    }; */
   }
 
-  async getEntregasPorChofer(choferId, options) {
+  async getEntregasByAgendaId(id_agenda_viaje, options = {}) {
+    if (!id_agenda_viaje) {
+      throw new Error("ID de agenda de viaje es requerido.");
+    }
     const include = [
       {
-        model: DetalleTransaccionRepository.getModel(),
-        as: "detalleTransaccion",
-        include: [
-          {
-            model: ProductosRepository.getModel(),
-            as: "producto",
-          },
-          {
-            model: TransaccionRepository.getModel(),
-            as: "transaccion",
-            include: [
-              {
-                model: ClienteRepository.getModel(),
-                as: "cliente", // Relación cliente en transacción
-              },
-              {
-                model: DocumentoRepository.getModel(),
-                as: "documentos",
-                include: [
-                  {
-                    model: PagoRepository.getModel(),
-                    as: "pagos",
-                    attributes: ["id_pago", "monto", "fecha", "referencia"],
-                  },
-                ],
-              },
-            ],
-          },
+        model: DocumentoRepository.getModel(),
+        as: "documento",
+
+        attributes: [
+          "id_documento",
+          "tipo_documento",
+          "numero",
+          "total",
+          "fecha_emision",
+          "estado",
         ],
       },
       {
-        model: UsuariosRepository.getModel(),
-        as: "usuario",
-        attributes: ["rut", "nombre", "email"],
+        model: PedidoRepository.getModel(),
+        as: "pedido",
+        attributes: ["id_pedido"],
+      },
+      {
+        model: ClienteRepository.getModel(),
+        as: "cliente",
+        attributes: [
+          "id_cliente",
+          "nombre",
+          "apellido",
+          "razon_social",
+          "direccion",
+        ],
       },
     ];
 
-    const where = choferId ? { id_usuario_chofer: choferId } : {};
+    const where = {
+      id_agenda_viaje: id_agenda_viaje,
+    };
 
     const result = await paginate(EntregaRepository.getModel(), options, {
       where,
       include,
-      order: [["id", "ASC"]],
+      attributes: [
+        "id_entrega",
+        "fecha_hora",
+        "estado_entrega",
+        "monto_total",
+        "productos_entregados",
+        "insumo_entregados",
+        "botellones_retorno",
+        "es_entrega_directa",
+      ],
+      order: [["fecha_hora", "DESC"]],
     });
 
-    // Agrupar entregas por chofer
-    const agrupadasPorChofer = result.data.reduce((acc, entrega) => {
-      const choferKey = entrega.usuario.rut;
-      if (!acc[choferKey]) {
-        acc[choferKey] = {
-          chofer: entrega.usuario,
-          transacciones: {},
-        };
-      }
-
-      const idTransaccion =
-        entrega.detalleTransaccion.transaccion.id_transaccion;
-      const total = entrega.detalleTransaccion.transaccion.total;
-      const documentos =
-        entrega.detalleTransaccion.transaccion.documentos || [];
-      const pagos = documentos
-        ? documentos.flatMap((doc) =>
-            doc.pagos.map((pago) => ({
-              id_pago: pago.id_pago,
-              monto: pago.monto,
-              fecha: pago.fecha,
-              referencia: pago.referencia,
-            }))
-          )
-        : [];
-
-      // Agrupar entregas dentro de la transacción correspondiente
-      if (!acc[choferKey].transacciones[idTransaccion]) {
-        acc[choferKey].transacciones[idTransaccion] = {
-          id_transaccion: idTransaccion,
-          total: total,
-          cliente: entrega.detalleTransaccion.transaccion.cliente
-            ? {
-                nombre: entrega.detalleTransaccion.transaccion.cliente.nombre,
-                apellido:
-                  entrega.detalleTransaccion.transaccion.cliente.apellido,
-                direccion:
-                  entrega.detalleTransaccion.transaccion.cliente.direccion,
-              }
-            : null,
-          pago: pagos,
-          entregas: [],
-        };
-      }
-
-      acc[choferKey].transacciones[idTransaccion].entregas.push({
-        id_entrega: entrega.id,
-        fechaHoraEntrega: entrega.fechaHoraEntrega,
-        estadoEntrega: entrega.estadoEntrega,
-        producto: entrega.detalleTransaccion.producto.nombre_producto,
-        cantidad: entrega.detalleTransaccion.cantidad,
-        subtotal: entrega.detalleTransaccion.subtotal,
-      });
-
-      return acc;
-    }, {});
-
-    // Convertir las transacciones a un array para facilitar el manejo en el frontend
-    const data = Object.values(agrupadasPorChofer).map((chofer) => ({
-      ...chofer,
-      transacciones: Object.values(chofer.transacciones),
-    }));
-
-    return {
-      data,
-      pagination: result.pagination,
-    };
+    return result;
   }
 
   async updateEntrega(id, data) {

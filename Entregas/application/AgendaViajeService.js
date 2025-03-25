@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import sequelize from "../../database/database.js";
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
@@ -32,8 +33,12 @@ class AgendaViajesService {
     const usuario = UsuariosRepository.findByRut(id_chofer);
     if (!usuario) throw Error(`No existe usuario con el id: ${id_chofer}`);
 
-    const viaje = await AgendaViajesRepository.findByChoferAndEstado(id_chofer, "En Tránsito");
-    if(!viaje) throw Error(`No existe viaje con el id del chofer: ${id_chofer}`);
+    const viaje = await AgendaViajesRepository.findByChoferAndEstado(
+      id_chofer,
+      "En Tránsito"
+    );
+    if (!viaje)
+      throw Error(`No existe viaje con el id del chofer: ${id_chofer}`);
 
     return viaje;
   }
@@ -110,77 +115,27 @@ class AgendaViajesService {
     }
   }
 
-  /* async iniciarViaje(id_agenda_carga, id_chofer) {
-    const transaction = await sequelize.transaction();
-
-    try {
-      // Verificar la agenda carga esté completada
-      const agendaCarga = await AgendaCargaRepository.findById(id_agenda_carga);
-      if (!agendaCarga || agendaCarga.estado !== "Completada") {
-        throw new Error("La agenda de carga no está lista para iniciar viaje.");
-      }
-
-      // Validar chofer asignado
-      if (agendaCarga.id_usuario_chofer !== id_chofer) {
-        throw new Error("Este chofer no está asignado a esta carga.");
-      }
-
-      // Obtener pedidos asignados al chofer en estado confirmado
-      const estadoConfirmado = await EstadoVentaRepository.findByNombre(
-        "Confirmado"
-      );
-      const pedidosConfirmados =
-        await PedidoRepository.findAllByChoferAndEstado(
-          id_chofer,
-          estadoConfirmado.id_estado_venta
-        );
-
-      if (!pedidosConfirmados.length) {
-        throw new Error("No hay pedidos confirmados asignados al chofer.");
-      }
-
-      // Generar destinos desde pedidos
-      const destinos = pedidosConfirmados.map((pedido) => ({
-        id_pedido: pedido.id_pedido,
-        cliente: pedido.cliente.nombre_cliente,
-        direccion: pedido.direccion_entrega,
-        estado: "Pendiente",
-      }));
-
-      // Crear la agenda viaje
-      const agendaViaje = await AgendaViajesRepository.create(
-        {
-          id_agenda_carga,
-          id_camion: agendaCarga.id_camion,
-          id_chofer,
-          inventario_inicial:
-            await InventarioCamionService.getInventarioByCamion(
-              agendaCarga.id_camion
-            ),
-          destinos,
-          estado: "En Tránsito",
-          fecha_inicio: new Date(),
-          notas: `Viaje iniciado desde agenda carga ${id_agenda_carga}.`,
-          validado_por_chofer: true,
+  async getHistorialViajesChofer(id_chofer) {
+    const viajes = await AgendaViajesRepository.findWithConditions({
+      where: {
+        id_chofer,
+        estado: {
+          [Op.notIn]: ["Pendiente", "En Tránsito"],
         },
-        { transaction }
-      );
+      },
+      include: [
+        {
+          model: CamionRepository.getModel(),
+          as: "camion",
+          attributes: ["placa", "capacidad"],
+        },
+        // Puedes agregar otros modelos relacionados
+      ],
+      order: [["fecha_inicio", "DESC"]],
+    });
 
-      // Actualizar estado del camión
-      await CamionRepository.update(
-        agendaCarga.id_camion,
-        { estado: "En Ruta" },
-        { transaction }
-      );
-
-      await transaction.commit();
-
-      return agendaViaje;
-    } catch (error) {
-      await transaction.rollback();
-      throw new Error(`Error al iniciar viaje: ${error.message}`);
-    }
-  } */
+    return viajes;
+  }
 }
 
 export default new AgendaViajesService();

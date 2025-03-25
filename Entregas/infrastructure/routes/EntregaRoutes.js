@@ -7,10 +7,16 @@ import { checkRoles } from '../../../shared/middlewares/CheckRole.js';
 const router = express.Router();
 
 // Rutas para Entrega
-router.post('/', authenticate, checkRoles(["chofer"]),EntregasController.createEntrega); 
-router.get('/:id', EntregasController.getEntregaById); 
-router.get('/', EntregasController.getAll); 
-router.get("/choferes/disponibles", ChoferController.getChoferesDisponibles);
+
+// Rutas para Entrega
+router.post('/', authenticate, checkRoles(["chofer"]), EntregasController.createEntrega);
+
+// ⚠️ Las rutas más específicas deben ir antes
+router.get('/por-agenda/', EntregasController.getEntregasByAgendaId);
+router.get('/choferes/disponibles', ChoferController.getChoferesDisponibles);
+
+router.get('/:id', EntregasController.getEntregaById);
+router.get('/', EntregasController.getAll);
 //router.put('/:id', EntregaController.update); // Actualizar una entrega
 //router.delete('/:id', EntregaController.delete); // Eliminar una entrega
 

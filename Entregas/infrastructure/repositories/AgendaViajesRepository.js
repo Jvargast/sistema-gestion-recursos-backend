@@ -77,6 +77,14 @@ class AgendaViajesRepository {
     });
   }
 
+  async findWithConditions(conditions) {
+    return await AgendaViajes.findAll(conditions);
+  }
+
+  async update(id_agenda_viaje, data) {
+    return AgendaViajes.update(data, { where: { id_agenda_viaje } });
+  }
+
   async create(data) {
     return await AgendaViajes.create(data);
   }

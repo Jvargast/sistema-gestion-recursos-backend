@@ -51,6 +51,49 @@ class PedidoController {
     }
   }
 
+  async registrarDesdePedido(req, res) {
+    try {
+      const {
+        id_pedido,
+        id_caja,
+        tipo_documento,
+        pago_recibido,
+        referencia,
+        notas,
+        id_metodo_pago
+      } = req.body;
+      
+      const id_usuario_creador = req?.user?.id
+
+      const resultado = await PedidoService.registrarDesdePedido({
+        id_pedido,
+        id_caja,
+        tipo_documento,
+        pago_recibido,
+        referencia,
+        notas,
+        id_usuario_creador,
+        id_metodo_pago
+      });
+
+      res.status(200).json(resultado);
+    } catch (error) {
+      console.error("Error en registrarDesdePedido:", error.message);
+      res.status(500).json({ mensaje: error.message });
+    }
+  }
+
+  async obtenerPedidosConTotal(req, res) {
+    try {
+      const { id_pedido } = req.params;
+      const pedidos = await PedidoService.getDetalleConTotal(id_pedido);
+
+      return res.status(200).json(pedidos);
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
   async obtenerPedidosSinAsignar(req, res) {
     try {
       const pedidos = await PedidoService.obtenerPedidosSinAsignar(req.query);

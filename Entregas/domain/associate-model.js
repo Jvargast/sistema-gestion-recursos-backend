@@ -5,6 +5,7 @@ import ProductoRetornable from "../../inventario/domain/models/ProductoRetornabl
 import Cliente from "../../ventas/domain/models/Cliente.js";
 import Documento from "../../ventas/domain/models/Documento.js";
 import MetodoPago from "../../ventas/domain/models/MetodoPago.js";
+import Pedido from "../../ventas/domain/models/Pedido.js";
 import AgendaCarga from "./models/AgendaCarga.js";
 import AgendaCargaDetalle from "./models/AgendaCargaDetalle.js";
 import AgendaViajes from "./models/AgendaViaje.js";
@@ -179,6 +180,15 @@ function loadEntregasAssociations(models) {
     as: "viaje",
   });
 
+  Entrega.belongsTo(Pedido, {
+    foreignKey: "id_pedido",
+    as: "pedido",
+  });
+  Pedido.hasMany(Entrega, {
+    foreignKey: "id_pedido",
+    as: "entregas",
+  });
+
   // Relación: ProductoRetornable -> Entrega
   ProductoRetornable.belongsTo(Entrega, {
     foreignKey: "id_entrega",
@@ -291,7 +301,6 @@ function loadEntregasAssociations(models) {
   InventarioCamionReservas.belongsTo(InventarioCamion, {
     foreignKey: "id_inventario_camion",
   });
-
 
   /**
    *

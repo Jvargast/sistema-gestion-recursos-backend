@@ -5,9 +5,9 @@ import { checkRoles } from "../../../shared/middlewares/CheckRole.js";
 
 const router = Router();
 
-
 router.get("/asignados/:id_chofer", authenticate, PedidoController.obtenerPedidosAsignados);
 router.get("/sin-asignar", authenticate, PedidoController.obtenerPedidosSinAsignar);
+router.get('/detalle-con-total/:id_pedido', authenticate, PedidoController.obtenerPedidosConTotal);
 router.get("/mis-pedidos", authenticate, checkRoles(['chofer']), PedidoController.obtenerMisPedidos);
 router.get("/historial", authenticate, checkRoles(['chofer']), PedidoController.obtenerHistorialPedidos);
 router.get("/confirmados/:id_chofer", authenticate, checkRoles(['chofer', 'administrador']), PedidoController.obtenerPedidosConfirmados);
@@ -16,6 +16,7 @@ router.get("/", authenticate, PedidoController.getAllPedidos);
 router.put("/asignar/:id_pedido", authenticate, PedidoController.asignarPedido);
 router.put("/desasignar/:id_pedido", authenticate, PedidoController.desasignarPedido);
 router.post("/", authenticate, PedidoController.createPedido);
+router.post("/registrar-desde-pedido", authenticate, PedidoController.registrarDesdePedido);
 router.patch("/:id_pedido/confirmacion", authenticate, checkRoles(['chofer']), PedidoController.confirmarPedido);
 
 
