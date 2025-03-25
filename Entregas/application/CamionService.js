@@ -28,7 +28,7 @@ class CamionService {
       if (!camion) {
         throw new Error("Camión no encontrado");
       }
-      camion.estado = nuevoEstado; 
+      camion.estado = nuevoEstado;
       await camion.save();
       return camion;
     } catch (error) {
@@ -38,9 +38,8 @@ class CamionService {
 
   async getCapacityByChoferId(id_chofer) {
     const capacidad = await CamionRepository.findByChoferId(id_chofer);
-    console.log(capacidad)
-    return capacidad
-
+    console.log(capacidad);
+    return capacidad;
   }
 
   async getCurrentCapacity(id_camion) {
@@ -109,6 +108,16 @@ class CamionService {
     });
 
     return await CamionRepository.findById(id_camion);
+  }
+
+  async desasignarChofer(id_camion) {
+    const camion = await CamionRepository.findById(id_camion);
+    if (!camion) {
+      throw new Error("El camión no existe.");
+    }
+
+    await CamionRepository.update(id_camion, { id_chofer_asignado: null });
+    return CamionRepository.findById(id_camion);
   }
 
   async getAllCamiones() {
