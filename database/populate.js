@@ -38,9 +38,1095 @@ async function populateDatabase() {
     const permisosAuth = [
       // Autenticación
       {
-        nombre: "iniciar_sesion",
+        nombre: "auth.iniciarsesion",
         descripcion: "Permiso para iniciar sesión",
         categoria: "Autenticación",
+      },
+      //Permisos de auth 
+      {
+        nombre: "auth.auditLogs.crear",
+        descripcion: "Permiso para crear auditlogs",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.auditLogs.editar",
+        descripcion: "Permiso para editar auditlogs",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.auditLogs.ver",
+        descripcion: "Permiso para ver auditlogs",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.auditLogs.eliminar",
+        descripcion: "Permiso para eliminar auditlogs",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.empresa.crear",
+        descripcion: "Permiso para crear empresa",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.empresa.editar",
+        descripcion: "Permiso para editar empresa",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.empresa.ver",
+        descripcion: "Permiso para ver empresa",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.empresa.eliminar",
+        descripcion: "Permiso para eliminar empresa",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.permisos.crear",
+        descripcion: "Permiso para crear permisos",
+        categoria: "Autenticación",
+      },
+      
+      {
+        nombre: "auth.permisos.editar",
+        descripcion: "Permiso para editar permisos",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.permisos.ver",
+        descripcion: "Permiso para ver permisos",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.permisos.eliminar",
+        descripcion: "Permiso para eliminar permisos",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.roles.crear",
+        descripcion: "Permiso para crear roles",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.roles.editar",
+        descripcion: "Permiso para editar roles",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.roles.ver",
+        descripcion: "Permiso para ver roles",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.roles.eliminar",
+        descripcion: "Permiso para eliminar roles",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.rolespermisos.crear",
+        descripcion: "Permiso para crear rolespermisos",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.rolespermisos.editar",
+        descripcion: "Permiso para editar rolespermisos",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.rolespermisos.ver",
+        descripcion: "Permiso para ver rolespermisos",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.rolespermisos.eliminar",
+        descripcion: "Permiso para eliminar rolespermisos",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.securitysettings.crear",
+        descripcion: "Permiso para crear securitysettings",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.securitysettings.editar",
+        descripcion: "Permiso para editar securitysettings",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.securitysettings.ver",
+        descripcion: "Permiso para ver securitysettings",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.securitysettings.eliminar",
+        descripcion: "Permiso para eliminar securitysettings",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.sucursal.crear",
+        descripcion: "Permiso para crear sucursal",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.sucursal.editar",
+        descripcion: "Permiso para editar sucursal",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.sucursal.ver",
+        descripcion: "Permiso para ver sucursal",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.sucursal.eliminar",
+        descripcion: "Permiso para eliminar sucursal",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.usuarios.crear",
+        descripcion: "Permiso para crear usuarios",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.usuarios.editar",
+        descripcion: "Permiso para editar usuarios",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.usuarios.ver",
+        descripcion: "Permiso para ver usuarios",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.usuarios.eliminar",
+        descripcion: "Permiso para eliminar usuarios",
+        categoria: "Autenticación",
+      },
+
+      {
+        nombre: "auth.usuarios.eliminar",
+        descripcion: "Permiso para eliminar usuarios",
+        categoria: "Autenticación",
+      },
+      //Permisos de Entregas
+      {
+        nombre: "entregas.agendacarga.crear",
+        descripcion: "Permiso para crear agendacarga",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendacarga.editar",
+        descripcion: "Permiso para editar agendacarga",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendacarga.ver",
+        descripcion: "Permiso para ver agendacarga",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendacarga.eliminar",
+        descripcion: "Permiso para eliminar agendacarga",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendacargadetalle.crear",
+        descripcion: "Permiso para crear agendacargadetalle",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendacargadetalle.editar",
+        descripcion: "Permiso para editar agendacargadetalle",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendacargadetalle.ver",
+        descripcion: "Permiso para ver agendacargadetalle",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendacargadetalle.eliminar",
+        descripcion: "Permiso para eliminar agendacargadetalle",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendaviaje.crear",
+        descripcion: "Permiso para crear agendaviaje",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendaviaje.editar",
+        descripcion: "Permiso para editar agendaviaje",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendaviaje.ver",
+        descripcion: "Permiso para ver agendaviaje",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.agendaviaje.eliminar",
+        descripcion: "Permiso para eliminar agendaviaje",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.camion.crear",
+        descripcion: "Permiso para crear camion",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.camion.editar",
+        descripcion: "Permiso para editar camion",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.camion.ver",
+        descripcion: "Permiso para ver camion",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.camion.eliminar",
+        descripcion: "Permiso para eliminar camion",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.detallesventachofer.crear",
+        descripcion: "Permiso para crear detallesventachofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.detallesventachofer.editar",
+        descripcion: "Permiso para editar detallesventachofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.detallesventachofer.ver",
+        descripcion: "Permiso para ver detallesventachofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.detallesventachofer.eliminar",
+        descripcion: "Permiso para eliminar detallesventachofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.entrega.crear",
+        descripcion: "Permiso para crear entrega",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.entrega.editar",
+        descripcion: "Permiso para editar entrega",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.entrega.ver",
+        descripcion: "Permiso para ver entrega",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.entrega.eliminar",
+        descripcion: "Permiso para eliminar entrega",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.historialventaschofer.crear",
+        descripcion: "Permiso para crear historialventaschofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.historialventaschofer.editar",
+        descripcion: "Permiso para editar historialventaschofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.historialventaschofer.ver",
+        descripcion: "Permiso para ver historialventaschofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.historialventaschofer.eliminar",
+        descripcion: "Permiso para eliminar historialventaschofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamion.crear",
+        descripcion: "Permiso para crear inventariocamion",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamion.editar",
+        descripcion: "Permiso para editar inventariocamion",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamion.ver",
+        descripcion: "Permiso para ver inventariocamion",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamion.eliminar",
+        descripcion: "Permiso para eliminar inventariocamion",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamionlogs.crear",
+        descripcion: "Permiso para crear inventariocamionlogs",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamionlogs.editar",
+        descripcion: "Permiso para editar inventariocamionlogs",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamionlogs.ver",
+        descripcion: "Permiso para ver inventariocamionlogs",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamionlogs.eliminar",
+        descripcion: "Permiso para eliminar inventariocamionlogs",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamionreservas.crear",
+        descripcion: "Permiso para crear inventariocamionreservas",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamionreservas.editar",
+        descripcion: "Permiso para editar inventariocamionreservas",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamionreservas.ver",
+        descripcion: "Permiso para ver inventariocamionreservas",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.inventariocamionreservas.eliminar",
+        descripcion: "Permiso para eliminar inventariocamionreservas",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.ventaschofer.crear",
+        descripcion: "Permiso para crear ventaschofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.ventaschofer.editar",
+        descripcion: "Permiso para editar ventaschofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.ventaschofer.ver",
+        descripcion: "Permiso para ver ventaschofer",
+        categoria: "Entregas",
+      },
+
+      {
+        nombre: "entregas.ventaschofer.eliminar",
+        descripcion: "Permiso para eliminar ventaschofer",
+        categoria: "Entregas",
+      },
+      //Permisos Inventario
+      {
+        nombre: "inventario.categoriaproducto.crear",
+        descripcion: "Permiso para crear categoriaproducto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.categoriaproducto.editar",
+        descripcion: "Permiso para editar categoriaproducto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.categoriaproducto.ver",
+        descripcion: "Permiso para ver categoriaproducto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.categoriaproducto.eliminar",
+        descripcion: "Permiso para eliminar categoriaproducto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.estadoproducto.crear",
+        descripcion: "Permiso para crear estadoproducto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.estadoproducto.editar",
+        descripcion: "Permiso para editar estadoproducto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.estadoproducto.ver",
+        descripcion: "Permiso para ver estadoproducto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.estadoproducto.eliminar",
+        descripcion: "Permiso para eliminar estadoproducto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.estadoproductoretornable.crear",
+        descripcion: "Permiso para crear estadoproductoretornable",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.estadoproductoretornable.editar",
+        descripcion: "Permiso para editar estadoproductoretornable",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.estadoproductoretornable.ver",
+        descripcion: "Permiso para ver estadoproductoretornable",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.estadoproductoretornable.eliminar",
+        descripcion: "Permiso para eliminar estadoproductoretornable",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.insumo.crear",
+        descripcion: "Permiso para crear insumo",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.insumo.editar",
+        descripcion: "Permiso para editar insumo",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.insumo.ver",
+        descripcion: "Permiso para ver insumo",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.insumo.eliminar",
+        descripcion: "Permiso para eliminar insumo",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.inventario.crear",
+        descripcion: "Permiso para crear inventario",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.inventario.editar",
+        descripcion: "Permiso para editar inventario",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.inventario.ver",
+        descripcion: "Permiso para ver inventario",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.inventario.eliminar",
+        descripcion: "Permiso para eliminar inventario",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.inventariologs.crear",
+        descripcion: "Permiso para crear inventariologs",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.inventariologs.editar",
+        descripcion: "Permiso para editar inventariologs",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.inventariologs.ver",
+        descripcion: "Permiso para ver inventariologs",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.inventariologs.eliminar",
+        descripcion: "Permiso para eliminar inventariologs",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.producto.crear",
+        descripcion: "Permiso para crear producto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.producto.editar",
+        descripcion: "Permiso para editar producto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.producto.ver",
+        descripcion: "Permiso para ver producto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.producto.eliminar",
+        descripcion: "Permiso para eliminar producto",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.productoretornable.crear",
+        descripcion: "Permiso para crear productoretornable",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.productoretornable.editar",
+        descripcion: "Permiso para editar productoretornable",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.productoretornable.ver",
+        descripcion: "Permiso para ver productoretornable",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.productoretornable.eliminar",
+        descripcion: "Permiso para eliminar productoretornable",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.tipoinsumo.crear",
+        descripcion: "Permiso para crear tipoinsumo",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.tipoinsumo.editar",
+        descripcion: "Permiso para editar tipoinsumo",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.tipoinsumo.ver",
+        descripcion: "Permiso para ver tipoinsumo",
+        categoria: "inventario",
+      },
+
+      {
+        nombre: "inventario.tipoinsumo.eliminar",
+        descripcion: "Permiso para eliminar tipoinsumo",
+        categoria: "inventario",
+      },
+      //Permisos Ventas
+      {
+        nombre: "ventas.caja.crear",
+        descripcion: "Permiso para crear caja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.caja.editar",
+        descripcion: "Permiso para editar caja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.caja.ver",
+        descripcion: "Permiso para ver caja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.caja.eliminar",
+        descripcion: "Permiso para eliminar caja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.cliente.crear",
+        descripcion: "Permiso para crear cliente",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.cliente.editar",
+        descripcion: "Permiso para editar cliente",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.cliente.ver",
+        descripcion: "Permiso para ver cliente",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.cliente.eliminar",
+        descripcion: "Permiso para eliminar cliente",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.cotizacion.crear",
+        descripcion: "Permiso para crear cotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.cotizacion.editar",
+        descripcion: "Permiso para editar cotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.cotizacion.ver",
+        descripcion: "Permiso para ver cotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.cotizacion.eliminar",
+        descripcion: "Permiso para eliminar cotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detallecotizacion.crear",
+        descripcion: "Permiso para crear detallecotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detallecotizacion.editar",
+        descripcion: "Permiso para editar detallecotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detallecotizacion.ver",
+        descripcion: "Permiso para ver detallecotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detallecotizacion.eliminar",
+        descripcion: "Permiso para eliminar detallecotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detallepedido.crear",
+        descripcion: "Permiso para crear detallepedido",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detallepedido.editar",
+        descripcion: "Permiso para editar detallepedido",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detallepedido.ver",
+        descripcion: "Permiso para ver detallepedido",
+        categoria: "ventas",
+      },
+      
+      {
+        nombre: "ventas.detallepedido.eliminar",
+        descripcion: "Permiso para eliminar detallepedido",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detalleventa.crear",
+        descripcion: "Permiso para crear detalleventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detalleventa.editar",
+        descripcion: "Permiso para editar detalleventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detalleventa.ver",
+        descripcion: "Permiso para ver detalleventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.detalleventa.eliminar",
+        descripcion: "Permiso para eliminar detalleventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.documento.crear",
+        descripcion: "Permiso para crear documento",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.documento.editar",
+        descripcion: "Permiso para editar documento",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.documento.ver",
+        descripcion: "Permiso para ver documento",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.documento.eliminar",
+        descripcion: "Permiso para eliminar documento",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.estadopago.crear",
+        descripcion: "Permiso para crear estadopago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.estadopago.editar",
+        descripcion: "Permiso para editar estadopago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.estadopago.ver",
+        descripcion: "Permiso para ver estadopago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.estadopago.eliminar",
+        descripcion: "Permiso para eliminar estadopago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.estadoventa.crear",
+        descripcion: "Permiso para crear estadoventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.estadoventa.editar",
+        descripcion: "Permiso para editar estadoventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.estadoventa.ver",
+        descripcion: "Permiso para ver estadoventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.estadoventa.eliminar",
+        descripcion: "Permiso para eliminar estadoventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.historialcaja.crear",
+        descripcion: "Permiso para crear historialcaja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.historialcaja.editar",
+        descripcion: "Permiso para editar historialcaja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.historialcaja.ver",
+        descripcion: "Permiso para ver historialcaja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.historialcaja.eliminar",
+        descripcion: "Permiso para eliminar historialcaja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.logcotizacion.crear",
+        descripcion: "Permiso para crear logcotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.logcotizacion.editar",
+        descripcion: "Permiso para editar logcotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.logcotizacion.ver",
+        descripcion: "Permiso para ver logcotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.logcotizacion.eliminar",
+        descripcion: "Permiso para eliminar logcotizacion",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.logventa.crear",
+        descripcion: "Permiso para crear logventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.logventa.editar",
+        descripcion: "Permiso para editar logventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.logventa.ver",
+        descripcion: "Permiso para ver logventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.logventa.eliminar",
+        descripcion: "Permiso para eliminar logventa",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.metodopago.crear",
+        descripcion: "Permiso para crear metodopago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.metodopago.editar",
+        descripcion: "Permiso para editar metodopago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.metodopago.ver",
+        descripcion: "Permiso para ver metodopago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.metodopago.eliminar",
+        descripcion: "Permiso para eliminar metodopago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.movimientocaja.crear",
+        descripcion: "Permiso para crear movimientocaja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.movimientocaja.editar",
+        descripcion: "Permiso para editar movimientocaja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.movimientocaja.ver",
+        descripcion: "Permiso para ver movimientocaja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.movimientocaja.eliminar",
+        descripcion: "Permiso para eliminar movimientocaja",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.pago.crear",
+        descripcion: "Permiso para crear pago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.pago.editar",
+        descripcion: "Permiso para editar pago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.pago.ver",
+        descripcion: "Permiso para ver pago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.pago.eliminar",
+        descripcion: "Permiso para eliminar pago",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.pedido.crear",
+        descripcion: "Permiso para crear pedido",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.pedido.editar",
+        descripcion: "Permiso para editar pedido",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.pedido.ver",
+        descripcion: "Permiso para crear pedido",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.pedido.eliminar",
+        descripcion: "Permiso para eliminar pedido",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.venta.crear",
+        descripcion: "Permiso para crear venta",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.venta.editar",
+        descripcion: "Permiso para editar venta",
+        categoria: "ventas",
+      },
+
+      {
+        nombre: "ventas.venta.ver",
+        descripcion: "Permiso para crear venta",
+        categoria: "ventas",
+      },
+      
+      {
+        nombre: "ventas.venta.eliminar",
+        descripcion: "Permiso para eliminar venta",
+        categoria: "ventas",
       },
 
       // Gestión de Usuarios
