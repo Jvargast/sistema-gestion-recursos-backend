@@ -7,12 +7,13 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { createServer } from "http";
-import { Server } from "socket.io"; 
+import { Server } from "socket.io";
 
 /**
  * Implementación de tareas
  */
 /* import setupAnalysisCronJobs from "./analisis/infrastructure/cron/analysisCronJobs.js"; */
+
 // Rutas para arquitectura hexagonal
 /* MÓDULO AUTH */
 import AuthRoutes from "./auth/infraestructure/routes/AuthRoutes.js";
@@ -43,7 +44,7 @@ import LogVentasRoutes from "./ventas/infrastructure/routes/LogVentasRoutes.js";
 import EstadosVentasRoutes from "./ventas/infrastructure/routes/EstadoVentaRoutes.js";
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
 import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js";
-/* import analisisRoutes from "./analisis/infraestructure/routes/";
+/* 
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
 import proveedoresRoutes from "./proveedores/infrastructure/routes/proveedoesrRoutes.js";
@@ -56,9 +57,10 @@ import EntregaRoutes from "./Entregas/infrastructure/routes/EntregaRoutes.js";
 import VentaChoferRoutes from "./Entregas/infrastructure/routes/VentaChoferRoutes.js";
 import AgendaViajesRoutes from "./Entregas/infrastructure/routes/AgendaViajeRoutes.js";
 /* MÓDULO ANÁLISIS */
-// Rutas del módulo de análisis
-/* import ProductoEstadisticaRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
-import VentasEstadisticasRoutes from "./analisis/infrastructure/routes/VentasEstadisticasRoutes.js"; */
+import VentasEstadisticasRoutes from "./analisis/infrastructure/routes/VentasEstadisticasRoutes.js";
+import PedidosEstadisticasRoutes from "./analisis/infrastructure/routes/PedidosEstadisticasRoutes.js";
+import ProductoEstadisticasRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
+
 /* Configuración */
 
 dotenv.config();
@@ -68,8 +70,8 @@ const io = new Server(server, {
   cors: {
     origin: "http://localhost:3000", // Configurar CORS
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], 
-    allowedHeaders: ["Content-Type", "Authorization"], 
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
 });
 
@@ -138,27 +140,20 @@ app.use("/api/movimientos", MovimientoCajaRoutes);
 app.use("/api/log-ventas", LogVentasRoutes);
 app.use("/api/estados-ventas", EstadosVentasRoutes);
 app.use("/api/pagos", PagosRoutes);
-app.use("/api/documentos", DocumentosRoutes) 
-/* app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
-app.use("/api/logs-transaccion", LogTransaccionRoutes);
-app.use("/api/transacciones", TransaccionRoutes);
-app.use("/api/detalle-transacciones", DetalleTransaccionRoutes);
-app.use("/api/estado-detalle", EstadoDetallesRoutes);
-app.use("/api/facturas", FacturasRoutes);
-app.use("/api/estado-factura", EstadoFacturaRoutes);
-app.use("/api/pagos", PagosRoutes);
-app.use("/api/documentos", DocumentosRoutes) */
+app.use("/api/documentos", DocumentosRoutes);
 
 /* MÓDULO ANÁLISIS */
-/* app.use("/api/analisis/productos", ProductoEstadisticaRoutes);
-app.use("/api/analisis/ventas", VentasEstadisticasRoutes); */
+/* MÓDULO ANÁLISIS */
+app.use("/api/analisis", VentasEstadisticasRoutes);
+app.use("/api/analisis", PedidosEstadisticasRoutes);
+app.use("/api/analisis", ProductoEstadisticasRoutes);
 
 /* MÓDULO DE ENTREGAS */
 app.use("/api/camiones", CamionRoutes);
 app.use("/api/inventario-camion", InventarioCamionRoutes);
 app.use("/api/agendas", AgendaCargaRoutes);
 app.use("/api/entregas", EntregaRoutes);
-app.use("/api/agenda-viajes", AgendaViajesRoutes)
+app.use("/api/agenda-viajes", AgendaViajesRoutes);
 app.use("/api/ventas-chofer", VentaChoferRoutes);
 
 io.on("connection", (socket) => {
@@ -181,7 +176,7 @@ initializeDatabase()
   .then(() => {
     /* setupAnalysisCronJobs();  falta configurarlo*/
     /* console.log("Tareas [CRON] configuradas."); */
-    server.listen(PORT, '0.0.0.0',() => {
+    server.listen(PORT, "0.0.0.0", () => {
       console.log(`Servidor escuchando en el puerto http://0.0.0.0:${PORT}`);
     });
   })
@@ -190,4 +185,4 @@ initializeDatabase()
     process.exit(1);
   });
 
-  export { io };
+export { io };
