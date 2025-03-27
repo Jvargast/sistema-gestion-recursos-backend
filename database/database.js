@@ -1,8 +1,7 @@
 import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
 import cls from "cls-hooked";
-import fs from 'fs';
-
+import fs from "fs";
 
 dotenv.config();
 
@@ -11,7 +10,7 @@ const namespace = cls.createNamespace("app-namespace");
 Sequelize.useCLS(namespace);
 
 // Configuración para diferentes entornos
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NODE_ENV === "production";
 
 const caCertificatePath = isProduction
   ? "/usr/src/app/global-bundle.pem" // Ruta dentro del contenedor Docker
@@ -26,15 +25,12 @@ const sequelize = new Sequelize(
     port: process.env.DB_PORT,
     dialect: "postgres",
     logging: isProduction, // Deshabilitar logs en producción
-    /* dialectOptions: isProduction
-      ? {
-          ssl: {
-            require: true,
-            rejectUnauthorized: false,
-            ca: fs.readFileSync(caCertificatePath).toString(),
-          },
-        }
-      : {}, */
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false, // ⚠️ IMPORTANTE para que no falle por certificado autofirmado
+      },
+    },
   }
 );
 
