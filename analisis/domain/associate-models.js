@@ -41,7 +41,7 @@ function loadAnalysisAssociations() {
     as: "chofer",
   });
 
-  console.log("✅ Asociaciones del módulo de análisis cargadas correctamente.");
+  console.log("Asociaciones del módulo de análisis cargadas correctamente.");
 }
 
 export default loadAnalysisAssociations;
