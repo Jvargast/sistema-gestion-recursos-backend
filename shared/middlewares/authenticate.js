@@ -6,7 +6,6 @@ const authenticate = async (req, res, next) => {
   try {
     // Obtener el token desde la cookie
     const token = req.cookies?.authToken;
-
     if (!token) {
       return res.status(401).json({ error: "Token no encontrado" });
     }
@@ -47,7 +46,7 @@ const authenticate = async (req, res, next) => {
       res.cookie("authToken", newToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
     }

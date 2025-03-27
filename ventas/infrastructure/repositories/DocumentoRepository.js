@@ -12,6 +12,7 @@ class DocumentoRepository {
           { model: Venta, as: "venta" },
           { model: Cliente, as: "cliente" },
           { model: Usuarios, as: "creador" },
+          { model: EstadoPago, as: "estadoPago"}
         ],
       });
     } catch (error) {

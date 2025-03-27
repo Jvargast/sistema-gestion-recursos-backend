@@ -1,61 +1,47 @@
+import Usuarios from "../../auth/domain/models/Usuarios.js";
 import Producto from "../../inventario/domain/models/Producto.js";
-import ProductoEstadisticas from "./models/ProductoEstadisticas.js";
-import Venta from "../../ventas/domain/models/Venta.js";
-import VentasEstadisticas from "./models/VentasEstadisticas.js";
+import EntregasEstadisticas from "./models/EntregasEstadisticas.js";
+import ProductosEstadisticas from "./models/ProductoEstadisticas.js";
+import VentasChoferEstadisticas from "./models/VentasChoferEstadisticas.js";
 
 
 function loadAnalysisAssociations() {
-  // Relación: Producto -> ProductoEstadisticas
-  Producto.hasMany(ProductoEstadisticas, {
+  // Relación: Producto ↔ ProductoEstadisticas
+  Producto.hasMany(ProductosEstadisticas, {
     foreignKey: "id_producto",
     as: "estadisticas",
-    onDelete: "SET NULL", // Permite eliminar productos sin afectar estadísticas
+    onDelete: "SET NULL",
   });
 
-  ProductoEstadisticas.belongsTo(Producto, {
+  ProductosEstadisticas.belongsTo(Producto, {
     foreignKey: "id_producto",
     as: "producto",
     onDelete: "SET NULL",
   });
 
-  // Relación: VentasEstadisticas -> Transacciones (a través de EstadisticasTransacciones)
-  VentasEstadisticas.belongsToMany(Transaccion, {
-    through: EstadisticasTransacciones,
-    foreignKey: "id_ventas_estadisticas",
-    otherKey: "id_transaccion",
-    as: "transaccionesRelacionadas",
+  // Relación: Usuarios (chofer) ↔ VentasChoferEstadisticas
+  Usuarios.hasMany(VentasChoferEstadisticas, {
+    foreignKey: "id_chofer",
+    as: "estadisticasChofer",
   });
 
-  Transaccion.belongsToMany(VentasEstadisticas, {
-    through: EstadisticasTransacciones,
-    foreignKey: "id_transaccion",
-    otherKey: "id_ventas_estadisticas",
-    as: "estadisticasRelacionadas",
+  VentasChoferEstadisticas.belongsTo(Usuarios, {
+    foreignKey: "id_chofer",
+    as: "chofer",
   });
 
-  // Relación directa entre VentasEstadisticas y EstadisticasTransacciones
-  VentasEstadisticas.hasMany(EstadisticasTransacciones, {
-    foreignKey: "id_ventas_estadisticas",
-    as: "estadisticasTransacciones",
+  // Relación: Usuarios (chofer) ↔ EntregasEstadisticas
+  Usuarios.hasMany(EntregasEstadisticas, {
+    foreignKey: "id_chofer",
+    as: "estadisticasEntregas",
   });
 
-  EstadisticasTransacciones.belongsTo(VentasEstadisticas, {
-    foreignKey: "id_ventas_estadisticas",
-    as: "ventasEstadisticas",
+  EntregasEstadisticas.belongsTo(Usuarios, {
+    foreignKey: "id_chofer",
+    as: "chofer",
   });
 
-  // Relación directa entre Transaccion y EstadisticasTransacciones
-  Transaccion.hasMany(EstadisticasTransacciones, {
-    foreignKey: "id_transaccion",
-    as: "estadisticasTransacciones",
-  });
-
-  EstadisticasTransacciones.belongsTo(Transaccion, {
-    foreignKey: "id_transaccion",
-    as: "transaccion",
-  });
-
-  console.log("Asociaciones del módulo de análisis cargadas correctamente.");
+  console.log("✅ Asociaciones del módulo de análisis cargadas correctamente.");
 }
 
 export default loadAnalysisAssociations;

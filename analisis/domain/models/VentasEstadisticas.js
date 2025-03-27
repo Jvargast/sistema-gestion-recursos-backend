@@ -1,30 +1,22 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
-import Transaccion from "../../../ventas/domain/models/Transaccion.js";
 
 const VentasEstadisticas = sequelize.define(
   "VentasEstadisticas",
   {
-    id_ventas_estadisticas: {
-      type: DataTypes.INTEGER,
-      autoIncrement: true,
-      primaryKey: true,
-    },
-    year: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    ventas_anuales: {
-      type: DataTypes.DECIMAL(10, 2),
-      defaultValue: 0.0,
-    },
-    unidades_vendidas_anuales: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-    },
-    datos_mensuales: {
-      type: DataTypes.JSON,
-      defaultValue: [],
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    fecha: { type: DataTypes.DATEONLY, allowNull: false },
+    mes: { type: DataTypes.INTEGER, allowNull: false }, // 1-12
+    anio: { type: DataTypes.INTEGER, allowNull: false },
+    total_ventas: { type: DataTypes.INTEGER, defaultValue: 0 },
+    monto_total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    tipo_entrega: {
+      type: DataTypes.ENUM(
+        "retiro_en_sucursal",
+        "despacho_a_domicilio",
+        "pedido_pagado_anticipado"
+      ),
+      allowNull: true,
     },
   },
   {
