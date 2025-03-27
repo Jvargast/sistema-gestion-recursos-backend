@@ -65,6 +65,7 @@ import ProductoEstadisticasRoutes from "./analisis/infrastructure/routes/Product
 
 dotenv.config();
 const app = express();
+app.set("trust proxy", 1); 
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
@@ -77,8 +78,12 @@ const io = new Server(server, {
 
 // Middleware
 app.use(express.json());
-app.use(helmet());
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+/* app.use(helmet());
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); */
+if (process.env.NODE_ENV === "production") {
+  app.use(helmet());
+  app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
+}
 app.use(morgan("common"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -90,17 +95,12 @@ app.use(cookieParser());
 ]; */
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://192.168.1.121:3000",
-      "http://192.168.1.174:3000", // IP del Android/Emulador
-    ],
+    origin: process.env.ALLOWED_ORIGINS?.split(",") || ["http://localhost:3000"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Métodos permitidos
     allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
   })
 );
-
 /* const allowedOrigins = [
   "http://localhost:3000", // Para desarrollo local
   "https://jvargast.github.io", // Dominio base de tu frontend
@@ -185,4 +185,5 @@ initializeDatabase()
     process.exit(1);
   });
 
+export default app;
 export { io };
