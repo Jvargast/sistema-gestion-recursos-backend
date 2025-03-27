@@ -66,10 +66,20 @@ class AuthController {
         "Autenticación",
         ip
       );
-      res.clearCookie("authToken");
-      res.clearCookie("refreshToken");
+     /*  res.clearCookie("authToken");
+      res.clearCookie("refreshToken"); */
+      res.clearCookie("authToken", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax", // si estás usando esto
+      });
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax", // si estás usando esto
+      });
       res.status(200).json({ message: "Cierre de sesión exitoso" });
-    } catch {
+    } catch(error) {
       res.status(401).json({ error: error.message });
     }
   }
