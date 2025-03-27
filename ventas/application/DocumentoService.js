@@ -1,85 +1,43 @@
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
-import EstadoPagoService from "./EstadoPagoService.js";
 
-class Documento {
-  /* async crearDocumento({ id_transaccion, tipo_documento, id_cliente, total }) {
-    const estadoInicial = await EstadoPagoService.findByNombre("Pendiente");
-
-    const documento = await DocumentoRepository.create({
-      id_transaccion,
-      tipo_documento,
-      id_estado_pago: estadoInicial.dataValues.id_estado_pago,
-      total,
-      id_cliente,
-      fecha_emision: new Date(),
-    });
-    if (tipo_documento === "factura") {
-      const factura = await FacturaService.generarFacturaDesdeDocumento(
-        documento.id_documento
-      );
-      return { ...documento.dataValues, factura };
-    } else if (tipo_documento === "boleta") {
-      const boleta = await BoletaRepository.create({
-        id_documento: documento.id_documento,
-      });
-      return { ...documento.dataValues, boleta };
-    }
-    throw new Error("Tipo de documento no válido.");
-  } */
-  // Obtener documento por ID de transacción
-  async obtenerDocumentoPorTransaccion(id_transaccion) {
-    const documento = await DocumentoRepository.findByTransaccionId(
-      id_transaccion
-    );
-
-    if (!documento) {
-      throw new Error(
-        "Documento no encontrado para la transacción proporcionada."
-      );
-    }
-
+class DocumentoService {
+  async obtenerDocumentoPorId(id_documento) {
+    if (!id_documento) throw new Error("Debe proporcionar un ID de documento.");
+    const documento = await DocumentoRepository.findById(id_documento);
+    if (!documento) throw new Error("Documento no encontrado.");
     return documento;
   }
 
   async obtenerDocumentosPorVenta(id_venta) {
-    try {
-      if (!id_venta) {
-        throw new Error("El ID de la venta es obligatorio.");
-      }
-
-      const documentos = await DocumentoRepository.findByVentaId(id_venta);
-
-      if (!documentos || documentos.length === 0) {
-        return []; 
-      }
-      return documentos;
-    } catch (error) {
-      throw new Error(
-        `Error al obtener documentos de la venta: ${error.message}`
-      );
-    }
+    if (!id_venta) throw new Error("El ID de la venta es obligatorio.");
+    return await DocumentoRepository.findByVentaId(id_venta);
   }
 
-  // Actualizar un documento
+  async crearDocumento(data) {
+    if (
+      !data ||
+      !data.id_venta ||
+      !data.tipo_documento ||
+      !data.numero ||
+      !data.total ||
+      !data.id_estado_pago
+    ) {
+      throw new Error("Faltan datos requeridos para crear el documento.");
+    }
+    return await DocumentoRepository.create(data);
+  }
+
   async actualizarDocumento(id_documento, updates) {
-    const documento = await DocumentoRepository.update(id_documento, updates);
-    return documento;
+    if (!id_documento)
+      throw new Error("Debe proporcionar el ID del documento a actualizar.");
+    return await DocumentoRepository.update(id_documento, updates);
   }
 
-  // Eliminar un documento
   async eliminarDocumento(id_documento) {
-    const result = await DocumentoRepository.delete(id_documento);
-    return result;
-  }
-
-  async actualizarTotalDocumento(id_documento, total) {
-    const documento = await DocumentoRepository.findById(id_documento);
-    if (!documento) {
-      throw new Error("Documento no encontrado.");
-    }
-
-    await DocumentoRepository.update(id_documento, { total });
-    return documento;
+    if (!id_documento)
+      throw new Error("Debe proporcionar el ID del documento a eliminar.");
+    return await DocumentoRepository.delete(id_documento);
   }
 }
-export default new Documento();
+
+export default new DocumentoService();

@@ -1,4 +1,5 @@
 import Documento from "../../domain/models/Documento.js";
+import EstadoPago from "../../domain/models/EstadoPago.js";
 import MetodoPago from "../../domain/models/MetodoPago.js";
 import Pago from "../../domain/models/Pago.js";
 import Venta from "../../domain/models/Venta.js";
@@ -11,6 +12,7 @@ class PagoRepository {
           { model: Documento, as: "documento" },
           { model: MetodoPago, as: "metodoPago" },
           { model: Venta, as: "venta" },
+          { model: EstadoPago, as: "estadoPago"}
         ],
       });
     } catch (error) {

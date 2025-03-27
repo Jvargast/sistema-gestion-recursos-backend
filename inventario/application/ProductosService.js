@@ -46,7 +46,7 @@ class ProductoService {
           "$estadoProducto.nombre_estado$": {
             [Op.like]: `%${options.search}%`,
           },
-        }, // Buscar en estado.nombre_estado
+        }, 
         { marca: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
         { descripcion: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
         { nombre_producto: { [Op.like]: `%${options.search}%` } }, // Buscar en marca

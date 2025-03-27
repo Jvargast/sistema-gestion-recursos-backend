@@ -74,7 +74,7 @@ class VentaChoferService {
     id_metodo_pago,
     productos,
     retornables_recibidos = [],
-    estadoPago = "pendiente",
+    estadoPago = "pagado",
     monto_recibido
   ) {
     const transaction = await sequelize.transaction();

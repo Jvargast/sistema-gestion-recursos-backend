@@ -41,9 +41,8 @@ import CajaRoutes from "./ventas/infrastructure/routes/CajaRoutes.js";
 import MovimientoCajaRoutes from "./ventas/infrastructure/routes/MovimientoCajaRoutes.js";
 import LogVentasRoutes from "./ventas/infrastructure/routes/LogVentasRoutes.js";
 import EstadosVentasRoutes from "./ventas/infrastructure/routes/EstadoVentaRoutes.js";
-/* 
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
-import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js"; */
+import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js";
 /* import analisisRoutes from "./analisis/infraestructure/routes/";
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
@@ -89,7 +88,11 @@ app.use(cookieParser());
 ]; */
 app.use(
   cors({
-    origin: ["http://localhost:3000"], // Asegúrate de que esté configurado
+    origin: [
+      "http://localhost:3000",
+      "http://192.168.1.121:3000",
+      "http://192.168.1.174:3000", // IP del Android/Emulador
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Métodos permitidos
     allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
@@ -134,6 +137,8 @@ app.use("/api/cajas", CajaRoutes);
 app.use("/api/movimientos", MovimientoCajaRoutes);
 app.use("/api/log-ventas", LogVentasRoutes);
 app.use("/api/estados-ventas", EstadosVentasRoutes);
+app.use("/api/pagos", PagosRoutes);
+app.use("/api/documentos", DocumentosRoutes) 
 /* app.use("/api/estado-transaccion", EstadoTransaccionRoutes);
 app.use("/api/logs-transaccion", LogTransaccionRoutes);
 app.use("/api/transacciones", TransaccionRoutes);
@@ -176,8 +181,8 @@ initializeDatabase()
   .then(() => {
     /* setupAnalysisCronJobs();  falta configurarlo*/
     /* console.log("Tareas [CRON] configuradas."); */
-    server.listen(PORT, () => {
-      console.log(`Servidor escuchando en el puerto [${PORT}]`);
+    server.listen(PORT, '0.0.0.0',() => {
+      console.log(`Servidor escuchando en el puerto http://0.0.0.0:${PORT}`);
     });
   })
   .catch((error) => {

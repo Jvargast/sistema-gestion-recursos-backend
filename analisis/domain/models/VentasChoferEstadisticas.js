@@ -1,21 +1,21 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 
-const ProductosEstadisticas = sequelize.define(
-  "ProductosEstadisticas",
+const VentasChoferEstadisticas = sequelize.define(
+  "VentasChoferEstadisticas",
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-    id_producto: { type: DataTypes.INTEGER, allowNull: false },
     fecha: { type: DataTypes.DATEONLY, allowNull: false },
     mes: { type: DataTypes.INTEGER, allowNull: false },
     anio: { type: DataTypes.INTEGER, allowNull: false },
-    cantidad_vendida: { type: DataTypes.INTEGER, defaultValue: 0 },
+    id_chofer: { type: DataTypes.STRING, allowNull: true },
+    total_ventas: { type: DataTypes.INTEGER, defaultValue: 0 },
     monto_total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
   },
   {
-    tableName: "ProductosEstadisticas",
+    tableName: "VentasChoferEstadisticas",
     timestamps: false,
   }
 );
 
-export default ProductosEstadisticas;
+export default VentasChoferEstadisticas;

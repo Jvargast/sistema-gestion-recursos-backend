@@ -1,12 +1,15 @@
 import { Router } from "express";
-import verifyToken from "../../../shared/middlewares/VerifyTokenMiddleware.js";
 import authenticate from "../../../shared/middlewares/authenticate.js";
-import PagosController from "../controllers/PagosController.js";
+import DocumentoController from "../controllers/DocumentoController.js";
+
 
 const router = Router();
 
-router.use(verifyToken);
-
-router.post("/:id/completar-pago", PagosController.completarPago)
+router.use(authenticate);
+router.get("/:id", DocumentoController.getDocumentoById);
+router.get("/venta/:id_venta", DocumentoController.getDocumentosByVenta);
+router.post("/", DocumentoController.createDocumento);
+router.put("/:id", DocumentoController.updateDocumento);
+router.delete("/:id", DocumentoController.deleteDocumento);
 
 export default router;

@@ -29,14 +29,14 @@ class AuthController {
       res.cookie("authToken", token, {
         httpOnly: true, // Asegura que la cookie no sea accesible desde el frontend (prevención de XSS)
         secure: process.env.NODE_ENV === "production" ? true : false, // Solo enviar la cookie en HTTPS en producción
-        sameSite: "strict", //sameSite: "strict", // Prevenir ataques CSRF
+        sameSite: "lax", //sameSite: "strict", // Prevenir ataques CSRF
         maxAge: 1 * 60 * 60 * 1000, // Expira en 1 hora
       });
 
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
       });
 
@@ -132,7 +132,7 @@ class AuthController {
       res.cookie("authToken", newAccessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         maxAge: 1 * 60 * 60 * 1000, // 1 hora
       });
 
