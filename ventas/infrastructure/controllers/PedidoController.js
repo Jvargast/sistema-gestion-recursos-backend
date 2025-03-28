@@ -109,19 +109,19 @@ class PedidoController {
   async obtenerMisPedidos(req, res) {
     try {
       const id_chofer = req.user.id;
-      let fecha = req.query.fecha;
+      /* let fecha = req.query.fecha; */
 
       // 🔹 Validar si la fecha no existe o es inválida
-      if (!fecha || isNaN(Date.parse(fecha))) {
+      /* if (!fecha || isNaN(Date.parse(fecha))) {
         return res
           .status(400)
           .json({ error: "Fecha inválida o no proporcionada." });
-      }
-      console.log(fecha)
+      } */
+     /*  console.log(fecha) */
       const options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
-        fecha,
+        /* fecha, */
       };
       const pedidos = await PedidoService.obtenerPedidosAsignados(
         id_chofer,
