@@ -66,20 +66,21 @@ class AuthController {
         "Autenticación",
         ip
       );
-     /*  res.clearCookie("authToken");
+      /*  res.clearCookie("authToken");
       res.clearCookie("refreshToken"); */
       res.clearCookie("authToken", {
         httpOnly: true,
-        secure: true,
-        sameSite: "lax", // si estás usando esto
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       });
       res.clearCookie("refreshToken", {
         httpOnly: true,
-        secure: true,
-        sameSite: "lax", // si estás usando esto
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       });
+
       res.status(200).json({ message: "Cierre de sesión exitoso" });
-    } catch(error) {
+    } catch (error) {
       res.status(401).json({ error: error.message });
     }
   }
