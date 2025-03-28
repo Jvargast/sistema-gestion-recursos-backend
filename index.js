@@ -62,10 +62,12 @@ import PedidosEstadisticasRoutes from "./analisis/infrastructure/routes/PedidosE
 import ProductoEstadisticasRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
 
 /* Configuración */
-
-dotenv.config();
+const env = process.env.NODE_ENV || "development";
+dotenv.config({
+  path: `.env.${env === "production" ? "prod" : "local"}`,
+});
 const app = express();
-app.set("trust proxy", 1); 
+app.set("trust proxy", 1);
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
@@ -95,7 +97,9 @@ app.use(cookieParser());
 ]; */
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(",") || ["http://localhost:3000"],
+    origin: process.env.ALLOWED_ORIGINS?.split(",") || [
+      "http://localhost:3000",
+    ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Métodos permitidos
     allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos

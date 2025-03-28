@@ -1,4 +1,5 @@
 import { Op } from "sequelize";
+import dayjs from "dayjs";
 import createFilter from "../../shared/utils/helpers.js";
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
 import VentaRepository from "../infrastructure/repositories/VentaRepository.js";
@@ -21,7 +22,6 @@ import PagoService from "./PagoService.js";
 import PedidoService from "./PedidoService.js";
 import sequelize from "../../database/database.js";
 import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
-import DetallePedidoRepository from "../infrastructure/repositories/DetallePedidoRepository.js";
 
 class VentaService {
   async getVentaById(id) {
@@ -231,7 +231,7 @@ class VentaService {
             tipo_entrega === "pedido_pagado_anticipado"
               ? direccion_entrega
               : null,
-          fecha: new Date(),
+          fecha: dayjs().tz("America/Santiago").toDate(),
           total: totalConImpuesto,
           impuestos_totales,
           id_estado_venta: estadoVenta.id_estado_venta,
@@ -286,7 +286,7 @@ class VentaService {
                 retornable.estado === "defectuoso"
                   ? retornable.tipo_defecto
                   : null,
-              fecha_retorno: new Date(),
+              fecha_retorno: dayjs().tz("America/Santiago").toDate(),
             },
             { transaction }
           );
@@ -309,7 +309,7 @@ class VentaService {
           numero: `${tipo_documento === "boleta" ? "B" : "F"}-${
             venta.id_venta
           }`,
-          fecha_emision: new Date(),
+          fecha_emision: dayjs().tz("America/Santiago").toDate(),
           id_cliente,
           id_usuario_creador,
           subtotal,
@@ -335,7 +335,7 @@ class VentaService {
           id_metodo_pago,
           id_estado_pago: estadoPago.id_estado_pago,
           monto: totalConImpuesto,
-          fecha_pago: tipo_documento === "boleta" ? new Date() : null,
+          fecha_pago: tipo_documento === "boleta" ? dayjs().tz("America/Santiago").toDate() : null,
           referencia: referencia || null,
         },
         { transaction }
@@ -421,7 +421,7 @@ class VentaService {
         {
           id_venta: venta.id_venta,
           accion: "creación",
-          fecha: new Date(),
+          fecha: dayjs().tz("America/Santiago").toDate(),
           usuario: id_usuario_creador,
           detalle: `Venta creada con documento ${tipo_documento.toUpperCase()}-${
             documento ? documento.numero : "Sin Pagar aún"

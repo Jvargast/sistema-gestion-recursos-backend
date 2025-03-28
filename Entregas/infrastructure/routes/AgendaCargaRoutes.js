@@ -6,7 +6,7 @@ import { checkRoles } from "../../../shared/middlewares/CheckRole.js";
 
 const router = Router();
 
-router.post("/confirmar-carga", authenticate, checkRoles(["chofer"]), AgendaController.confirmarCargaCamion)
+router.post("/confirmar-carga", authenticate, AgendaController.confirmarCargaCamion)
 router.get("/agenda/hoy", authenticate, checkRoles(["chofer"]), AgendaController.getAgendaCargaDelDia);
 router.post("/", authenticate, AgendaController.createAgenda);
 router.get("/:id", authenticate, AgendaController.getAgendaById);

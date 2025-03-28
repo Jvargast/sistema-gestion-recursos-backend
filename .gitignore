@@ -4,3 +4,5 @@
 /data
 /node_modules
 /routes
+.env.local
+.env.prod
