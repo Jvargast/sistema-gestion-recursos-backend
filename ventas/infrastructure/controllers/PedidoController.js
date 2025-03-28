@@ -117,6 +117,7 @@ class PedidoController {
           .status(400)
           .json({ error: "Fecha inválida o no proporcionada." });
       }
+      console.log(fecha)
       const options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
