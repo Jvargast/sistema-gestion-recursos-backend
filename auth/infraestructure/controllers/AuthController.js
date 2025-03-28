@@ -31,6 +31,7 @@ class AuthController {
         secure: process.env.NODE_ENV === "production" ? true : false, // Solo enviar la cookie en HTTPS en producción
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", //sameSite: "strict", // Prevenir ataques CSRF
         maxAge: 1 * 60 * 60 * 1000, // Expira en 1 hora
+        path: "/", // IMPORTANTE
       });
 
       res.cookie("refreshToken", refreshToken, {
@@ -38,6 +39,7 @@ class AuthController {
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+        path: "/", // IMPORTANTE
       });
 
       res.status(200).json({ success: true, usuario });
@@ -72,11 +74,13 @@ class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/", // IMPORTANTE
       });
       res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        path: "/", // IMPORTANTE
       });
 
       res.status(200).json({ message: "Cierre de sesión exitoso" });

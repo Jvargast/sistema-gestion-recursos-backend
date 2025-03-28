@@ -44,7 +44,6 @@ const Cliente = sequelize.define('Cliente', {
     },
     fecha_registro: {
         type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW
     },
     activo: {
         type: DataTypes.BOOLEAN,

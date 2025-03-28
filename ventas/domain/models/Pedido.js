@@ -33,7 +33,6 @@ const Pedido = sequelize.define(
     fecha_pedido: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
     },
     id_estado_pedido: {
       type: DataTypes.INTEGER,

@@ -3,7 +3,6 @@ import UsuariosRepository from "../../auth/infraestructure/repositories/Usuarios
 import sequelize from "../../database/database.js";
 import InventarioCamionService from "../../Entregas/application/InventarioCamionService.js";
 import AgendaViajesRepository from "../../Entregas/infrastructure/repositories/AgendaViajesRepository.js";
-import InventarioCamionReservasRepository from "../../Entregas/infrastructure/repositories/InventarioCamionReservasRepository.js";
 import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
 import NotificacionService from "../../shared/services/NotificacionService.js";
 import createFilter from "../../shared/utils/helpers.js";
@@ -13,10 +12,10 @@ import DetallePedidoRepository from "../infrastructure/repositories/DetallePedid
 import EstadoVentaRepository from "../infrastructure/repositories/EstadoVentaRepository.js";
 import MetodoPagoRepository from "../infrastructure/repositories/MetodoPagoRepository.js";
 import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
-import InventarioCamionRepository from "../../Entregas/infrastructure/repositories/InventarioCamionRepository.js";
 import InsumoRepository from "../../inventario/infrastructure/repositories/InsumoRepository.js";
 import VentaService from "./VentaService.js";
 import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
+import dayjs from "dayjs";
 
 class PedidoService {
   // Se crea en Pendiente
@@ -50,6 +49,7 @@ class PedidoService {
       );
       if (!estadoInicial) throw new Error("Estado inicial no configurado.");
 
+      const fechaChile = dayjs().tz("America/Santiago").toDate();
       const nuevoPedido = await PedidoRepository.create(
         {
           id_cliente: cliente.id_cliente,
@@ -60,6 +60,7 @@ class PedidoService {
           notas: notas ? notas : null,
           total: 0,
           estado_pago: pagado ? "Pagado" : "Pendiente",
+          fecha_pedido: fechaChile,
         },
         { transaction }
       );
@@ -614,7 +615,7 @@ class PedidoService {
       id_chofer: id_chofer,
       fecha_pedido: {
         [Op.between]: [`${fecha} 00:00:00`, `${fecha} 23:59:59`],
-      }, // Rango de día completo
+      }, 
     };
 
     const include = [
@@ -636,7 +637,6 @@ class PedidoService {
       },
     ];
 
-    // 🔹 Corrección: nos aseguramos de usar "id_pedido" correctamente
     const result = await paginate(PedidoRepository.getModel(), options, {
       where,
       include,

@@ -32,7 +32,6 @@ const HistorialCaja = sequelize.define(
     fecha_cierre: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
     },
     saldo_final: {
       type: DataTypes.DECIMAL(10, 2),

@@ -3,6 +3,7 @@ import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
 import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
 import MovimientoCajaRepository from "../infrastructure/repositories/MovimientoCajaRepository.js";
+import dayjs from "dayjs";
 class MovimientoCajaService {
   async getAllMovimientos(filters, options) {
     const allowedFields = [
@@ -99,13 +100,14 @@ class MovimientoCajaService {
       nuevoSaldo = Number(saldo_actual) - Number(monto);
     }
 
+    const fechaChile = dayjs().tz("America/Santiago").toDate();
     // Registrar movimiento
     const movimiento = await MovimientoCajaRepository.create({
       id_caja,
       tipo_movimiento,
       monto,
       descripcion,
-      fecha_movimiento: new Date(),
+      fecha_movimiento: fechaChile,
       id_venta,
       id_metodo_pago,
       saldo_caja: nuevoSaldo,

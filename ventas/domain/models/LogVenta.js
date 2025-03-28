@@ -26,7 +26,6 @@ const LogVenta = sequelize.define(
     fecha: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: DataTypes.NOW,
     },
     usuario: {
       type: DataTypes.STRING,
