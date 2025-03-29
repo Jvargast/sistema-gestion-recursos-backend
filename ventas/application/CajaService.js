@@ -2,7 +2,6 @@ import moment from "moment";
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
 import HistorialCajaRepository from "../infrastructure/repositories/HistorialCajaRepository.js";
-import dayjs from "dayjs";
 
 class CajaService {
   async getCajaById(id) {
@@ -79,11 +78,10 @@ class CajaService {
       throw new Error("La caja ya está abierta.");
     }
 
-    const fechaChile = dayjs().tz("America/Santiago").toDate();
     const datosActualizados = {
       estado: "abierta",
       saldo_inicial: saldoInicial,
-      fecha_apertura: fechaChile,
+      fecha_apertura: new Date(),
       usuario_apertura: rutUsuario,
     };
 
@@ -102,13 +100,12 @@ class CajaService {
     }
 
 
-    const fechaChile = dayjs().tz("America/Santiago").toDate();
 
     // Registrar el historial antes de actualizar el estado de la caja
     await HistorialCajaRepository.create({
       id_caja: idCaja,
       id_sucursal: caja.id_sucursal,
-      fecha_cierre: fechaChile,
+      fecha_cierre: new Date(),
       saldo_final: caja.saldo_final,
       usuario_cierre: rutUsuario,
       observaciones: `Cierre de caja registrado el ${new Date().toLocaleString()}`,

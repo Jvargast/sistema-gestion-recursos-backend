@@ -64,7 +64,6 @@ const VentasChofer = sequelize.define(
     },
     fechaHoraVenta: {
       type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
     },
   },
   {
