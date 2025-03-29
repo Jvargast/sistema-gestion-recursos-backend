@@ -11,7 +11,6 @@ import loadNotificacionAssociations from "../shared/domain/associate-models.js";
 //import loadManagementAssociations from '../management/domain/associate-models.js';
 //import loadProveedoresAssociations from '../proveedores/domain/associate-models.js';
 
-//Se inicializa la base datos
 async function initializeDatabase() {
   
   try {
@@ -27,19 +26,12 @@ async function initializeDatabase() {
     loadNotificacionAssociations();
     loadAnalysisAssociations();
 
-    //Cargas las asociaciones
-    //loadAnalisisAssociations();
-    /* loadAnalysisAssociations(); */
-    //loadGeografiaAssociations();
-    //loadManagementAssociations();
-    //loadProveedoresAssociations();
-
     // Sincronizar modelos con la base de datos
     await sequelize.sync({ alter: isProduction ? true : false }); // `alter: true` ajusta los modelos según cambios (solo en desarrollo)
     console.log("Modelos sincronizados con la base de datos.");
   } catch (error) {
     console.error("Error al conectar con la base de datos:", error);
-    throw error; // Lanza el error para manejarlo en index.js
+    throw error;
   }
 }
 

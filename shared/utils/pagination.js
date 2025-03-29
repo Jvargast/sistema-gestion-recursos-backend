@@ -15,9 +15,7 @@ async function paginate(model, options, queryOptions = {}) {
   const where = queryOptions.where || {};
   const order = queryOptions.order || [["id", "DESC"]];
   const distinctCol = queryOptions.distinctCol || model.primaryKeyAttribute;
-  // Obtener los resultados paginados
   
-  // Obtener los resultados paginados
   const rows = await model.findAll({
     ...queryOptions,
     order,
@@ -25,7 +23,6 @@ async function paginate(model, options, queryOptions = {}) {
     offset,
   });
 
-  // Realizar un conteo separado para evitar duplicados
   const count = await model.count({
     where, // Aplicar filtros al conteo
     include: queryOptions.include || [],

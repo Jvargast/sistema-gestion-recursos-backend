@@ -65,6 +65,7 @@ class UsuarioRepository extends IUsuariosRepository {
         "apellido",
         "email",
         "rolId",
+        "fecha_registro",
         [
           literal(`(
             SELECT COUNT(*)
@@ -73,7 +74,6 @@ class UsuarioRepository extends IUsuariosRepository {
           )`),
           "pedidosCount",
         ],
-        // Sumar las cantidades de los items que ya están en el camión.
         [
           literal(`(
             SELECT COALESCE(SUM(ic.cantidad), 0)
@@ -83,7 +83,6 @@ class UsuarioRepository extends IUsuariosRepository {
           )`),
           "inventarioActual",
         ],
-        // Sumar la capacidad de los camiones asignados al chofer.
         [
           literal(`(
             SELECT COALESCE(SUM(c.capacidad), 0)
@@ -98,6 +97,7 @@ class UsuarioRepository extends IUsuariosRepository {
         as: "rol",
         attributes: ["nombre"],
       },
+      order: [["fecha_registro", "ASC"]]
     });
   }
 

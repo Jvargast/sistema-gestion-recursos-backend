@@ -5,6 +5,8 @@ import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesR
 import CamionRepository from "../infrastructure/repositories/CamionRepository.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
 import InventarioCamionService from "./InventarioCamionService.js";
+import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
+import HistorialCajaRepository from "../../ventas/infrastructure/repositories/HistorialCajaRepository.js";
 
 class AgendaViajesService {
   async getAllViajes() {
@@ -71,6 +73,13 @@ class AgendaViajesService {
         throw new Error("Camión no encontrado.");
       }
 
+      const cajaAsignada = await CajaRepository.findByAsignado(choferRut, {
+        transaction,
+      });
+      if (!cajaAsignada) {
+        throw new Error("No se encontró la caja asignada para cerrar.");
+      }
+
       await InventarioCamionService.descargarItemsCamion(
         camion.id_camion,
         {
@@ -80,7 +89,6 @@ class AgendaViajesService {
         transaction
       );
 
-      console.log("SI funcion");
       const inventarioCamion =
         await InventarioCamionRepository.findAllByCamionId(camion.id_camion, {
           transaction,
@@ -101,6 +109,28 @@ class AgendaViajesService {
 
       camion.estado = "Disponible";
       await camion.save({ transaction });
+
+      await HistorialCajaRepository.create(
+        {
+          id_caja: cajaAsignada.id_caja,
+          id_sucursal: caja.id_sucursal,
+          fecha_cierre: new Date(),
+          saldo_final: cajaAsignada.saldo_final,
+          usuario_cierre: choferRut,
+          observaciones: `Cierre de caja registrado el ${new Date().toLocaleString()}`,
+        },
+        { transaction }
+      );
+
+      await CajaRepository.update(
+        cajaAsignada.id_caja,
+        {
+          estado: "cerrada",
+          fecha_cierre: new Date(),
+          saldo_final: null,
+        },
+        { transaction }
+      );
 
       await transaction.commit();
       return {

@@ -1,26 +1,27 @@
 import CotizacionService from "../../application/CotizacionService.js";
 
-
 class CotizacionController {
-  // Crear una nueva cotización
   async createCotizacion(req, res) {
     try {
       const cotizacionData = req.body; // Datos enviados desde el frontend
       const rut = req.user.id; // Asumiendo que el usuario está autenticado y su RUT está en req.user
-      const {cotizacion, detalles} = await CotizacionService.createCotizacion(
+      const { cotizacion, detalles } = await CotizacionService.createCotizacion(
         cotizacionData,
         rut
       );
 
       res
         .status(201)
-        .json({ message: "Cotización creada exitosamente", cotizacion, detalles });
+        .json({
+          message: "Cotización creada exitosamente",
+          cotizacion,
+          detalles,
+        });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
   }
 
-  // Obtener una cotización por su ID
   async getCotizacionById(req, res) {
     try {
       const { id } = req.params; // ID de la cotización enviado en la URL
@@ -36,7 +37,6 @@ class CotizacionController {
     }
   }
 
-  // Obtener todas las cotizaciones con filtros y paginación
   async getAllCotizaciones(req, res) {
     try {
       const filters = req.query; // Filtros enviados en la URL como query params
@@ -62,7 +62,6 @@ class CotizacionController {
     }
   }
 
-  // Actualizar una cotización existente
   async updateCotizacion(req, res) {
     try {
       const { id } = req.params; // ID de la cotización enviada en la URL
@@ -80,13 +79,15 @@ class CotizacionController {
 
       res
         .status(200)
-        .json({ message: "Cotización actualizada exitosamente", updatedCotizacion });
+        .json({
+          message: "Cotización actualizada exitosamente",
+          updatedCotizacion,
+        });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
   }
 
-  // Eliminar una cotización
   async deleteCotizacion(req, res) {
     try {
       const { id } = req.params; // ID de la cotización enviada en la URL
@@ -101,6 +102,23 @@ class CotizacionController {
       res.status(200).json({ message: "Cotización eliminada exitosamente" });
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  }
+
+  async generarPdfCotizacion(req, res) {
+    try {
+      const { id } = req.params;
+
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=cotizacion_${id}.pdf`
+      );
+      res.setHeader("Content-Type", "application/pdf");
+
+      await CotizacionService.generarCotizacionPdf(id, res);
+    } catch (error) {
+      console.error("Error al generar PDF de cotización:", error);
+      res.status(500).json({ error: error.message || "Error al generar PDF" });
     }
   }
 }

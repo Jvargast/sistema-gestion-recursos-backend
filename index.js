@@ -61,6 +61,7 @@ import AgendaViajesRoutes from "./Entregas/infrastructure/routes/AgendaViajeRout
 import VentasEstadisticasRoutes from "./analisis/infrastructure/routes/VentasEstadisticasRoutes.js";
 import PedidosEstadisticasRoutes from "./analisis/infrastructure/routes/PedidosEstadisticasRoutes.js";
 import ProductoEstadisticasRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
+import WebSocketServer from "./shared/websockets/WebSocketServer.js";
 
 /* Configuración */
 const env = process.env.NODE_ENV || "development";
@@ -93,6 +94,7 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: corsOptions,
 });
+WebSocketServer.setupWebSocket(io);
 
 // Middleware
 app.use(express.json());
@@ -169,19 +171,6 @@ app.use("/api/agendas", AgendaCargaRoutes);
 app.use("/api/entregas", EntregaRoutes);
 app.use("/api/agenda-viajes", AgendaViajesRoutes);
 app.use("/api/ventas-chofer", VentaChoferRoutes);
-
-io.on("connection", (socket) => {
-  console.log("⚡ Cliente conectado:", socket.id);
-
-  socket.on("subscribe", (id_usuario) => {
-    socket.join(`usuario_${id_usuario}`);
-    console.log(`✅ Usuario ${id_usuario} suscrito a notificaciones.`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("❌ Cliente desconectado:", socket.id);
-  });
-});
 
 const PORT = process.env.PORT || 9000;
 

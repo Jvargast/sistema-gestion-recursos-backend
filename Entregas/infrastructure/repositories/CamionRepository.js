@@ -44,7 +44,7 @@ class CamionRepository {
           attributes: ["nombre"],
         },
       ],
-      order: [["id_camion", "DESC"]],
+      order: [["id_camion", "ASC"]],
     });
   }
 

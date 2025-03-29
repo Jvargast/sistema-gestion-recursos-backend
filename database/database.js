@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cls from "cls-hooked";
 import fs from "fs";
 
+//Variables de entorno
 const env = process.env.NODE_ENV || "development";
 const envPath = `.env.${env === "production" ? "prod" : "local"}`;
 

@@ -51,7 +51,7 @@ const Usuarios = sequelize.define(
         model: Roles,
         key: "id",
       },
-      allowNull: false, // Cada usuario debe tener un rol asignado
+      allowNull: false,
     },
     id_empresa: {
       type: DataTypes.INTEGER,
@@ -67,12 +67,11 @@ const Usuarios = sequelize.define(
         model: Sucursal,
         key: "id_sucursal",
       },
-      allowNull: true, // Puede ser opcional si el usuario no está asignado a ninguna sucursal específica
+      allowNull: true, 
     },
-    // Campo para almacenar Refresh Tokens
     refreshTokens: {
-      type: DataTypes.TEXT, // Almacena un array de tokens en formato JSON
-      allowNull: true, // Inicialmente vacío
+      type: DataTypes.TEXT, 
+      allowNull: true, 
     },
   },
   {

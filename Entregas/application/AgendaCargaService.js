@@ -16,7 +16,7 @@ import EstadoVentaRepository from "../../ventas/infrastructure/repositories/Esta
 import InsumoRepository from "../../inventario/infrastructure/repositories/InsumoRepository.js";
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteRepository.js";
-import InventarioRepository from "../../inventario/infrastructure/repositories/InventarioRepository.js";
+import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 
 class AgendaCargaService {
   // Pedido de Confirmado -> En Preparación
@@ -318,7 +318,10 @@ class AgendaCargaService {
 
     try {
       // 1. Validar la agenda de carga
-      const agendaCarga = await AgendaCargaRepository.findById(id_agenda_carga);
+      const agendaCarga = await AgendaCargaRepository.findById(
+        id_agenda_carga,
+        { transaction }
+      );
       if (!agendaCarga) throw new Error("Agenda de carga no encontrada.");
       if (agendaCarga.estado !== "Pendiente")
         throw new Error("Esta agenda ya fue confirmada o cancelada.");
@@ -326,14 +329,22 @@ class AgendaCargaService {
       if (agendaCarga.id_usuario_chofer !== id_chofer)
         throw new Error("Este chofer no está asignado a la agenda.");
 
-      const camion = await CamionRepository.findById(agendaCarga.id_camion);
+      const camion = await CamionRepository.findById(agendaCarga.id_camion, {
+        transaction,
+      });
       if (!camion) throw new Error("Camión asignado no encontrado.");
       if (camion.estado !== "Disponible")
         throw new Error("Camión no disponible para iniciar ruta.");
 
       const inventarioCamion = await InventarioCamionRepository.findByCamionId(
-        camion.id_camion
+        camion.id_camion,
+        { transaction }
       );
+
+      const cajaAsignada = await CajaRepository.findByAsignado(id_chofer, {
+        transaction,
+      });
+      if (!cajaAsignada) throw new Error("El Chofer debe tener caja asignada");
 
       const resumenInventarioCamion = {
         disponibles: {},
@@ -355,7 +366,8 @@ class AgendaCargaService {
 
       // 2. Validar los productos cargados (Físico vs Virtual)
       const detallesAgenda = await AgendaCargaDetalleRepository.findByAgendaId(
-        id_agenda_carga
+        id_agenda_carga,
+        { transaction }
       );
 
       // Primero crear un resumen agrupado del detalle de la agenda
@@ -404,9 +416,16 @@ class AgendaCargaService {
           }
         }
       }
-     console.log(resumenCargado)
-     console.log(resumenDetalleAgenda)
-     console.log(resumenInventarioCamion)
+
+      await CajaRepository.update(
+        cajaAsignada.id_caja,
+        {
+          estado: "abierta",
+          fecha_apertura: new Date(),
+          saldo_inicial: cajaAsignada.monto_apertura || 0,
+        },
+        { transaction }
+      );
 
       await AgendaCargaDetalleRepository.updateEstadoByAgendaId(
         id_agenda_carga,
@@ -579,7 +598,7 @@ class AgendaCargaService {
     if (!id_chofer) {
       throw new Error("Se requiere el ID del chofer.");
     }
-  
+
     // Obtener la agenda pendiente del día
     const agenda = await AgendaCargaRepository.findOneByConditions({
       where: {
@@ -624,26 +643,30 @@ class AgendaCargaService {
       ],
       order: [["fecha_hora", "ASC"]],
     });
-  
+
     if (!agenda) return null;
-  
+
     // Procesar la agenda para separar reservados y disponibles
     const productos = {};
-  
+
     for (const detalle of agenda.detallesCarga) {
       const key = detalle.id_producto
         ? `producto_${detalle.id_producto}`
         : `insumo_${detalle.id_insumo}`;
-  
-      const inventarios = detalle.producto?.inventariosProducto || detalle.insumo?.inventariosInsumo || [];
-  
+
+      const inventarios =
+        detalle.producto?.inventariosProducto ||
+        detalle.insumo?.inventariosInsumo ||
+        [];
+
       productos[key] = {
-        nombre: detalle.producto?.nombre_producto || detalle.insumo?.nombre_insumo,
+        nombre:
+          detalle.producto?.nombre_producto || detalle.insumo?.nombre_insumo,
         cantidadPlanificada: detalle.cantidad,
         reservados: 0,
         disponibles: 0,
       };
-  
+
       for (const item of inventarios) {
         if (item.estado === "En Camión - Reservado") {
           productos[key].reservados += item.cantidad;
@@ -652,7 +675,7 @@ class AgendaCargaService {
         }
       }
     }
-  
+
     return {
       ...agenda.toJSON(),
       resumenProductos: productos,

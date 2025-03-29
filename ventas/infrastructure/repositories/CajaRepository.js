@@ -1,6 +1,8 @@
 import { Op } from "sequelize";
 import Sucursal from "../../../auth/domain/models/Sucursal.js";
 import Caja from "../../domain/models/Caja.js";
+import Usuarios from "../../../auth/domain/models/Usuarios.js";
+import Roles from "../../../auth/domain/models/Roles.js";
 
 class CajaRepository {
   async findById(id) {
@@ -17,7 +19,16 @@ class CajaRepository {
       where: filters,
       limit,
       offset,
-      include: [{ model: Sucursal, as: "sucursal" }],
+      include: [
+        { model: Sucursal, as: "sucursal" },
+        {
+          model: Usuarios,
+          as: "usuarioAsignado",
+          attributes: ["nombre"],
+          include: [{ model: Roles, as: "rol", attributes: ["nombre"] }],
+        },
+      ],
+      order: [["id_caja", "ASC"]],
     });
   }
 
