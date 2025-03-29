@@ -8,7 +8,7 @@ class CotizacionRepository {
       try {
         return await Cotizacion.findByPk(id, {
           include: [
-            { model: DetalleCotizacion, as: "detalles" },
+            { model: DetalleCotizacion, as: "detallesCotizacion" },
             { model: Cliente, as: "cliente" },
             { model: Usuarios, as: "vendedor" },
           ],

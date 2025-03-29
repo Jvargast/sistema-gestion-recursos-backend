@@ -15,7 +15,7 @@ import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js
 import InsumoRepository from "../../inventario/infrastructure/repositories/InsumoRepository.js";
 import VentaService from "./VentaService.js";
 import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
-import dayjs from "dayjs";
+import WebSocketServer from "../../shared/websockets/WebSocketServer.js";
 
 class PedidoService {
   // Se crea en Pendiente
@@ -49,7 +49,8 @@ class PedidoService {
       );
       if (!estadoInicial) throw new Error("Estado inicial no configurado.");
 
-      const fechaChile = dayjs().tz("America/Santiago").toDate();
+      const fecha_pedido = new Date();
+      console.log("Fecha Chile:", fecha_pedido);
       const nuevoPedido = await PedidoRepository.create(
         {
           id_cliente: cliente.id_cliente,
@@ -60,7 +61,7 @@ class PedidoService {
           notas: notas ? notas : null,
           total: 0,
           estado_pago: pagado ? "Pagado" : "Pendiente",
-          fecha_pedido: fechaChile,
+          fecha_pedido: fecha_pedido,
         },
         { transaction }
       );
@@ -298,6 +299,9 @@ class PedidoService {
         mensaje: `Nuevo pedido asignado: ID ${id_pedido}`,
         tipo: "pedido_asignado",
       });
+      WebSocketServer.emitToUser(id_chofer, {
+        type: "actualizar_mis_pedidos",
+      });
 
       return PedidoRepository.findById(id_pedido);
     } catch (error) {
@@ -313,6 +317,7 @@ class PedidoService {
       });
       if (!pedido) throw new Error("Pedido no encontrado.");
 
+      const id_chofer_previo = pedido.id_chofer;
       const estadoActual = await EstadoVentaRepository.findById(
         pedido.id_estado_pedido
       );
@@ -334,6 +339,9 @@ class PedidoService {
       await PedidoRepository.update(id_pedido, {
         id_chofer: null,
         id_estado_pedido: estadoPendiente.id_estado_venta,
+      });
+      WebSocketServer.emitToUser(id_chofer_previo, {
+        type: "actualizar_mis_pedidos",
       });
 
       await transaction.commit();
@@ -491,7 +499,6 @@ class PedidoService {
       ],
       order: [["fecha_pedido", "ASC"]],
     });
-    console.log(pedidos);
 
     if (!pedidos || pedidos.length === 0) {
       return [];
@@ -556,13 +563,13 @@ class PedidoService {
     if (filters.id_chofer === null) {
       where.id_chofer = { [Op.is]: null };
     }
-
     if (options.fecha) {
+      const { inicioUTC, finUTC } = obtenerRangoUTCDesdeFechaLocal(
+        options.fecha
+      );
+
       where.fecha_pedido = {
-        [Op.between]: [
-          `${options.fecha} 00:00:00`,
-          `${options.fecha} 23:59:59`,
-        ],
+        [Op.between]: [inicioUTC, finUTC],
       };
     }
 
@@ -615,7 +622,7 @@ class PedidoService {
       id_chofer: id_chofer,
       fecha_pedido: {
         [Op.between]: [`${fecha} 00:00:00`, `${fecha} 23:59:59`],
-      }, 
+      },
     };
 
     const include = [
