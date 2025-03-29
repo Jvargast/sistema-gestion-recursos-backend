@@ -8,6 +8,7 @@ import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import fs from "fs";
 
 /**
  * Implementación de tareas
@@ -63,19 +64,34 @@ import ProductoEstadisticasRoutes from "./analisis/infrastructure/routes/Product
 
 /* Configuración */
 const env = process.env.NODE_ENV || "development";
-dotenv.config({
-  path: `.env.${env === "production" ? "prod" : "local"}`,
-});
+const envPath = `.env.${env === "production" ? "prod" : "local"}`;
+
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+} else {
+  dotenv.config(); // fallback por si acaso
+}
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [];
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("No permitido por CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
 const app = express();
 app.set("trust proxy", 1);
+app.use(cors(corsOptions));
 const server = createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: "http://localhost:3000", // Configurar CORS
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  },
+  cors: corsOptions,
 });
 
 // Middleware
@@ -86,7 +102,8 @@ if (process.env.NODE_ENV === "production") {
   app.use(helmet());
   app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 }
-app.use(morgan("common"));
+// 📝 Logging
+app.use(morgan(env === "production" ? "combined" : "dev"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -95,7 +112,7 @@ app.use(cookieParser());
   "http://localhost:3000",
   "https://jvargast.github.io/sistema-gestion-recursos-frontend",
 ]; */
-app.use(
+/* app.use(
   cors({
     origin: process.env.ALLOWED_ORIGINS?.split(",") || [
       "http://localhost:3000",
@@ -104,13 +121,7 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Métodos permitidos
     allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
   })
-);
-/* const allowedOrigins = [
-  "http://localhost:3000", // Para desarrollo local
-  "https://jvargast.github.io", // Dominio base de tu frontend
-];*/
-
-/* Rutas*/
+); */
 /* MÓDULO AUTH */
 app.use("/api/usuarios", UsuariosRoutes);
 app.use("/api/auth", AuthRoutes);
@@ -146,7 +157,6 @@ app.use("/api/estados-ventas", EstadosVentasRoutes);
 app.use("/api/pagos", PagosRoutes);
 app.use("/api/documentos", DocumentosRoutes);
 
-/* MÓDULO ANÁLISIS */
 /* MÓDULO ANÁLISIS */
 app.use("/api/analisis", VentasEstadisticasRoutes);
 app.use("/api/analisis", PedidosEstadisticasRoutes);
