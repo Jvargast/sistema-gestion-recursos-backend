@@ -1,5 +1,4 @@
 import { Op } from "sequelize";
-import dayjs from "dayjs";
 import createFilter from "../../shared/utils/helpers.js";
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
 import VentaRepository from "../infrastructure/repositories/VentaRepository.js";
@@ -231,7 +230,7 @@ class VentaService {
             tipo_entrega === "pedido_pagado_anticipado"
               ? direccion_entrega
               : null,
-          fecha: dayjs().tz("America/Santiago").toDate(),
+          fecha: new Date(),
           total: totalConImpuesto,
           impuestos_totales,
           id_estado_venta: estadoVenta.id_estado_venta,
@@ -286,7 +285,7 @@ class VentaService {
                 retornable.estado === "defectuoso"
                   ? retornable.tipo_defecto
                   : null,
-              fecha_retorno: dayjs().tz("America/Santiago").toDate(),
+              fecha_retorno: new Date(),
             },
             { transaction }
           );
@@ -309,7 +308,7 @@ class VentaService {
           numero: `${tipo_documento === "boleta" ? "B" : "F"}-${
             venta.id_venta
           }`,
-          fecha_emision: dayjs().tz("America/Santiago").toDate(),
+          fecha_emision: new Date(),
           id_cliente,
           id_usuario_creador,
           subtotal,
@@ -335,7 +334,7 @@ class VentaService {
           id_metodo_pago,
           id_estado_pago: estadoPago.id_estado_pago,
           monto: totalConImpuesto,
-          fecha_pago: tipo_documento === "boleta" ? dayjs().tz("America/Santiago").toDate() : null,
+          fecha_pago: tipo_documento === "boleta" ? new Date(): null,
           referencia: referencia || null,
         },
         { transaction }
@@ -421,7 +420,7 @@ class VentaService {
         {
           id_venta: venta.id_venta,
           accion: "creación",
-          fecha: dayjs().tz("America/Santiago").toDate(),
+          fecha: new Date(),
           usuario: id_usuario_creador,
           detalle: `Venta creada con documento ${tipo_documento.toUpperCase()}-${
             documento ? documento.numero : "Sin Pagar aún"
