@@ -42,8 +42,10 @@ class NotificacionService {
         tipo,
         fecha: nuevaNotificacion.fecha,
       });
+      return nuevaNotificacion;
     } catch (error) {
       console.error("❌ Error al enviar notificación:", error);
+      throw new Error(`No se pudo enviar la notificación: ${error.message}`);
     }
   }
 

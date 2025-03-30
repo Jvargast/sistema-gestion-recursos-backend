@@ -1,6 +1,6 @@
 let ioInstance = null;
 
-const usuariosConectados = new Map(); // opcional si luego quieres emitir directamente por socket.id
+const usuariosConectados = new Map();
 
 const setupWebSocket = (io) => {
   ioInstance = io;
@@ -28,20 +28,28 @@ const setupWebSocket = (io) => {
 };
 
 const emitToUser = (userId, payload) => {
-  console.log(payload);
-  console.log(userId);
   if (!ioInstance) {
     console.error("⚠️ WebSocket no inicializado correctamente");
     return;
   }
 
   const room = `usuario_${userId}`;
-  if (payload.type === "actualizar_mis_pedidos") {
-    console.log(`📡 Enviando 'actualizar_mis_pedidos' a sala: ${room}`);
-    ioInstance.to(room).emit("actualizar_mis_pedidos");
-  } else {
-    console.log(`📡 Enviando 'nueva_notificacion' a sala: ${room}`, payload);
-    ioInstance.to(room).emit("nueva_notificacion", payload);
+
+  switch (payload.type) {
+    case "actualizar_mis_pedidos":
+      console.log(`📡 Enviando 'actualizar_mis_pedidos' a sala: ${room}`);
+      ioInstance.to(room).emit("actualizar_mis_pedidos");
+      break;
+
+    case "actualizar_agenda_chofer":
+      console.log(`📡 Enviando 'actualizar_agenda_chofer' a sala: ${room}`);
+      ioInstance.to(room).emit("actualizar_agenda_chofer", payload.data);
+      break;
+
+    default:
+      console.log(`📡 Enviando 'nueva_notificacion' a sala: ${room}`, payload);
+      ioInstance.to(room).emit("nueva_notificacion", payload);
+      break;
   }
 };
 
