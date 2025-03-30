@@ -354,41 +354,52 @@ class PedidoService {
   //Para a En Entrega o Confirmado
   async confirmarPedidoChofer(id_pedido, id_chofer) {
     const transaction = await sequelize.transaction();
+    let admin, notificacion, viajeActivo;
+
     try {
-      const pedido = await PedidoRepository.findById(id_pedido);
+      const pedido = await PedidoRepository.findById(id_pedido, {
+        transaction,
+      });
       if (!pedido || pedido.id_chofer !== id_chofer)
         throw new Error("Pedido no asignado a este chofer.");
 
       const detallesPedido = await DetallePedidoRepository.findByPedidoId(
-        id_pedido
+        id_pedido,
+        { transaction }
       );
 
       const detallesPedidoProductos = [];
-
       for (const item of detallesPedido) {
-        const producto = await ProductosRepository.findById(item.id_producto);
-        if (producto) {
-          detallesPedidoProductos.push(item);
-        }
+        const producto = await ProductosRepository.findById(item.id_producto, {
+          transaction,
+        });
+        if (producto) detallesPedidoProductos.push(item);
       }
 
-      const viajeActivo = await AgendaViajesRepository.findByChoferAndEstado(
+      viajeActivo = await AgendaViajesRepository.findByChoferAndEstado(
         id_chofer,
-        "En Tránsito"
+        "En Tránsito",
+        { transaction }
       );
 
       let nuevoEstado;
       if (viajeActivo) {
         const inventarioDisponible =
           await InventarioCamionService.getInventarioDisponible(
-            viajeActivo.id_camion
+            viajeActivo.id_camion,
+            "",
+            { transaction }
           );
-        const cliente = await ClienteRepository.findById(pedido.id_cliente);
+        const cliente = await ClienteRepository.findById(pedido.id_cliente, {
+          transaction,
+        });
 
         for (const item of detallesPedidoProductos) {
-          const producto = await ProductosRepository.findById(item.id_producto);
+          const producto = await ProductosRepository.findById(
+            item.id_producto,
+            { transaction }
+          );
           const esRetornable = producto.es_retornable;
-
           const disponibleEnCamion = inventarioDisponible.find(
             (inv) => inv.id_producto === item.id_producto
           );
@@ -398,7 +409,8 @@ class PedidoService {
             disponibleEnCamion.cantidad < item.cantidad
           ) {
             nuevoEstado = await EstadoVentaRepository.findByNombre(
-              "Pendiente Asignación"
+              "Pendiente Asignación",
+              { transaction }
             );
             throw new Error(
               `Stock insuficiente para producto ${producto.nombre_producto}`
@@ -414,6 +426,7 @@ class PedidoService {
             transaction,
           });
         }
+
         const nuevoDestino = {
           id_pedido: pedido.id_pedido,
           id_cliente: cliente.id_cliente,
@@ -422,7 +435,6 @@ class PedidoService {
           notas: pedido.notas || "",
         };
 
-        // Agregar destino a la lista actual de destinos
         const destinosActuales = viajeActivo.destinos || [];
         destinosActuales.push(nuevoDestino);
 
@@ -431,33 +443,47 @@ class PedidoService {
           { destinos: destinosActuales },
           { transaction }
         );
-        nuevoEstado = await EstadoVentaRepository.findByNombre("En Entrega");
+
+        nuevoEstado = await EstadoVentaRepository.findByNombre("En Entrega", {
+          transaction,
+        });
       } else {
-        // Si no hay viaje activo, no reservas inmediatamente
-        nuevoEstado = await EstadoVentaRepository.findByNombre("Confirmado");
+        nuevoEstado = await EstadoVentaRepository.findByNombre("Confirmado", {
+          transaction,
+        });
       }
 
       await PedidoRepository.update(
         id_pedido,
-        {
-          id_estado_pedido: nuevoEstado.id_estado_venta,
-        },
+        { id_estado_pedido: nuevoEstado.id_estado_venta },
         { transaction }
       );
-      const admin = UsuariosRepository.findByRol("administrador");
 
-      await NotificacionService.enviarNotificacion({
+      admin = await UsuariosRepository.findByRol("administrador", {
+        transaction,
+      });
+
+      notificacion = await NotificacionService.enviarNotificacion({
         id_usuario: admin.rut,
-        mensaje: `Pedido ${id_pedido} confirmado correctamente.`,
+        mensaje: `El chofer ${id_chofer} confirmó el pedido ${id_pedido}.`,
         tipo: "pedido_confirmado",
       });
 
       await transaction.commit();
-      return PedidoRepository.findById(id_pedido);
     } catch (error) {
       await transaction.rollback();
       throw new Error(`Error al confirmar pedido: ${error.message}`);
     }
+
+    if (viajeActivo) {
+      WebSocketServer.emitToUser(id_chofer, {
+        type: "actualizar_agenda_chofer",
+        data: {
+          mensaje: `Tu agenda se actualizó con el pedido ${id_pedido}`,
+        },
+      });
+    }
+    return PedidoRepository.findById(id_pedido);
   }
 
   async getPedidosConfirmadosPorChofer(id_chofer) {

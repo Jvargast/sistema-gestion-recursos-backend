@@ -98,11 +98,11 @@ class AuthController {
         return res.status(401).json({ error: "Usuario no autenticado" });
       }
 
-      const { id, nombre, apellido, email, rol, permisos } = user;
+      const { id, nombre, apellido, email, rol, permisos, id_sucursal } = user;
 
       res.status(200).json({
         message: "Usuario autenticado con éxito",
-        usuario: { id, nombre, apellido, email },
+        usuario: { id, nombre, apellido, email, id_sucursal },
         rol,
         permisos,
       });

@@ -72,7 +72,8 @@ class AuthService {
     return {
       id: user.rut,
       nombre: user.nombre,
-      apelldio: user.apellido,
+      apellido: user.apellido,
+      id_sucursal: user.id_sucursal,
       email: user.email,
       rut: user.rut,
       activo: user.activo,

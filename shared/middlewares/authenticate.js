@@ -56,6 +56,7 @@ const authenticate = async (req, res, next) => {
       id: user.rut,
       nombre: user.nombre,
       apellido: user.apellido,
+      id_sucursal: user.id_sucursal,
       email: user.email,
       rol: user.rol,
       permisos: user.permisos, // Asegúrate de que este campo esté presente

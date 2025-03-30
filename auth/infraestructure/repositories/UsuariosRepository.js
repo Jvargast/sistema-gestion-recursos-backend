@@ -97,32 +97,41 @@ class UsuarioRepository extends IUsuariosRepository {
         as: "rol",
         attributes: ["nombre"],
       },
-      order: [["fecha_registro", "ASC"]]
+      order: [["fecha_registro", "ASC"]],
     });
   }
 
   async findOne(rut) {
     return await Usuario.findOne({
       where: { rut },
-      attributes: ["rut", "nombre", "apellido", "email", "rolId"],
-      include: {
-        model: Roles,
-        as: "rol",
-        attributes: ["nombre"],
-        include: [
-          {
-            model: RolesPermisos,
-            as: "rolesPermisos", // Usa el alias definido en la relación
-            include: [
-              {
-                model: Permisos,
-                as: "permiso", // Usa el alias definido en la relación
-                attributes: ["nombre"], // Solo queremos el nombre del permiso
-              },
-            ],
-          },
-        ],
-      },
+      attributes: [
+        "rut",
+        "nombre",
+        "apellido",
+        "email",
+        "rolId",
+        "id_sucursal",
+      ],
+      include: [
+        {
+          model: Roles,
+          as: "rol",
+          attributes: ["nombre"],
+          include: [
+            {
+              model: RolesPermisos,
+              as: "rolesPermisos", // Usa el alias definido en la relación
+              include: [
+                {
+                  model: Permisos,
+                  as: "permiso", // Usa el alias definido en la relación
+                  attributes: ["nombre"], // Solo queremos el nombre del permiso
+                },
+              ],
+            },
+          ],
+        },
+      ],
     });
   }
 
