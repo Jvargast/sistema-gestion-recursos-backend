@@ -115,7 +115,7 @@ class CajaService {
     const datosActualizados = {
       estado: "cerrada",
       saldo_final: null,
-      fecha_cierre: fechaChile,
+      fecha_cierre: new Date(),
       usuario_cierre: rutUsuario,
     };
 

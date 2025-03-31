@@ -5,10 +5,28 @@ import Camion from "../../domain/models/Camion.js";
 import InventarioCamion from "../../domain/models/InventarioCamion.js";
 
 class AgendaViajesRepository {
+  async getAll() {
+    return await AgendaViajes.findAll({
+      include: [
+        {
+          model: Usuarios,
+          as: "chofer",
+          attributes: ["rut", "nombre", "apellido"],
+        },
+        {
+          model: Camion,
+          as: "camion",
+          attributes: ["id_camion", "placa", "capacidad"],
+        },
+      ],
+      order: [["fecha_inicio", "DESC"]],
+    });
+  }
+
   async getChoferesEnTransito() {
     try {
       const choferes = await AgendaViajes.findAll({
-        where: { estado: "En Tránsito" }, // Solo viajes en tránsito
+        where: { estado: "En Tránsito" },
         include: [
           {
             model: Usuarios,

@@ -113,7 +113,7 @@ class AgendaViajesService {
       await HistorialCajaRepository.create(
         {
           id_caja: cajaAsignada.id_caja,
-          id_sucursal: caja.id_sucursal,
+          id_sucursal: cajaAsignada.id_sucursal,
           fecha_cierre: new Date(),
           saldo_final: cajaAsignada.saldo_final,
           usuario_cierre: choferRut,
@@ -165,6 +165,16 @@ class AgendaViajesService {
     });
 
     return viajes;
+  }
+
+  async getHistorialViajes() {
+    try {
+      const viajes = await AgendaViajesRepository.getAll();
+      return viajes;
+    } catch (error) {
+      console.error("Error al obtener historial de viajes:", error);
+      throw new Error("No se pudo obtener el historial de viajes.");
+    }
   }
 }
 
