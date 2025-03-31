@@ -17,6 +17,7 @@ import InsumoRepository from "../../inventario/infrastructure/repositories/Insum
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteRepository.js";
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
+import { getEstadoCamion } from "../../shared/utils/estadoCamion.js";
 
 class AgendaCargaService {
   // Pedido de Confirmado -> En Preparación
@@ -32,6 +33,9 @@ class AgendaCargaService {
     const t = await sequelize.transaction();
 
     try {
+      /**
+       * Validaciones
+       */
       if (!id_usuario_chofer || !id_camion) {
         throw new Error(
           "Faltan datos obligatorios para crear la agenda de carga."
@@ -53,10 +57,12 @@ class AgendaCargaService {
         throw new Error("El chofer no está asignado a este camión.");
       }
 
+      // Pedodido -> Confirmado
       const estadoConfirmado = await EstadoVentaRepository.findByNombre(
         "Confirmado",
         { transaction: t }
       );
+      // Pedido -> En Preparación
       const estadoEnPreparacion = await EstadoVentaRepository.findByNombre(
         "En Preparación",
         { transaction: t }
@@ -65,6 +71,7 @@ class AgendaCargaService {
       if (!estadoConfirmado || !estadoEnPreparacion)
         throw new Error("Estados necesarios no configurados correctamente.");
 
+      //Se buscan pedidos confirmados por chofer
       const pedidosConfirmados =
         await PedidoRepository.findAllByChoferAndEstado(
           id_usuario_chofer,
@@ -151,7 +158,7 @@ class AgendaCargaService {
                 id_camion,
                 id_producto: item.id_producto,
                 cantidad: item.cantidad,
-                estado: "En Camión - Reservado",
+                estado: getEstadoCamion(es_retornable, true),
                 tipo: "Reservado",
                 es_retornable,
               },
@@ -179,7 +186,7 @@ class AgendaCargaService {
                 id_camion,
                 id_insumo: item.id_insumo,
                 cantidad: item.cantidad,
-                estado: "En Camión - Reservado",
+                estado: getEstadoCamion(false, true),
                 tipo: "Reservado",
                 es_retornable: false,
               },
@@ -237,7 +244,7 @@ class AgendaCargaService {
               id_camion,
               id_producto: adicional.id_producto,
               cantidad: adicional.cantidad,
-              estado: "En Camión - Disponible",
+              estado: getEstadoCamion(es_retornable, false),
               tipo: "Disponible",
               es_retornable,
             },

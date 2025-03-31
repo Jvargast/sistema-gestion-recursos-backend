@@ -2,11 +2,10 @@ import { Router } from 'express';
 import ProductoController from '../controllers/ProductoController.js';
 import authenticate from '../../../shared/middlewares/authenticate.js';
 import checkPermissions from '../../../shared/middlewares/CheckPermissionsMiddleware.js';
-import { checkRoles } from '../../../shared/middlewares/CheckRole.js';
 
 const router = Router();
 
-router.get('/disponible', authenticate, checkPermissions("ver_productos_disponibles"), checkRoles(["administrador", "chofer"]), ProductoController.getAvailableProductos)
+router.get('/disponible', authenticate, checkPermissions("ver_productos_disponibles"), ProductoController.getAvailableProductos)
 router.get('/:id', authenticate, checkPermissions("ver_producto"),ProductoController.getProductoById);
 router.get('/', authenticate, checkPermissions("ver_productos"),ProductoController.getAllProductos);
 router.post('/', authenticate, checkPermissions("crear_producto"),ProductoController.createProducto);

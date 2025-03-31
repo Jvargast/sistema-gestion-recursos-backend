@@ -6,6 +6,7 @@ import RolesPermisos from "../../domain/models/RolesPermisos.js";
 import Sucursal from "../../domain/models/Sucursal.js";
 import Usuario from "../../domain/models/Usuarios.js";
 import IUsuariosRepository from "../../domain/repositories/IUsuariosRepository.js";
+import Caja from "../../../ventas/domain/models/Caja.js";
 
 class UsuarioRepository extends IUsuariosRepository {
   async findByRut(rut) {
@@ -98,6 +99,32 @@ class UsuarioRepository extends IUsuariosRepository {
         attributes: ["nombre"],
       },
       order: [["fecha_registro", "ASC"]],
+    });
+  }
+
+  async findAllVendedoresConCaja(rolId) {
+    return await Usuario.findAll({
+      where: { rolId },
+      attributes: [
+        "rut",
+        "nombre",
+        "apellido",
+        "email",
+        "fecha_registro"
+      ],
+      include: [
+        {
+          model: Roles,
+          as: "rol",
+          attributes: ["nombre"]
+        },
+        {
+          model: Caja,
+          as: "cajasAsignadas",
+          attributes: ["id_caja", "saldo_inicial", "saldo_final", "fecha_apertura", "fecha_cierre", "estado"]
+        }
+      ],
+      order: [["fecha_registro", "ASC"]]
     });
   }
 

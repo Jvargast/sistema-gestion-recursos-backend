@@ -158,8 +158,7 @@ class UsuarioService {
   async getAllVendedores(filters = {}, options) {
     try {
       const rolVendedor = await RolesService.getRolIdByName("vendedor");
-
-      const vendedores = await UsuariosRepository.findAllByRolId(rolVendedor);
+      const vendedores = await UsuariosRepository.findAllVendedoresConCaja(rolVendedor);
 
       return vendedores;
     } catch (error) {

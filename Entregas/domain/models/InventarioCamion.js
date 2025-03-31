@@ -45,6 +45,7 @@ const InventarioCamion = sequelize.define(
         "En Camión - Disponible",
         "En Camión - Reservado",
         "En Camión - Retorno",
+        "En Camión - Reservado - Entrega",
         "Regresado",
         "Entregado"
       ),

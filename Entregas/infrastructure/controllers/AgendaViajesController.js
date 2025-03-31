@@ -55,17 +55,14 @@ class AgendaViajesController {
     }
   }
 
-  /* Opcionalmente, podrías agregar otros endpoints, por ejemplo:
-  async iniciarViaje(req, res) {
+  async getHistorialViajes(req, res) {
     try {
-      const { id_agenda_carga } = req.params;
-      const choferRut = req.user ? req.user.rut : null;
-      const result = await AgendaViajesService.iniciarViaje(id_agenda_carga, choferRut);
-      res.status(200).json(result);
+      const viajes = await AgendaViajeService.getHistorialViajes();
+      res.status(200).json(viajes);
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
-  } */
+  }
 }
 
 export default new AgendaViajesController();
