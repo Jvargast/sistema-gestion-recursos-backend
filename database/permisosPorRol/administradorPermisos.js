@@ -116,6 +116,7 @@ const administradorPermisos = [
   "vistas.tipoinsumos.ver",
   "vistas.tipoinsumos.gestionar",
   "vistas.camiones.ver",
+  "vistas.camiones.gestionar",
   "vistas.agendaCarga.ver",
   "vistas.puntoventa.ver",
   "vistas.pedidos.ver",
@@ -129,14 +130,13 @@ const administradorPermisos = [
 
   // funcionales
   "ventas.pedido.confirmar",
-
   "ventas.pedido.pago",
-
   "ventas.pedido.asignar",
-
   "ventas.pedido.desasignar",
   "ventas.factura.registrar",
   "entregas.ventaschofer.ver",
+  "entregas.camion.asignar",
+  "entregas.camion.desasignar",
   "ventas.pedido.asignados",
   "ventas.pedido.historial",
   "ventas.movimiento.ver",

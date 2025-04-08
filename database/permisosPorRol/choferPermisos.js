@@ -11,6 +11,7 @@ const choferPermisos = [
     "vistas.pedidos.ver",
     "vistas.clientes.ver",
     "vistas.perfil.ver",
+    "vistas.camiones.ver",
   
     // Ventas (ventas rápidas)
     "ventas.venta.crear",
@@ -29,6 +30,7 @@ const choferPermisos = [
     "entregas.agendaviaje.finalizar",
     "entregas.inventariocamion.ver",
     "entregas.inventariocamion.estado",
+    "entregas.inventariocamion.disponible",
     "entregas.ventaschofer.ver",
     "entregas.camion.ver",
     "entregas.agendacarga.confirmar",
