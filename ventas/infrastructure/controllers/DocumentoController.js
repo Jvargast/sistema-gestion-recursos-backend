@@ -1,4 +1,5 @@
 import DocumentoService from "../../application/DocumentoService.js";
+import CuentaPorCobrarRepository from "../repositories/CuentaPorCobrarRepository.js";
 
 class DocumentoController {
   async getDocumentoById(req, res) {

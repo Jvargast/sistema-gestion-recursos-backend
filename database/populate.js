@@ -1,10 +1,14 @@
 import sequelize from "./database.js";
+import todosLosPermisos from "./permisos/index.js";
+import permisosDependencias from "./permisosDependencias/index.js";
+
 /**
  * Módulo Usuarios 4
  */
 import Usuarios from "../auth/domain/models/Usuarios.js";
 import Roles from "../auth/domain/models/Roles.js";
 import Permisos from "../auth/domain/models/Permisos.js";
+import PermisosDependencias from "../auth/domain/models/PermisosDependencias.js";
 import RolesPermisos from "../auth/domain/models/RolesPermisos.js";
 import Empresa from "../auth/domain/models/Empresa.js";
 import Sucursal from "../auth/domain/models/Sucursal.js";
@@ -20,21 +24,22 @@ import CategoriaProducto from "../inventario/domain/models/CategoriaProducto.js"
 import EstadoPago from "../ventas/domain/models/EstadoPago.js";
 import MetodoPago from "../ventas/domain/models/MetodoPago.js";
 import EstadoVenta from "../ventas/domain/models/EstadoVenta.js";
+import permisosPorRol from "./permisosPorRol/index.js";
 
 async function populateDatabase() {
   try {
     // Conectar a la base de datos
     await sequelize.authenticate();
-    console.log("Conexión establecida con éxito.");
+    console.log("✅ Conexión establecida con éxito.");
 
     // Sincronizar modelos (solo en desarrollo)
     await sequelize.sync({ alter: true });
     /*****************************************************/
-    console.log("Poblando la base de datos...");
+    console.log("✅ Poblando la base de datos...");
     /******************************/
     //         Módulo AUTH        *
     /******************************/
-    // Crear permisos
+    // Crear permisos - versión legacy
     const permisosAuth = [
       // Autenticación
       {
@@ -713,11 +718,66 @@ async function populateDatabase() {
         categoria: "Gestión de Vistas Permitidas",
       },
     ];
-
+    /*  
     const permisosCreados = await Permisos.bulkCreate(permisosAuth);
     console.log("Permisos creados");
+    */
+    // 1. Crear permisos
+    await Permisos.bulkCreate(todosLosPermisos, {
+      ignoreDuplicates: true,
+    });
+    console.log("✅ Permisos creados exitosamente");
 
-    // Crear roles
+    // 2. Crear mapa de permisos
+    const permisosExistentes = await Permisos.findAll();
+    const mapaPermisos = new Map(
+      permisosExistentes.map((p) => [p.nombre, p.id])
+    );
+
+    // 3. Procesar dependencias
+    const dependenciasValidas = [];
+
+    for (const dep of permisosDependencias) {
+      const permisoId = mapaPermisos.get(dep.permiso);
+
+      // Normaliza dependeDe: puede ser string o array
+      const dependeDeArray = Array.isArray(dep.dependeDe)
+        ? dep.dependeDe
+        : typeof dep.dependeDe === "string"
+        ? dep.dependeDe.split(",").map((d) => d.trim())
+        : [];
+
+      if (!permisoId || dependeDeArray.length === 0) {
+        console.warn(
+          `❌ Permiso o dependeDe inválido para ${dep.permiso}:`,
+          dep.dependeDe
+        );
+        continue;
+      }
+
+      for (const dependeDe of dependeDeArray) {
+        const dependeDeId = mapaPermisos.get(dependeDe);
+
+        if (!dependeDeId) {
+          console.warn(
+            `❌ Permiso faltante en dependencias: permiso="${dep.permiso}", dependeDe="${dependeDe}"`
+          );
+          continue;
+        }
+
+        dependenciasValidas.push({
+          permisoId,
+          dependeDeId,
+        });
+      }
+    }
+
+    await PermisosDependencias.bulkCreate(dependenciasValidas, {
+      ignoreDuplicates: true,
+    });
+    console.log("✅ Dependencias de permisos registradas exitosamente.");
+
+    // 4. Crear roles
     const rolesData = [
       { nombre: "vendedor", descripcion: "Rol para vendedores" },
       { nombre: "administrador", descripcion: "Rol para administradores" },
@@ -726,10 +786,41 @@ async function populateDatabase() {
     ];
 
     const rolesCreados = await Roles.bulkCreate(rolesData);
-    console.log("Roles creados");
+    console.log("✅ Roles creados");
 
-    // Asignar permisos a roles
-    const permisosPorRol = {
+    // 5. Asignación de permisos por rol
+    for (const rol of rolesCreados) {
+      const permisosDelRol = permisosPorRol[rol.nombre];
+
+      if (!permisosDelRol) continue;
+
+      const relaciones = permisosDelRol
+        .map((nombrePermiso) => {
+          const permisoId = mapaPermisos.get(nombrePermiso);
+          if (!permisoId) {
+            console.warn(
+              `⚠️ Permiso no encontrado para rol ${rol.nombre}: ${nombrePermiso}`
+            );
+            return null;
+          }
+
+          return {
+            rolId: rol.id,
+            permisoId,
+          };
+        })
+        .filter(Boolean);
+
+      if (relaciones.length > 0) {
+        await RolesPermisos.bulkCreate(relaciones, { ignoreDuplicates: true });
+        console.log(`✅ Permisos asignados a rol: ${rol.nombre}`);
+      } else {
+        console.warn(`⚠️ No se asignaron permisos al rol ${rol.nombre}`);
+      }
+    }
+
+    // Asignar permisos a roles - legacy
+    /*  const permisosPorRol = {
       vendedor: [
         "iniciar_sesion",
         "ver_inventario",
@@ -899,7 +990,7 @@ async function populateDatabase() {
         "borrar_categoria",
         "crear_tipo_insumo",
         "editar_tipo_insumo",
-        "borrar_tipo_insumo"
+        "borrar_tipo_insumo",
       ],
 
       operario: [
@@ -942,9 +1033,9 @@ async function populateDatabase() {
         "ver_entregas_asignadas",
         "ver_ventas_chofer",
       ],
-    };
+    }; */
 
-    for (const [rolNombre, permisos] of Object.entries(permisosPorRol)) {
+    /* for (const [rolNombre, permisos] of Object.entries(permisosPorRol)) {
       const rol = rolesCreados.find((r) => r.nombre === rolNombre);
       const permisosIds = permisosCreados
         .filter((p) => permisos.includes(p.nombre))
@@ -956,9 +1047,9 @@ async function populateDatabase() {
       }));
 
       await RolesPermisos.bulkCreate(relaciones);
-    }
-
-    console.log("Permisos asignados a roles");
+    } */
+    /* 
+    console.log("Permisos asignados a roles"); */
 
     // Crear empresa Aguas Valentino
     const empresaData = {
@@ -968,7 +1059,7 @@ async function populateDatabase() {
       email: "contacto@aguasvalentino.com",
       rut_empresa: "12345678-9",
     };
-    console.log("Empresa 'Aguas Valentino' creada exitosamente.");
+    console.log("✅ Empresa 'Aguas Valentino' creada exitosamente.");
     const empresaCreada = await Empresa.create(empresaData);
 
     const sucursalData = {
@@ -979,11 +1070,11 @@ async function populateDatabase() {
     };
 
     const sucursalCreada = await Sucursal.create(sucursalData);
-    console.log("Sucursal 'Sucursal Central' creada exitosamente.");
+    console.log("✅ Sucursal 'Sucursal Central' creada exitosamente.");
     // Crear usuarios
     const usuariosData = [
       {
-        rut: "12345678-9",
+        rut: "12.345.678-9",
         nombre: "Test1",
         apellido: "Test1",
         email: "test1.test@example.com",
@@ -1007,7 +1098,7 @@ async function populateDatabase() {
     ];
 
     await Usuarios.bulkCreate(usuariosData);
-    console.log("Usuarios creados");
+    console.log("✅ Usuarios creados");
     /******************************/
     //     Módulo INVENTARIO      *
     /******************************/
@@ -1035,7 +1126,7 @@ async function populateDatabase() {
     ];
 
     await EstadoProducto.bulkCreate(estados);
-    console.log("Estados productos creados");
+    console.log("✅ Estados productos creados");
 
     // Crear Tipos de productos
     const tipos = [
@@ -1058,7 +1149,7 @@ async function populateDatabase() {
     ];
 
     await TipoInsumo.bulkCreate(tipos);
-    console.log("Tipos de insumos creados");
+    console.log("✅ Tipos de insumos creados");
 
     // Crear Categorias de productos
     const categorias = [
@@ -1073,7 +1164,7 @@ async function populateDatabase() {
     ];
 
     await CategoriaProducto.bulkCreate(categorias);
-    console.log("Categoria productos creadas");
+    console.log("✅ Categoria productos creadas");
     /******************************/
     //       Módulo VENTAS        *
     /******************************/
@@ -1083,7 +1174,8 @@ async function populateDatabase() {
       // Estados comunes
       {
         nombre_estado: "Pendiente",
-        descripcion: "Estado inicial al registrar un pedido o venta, pendiente de procesamiento.",
+        descripcion:
+          "Estado inicial al registrar un pedido o venta, pendiente de procesamiento.",
         tipo_transaccion: ["venta", "pedido"],
         es_inicial: true,
       },
@@ -1101,7 +1193,8 @@ async function populateDatabase() {
       },
       {
         nombre_estado: "Pendiente de Confirmación",
-        descripcion: "Pedido asignado al chofer y pendiente de confirmación por su parte.",
+        descripcion:
+          "Pedido asignado al chofer y pendiente de confirmación por su parte.",
         tipo_transaccion: "pedido",
         es_inicial: false,
       },
@@ -1119,7 +1212,8 @@ async function populateDatabase() {
       },
       {
         nombre_estado: "En Preparación",
-        descripcion: "La venta o pedido está siendo preparado para despacho o retiro.",
+        descripcion:
+          "La venta o pedido está siendo preparado para despacho o retiro.",
         tipo_transaccion: "venta",
         es_inicial: false,
       },
@@ -1149,7 +1243,8 @@ async function populateDatabase() {
       },
       {
         nombre_estado: "Rechazada",
-        descripcion: "La transacción fue rechazada por problemas con el pago o autorización.",
+        descripcion:
+          "La transacción fue rechazada por problemas con el pago o autorización.",
         tipo_transaccion: "venta",
         es_inicial: false,
       },
@@ -1158,10 +1253,10 @@ async function populateDatabase() {
         descripcion: "El pedido ha sido entregado correctamente y cerrado.",
         tipo_transaccion: "pedido",
         es_inicial: false,
-      }
+      },
     ];
     await EstadoVenta.bulkCreate(estadosVentas);
-    console.log("Estados de Transacción creados exitosamente.");
+    console.log("✅ Estados de Transacción creados exitosamente.");
 
     // Estado Pago
     const estadosPago = [
@@ -1184,7 +1279,7 @@ async function populateDatabase() {
       },
     ];
     await EstadoPago.bulkCreate(estadosPago);
-    console.log("Estado Pago creado exitosamente.");
+    console.log("✅ Estado Pago creado exitosamente.");
     // Método Pago
     const metodosPago = [
       { nombre: "Efectivo", descripcion: "Pago en efectivo." },
@@ -1196,14 +1291,14 @@ async function populateDatabase() {
       { nombre: "Transferencia", descripcion: "Transferencia bancaria." },
     ];
     await MetodoPago.bulkCreate(metodosPago);
-    console.log("Métodos Pago creado exitosamente.");
+    console.log("✅ Métodos Pago creado exitosamente.");
     /***********************************************************************************/
-    console.log("Base de datos poblada con éxito.");
+    console.log("✅ Base de datos poblada con éxito.");
   } catch (error) {
     console.error("Error al poblar la base de datos:", error);
   } finally {
     await sequelize.close();
-    console.log("Conexión cerrada.");
+    console.log("✅ Conexión cerrada.");
   }
 }
 

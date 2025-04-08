@@ -1,25 +1,16 @@
 import { Router } from 'express';
 import PermisosController from '../controllers/PermisosController.js';
 import authenticate from '../../../shared/middlewares/authenticate.js';
+import checkPermissions from '../../../shared/middlewares/CheckPermissionsMiddleware.js';
 
 const router = Router();
 
-// Middleware de autenticación
+router.use(authenticate)
 
-
-// Crear un permiso
-router.post('/', authenticate, PermisosController.createPermiso);
-
-// Actualizar un permiso
-router.put('/:id', authenticate, PermisosController.updatePermiso);
-
-// Eliminar un permiso
-router.delete('/:id', authenticate, PermisosController.deletePermiso);
-
-// Obtener todos los permisos
-router.get('/', authenticate, PermisosController.getAllPermisos);
-
-// Obtener un permiso por ID
-router.get('/:id', authenticate, PermisosController.getPermisoById);
+router.post('/', checkPermissions("auth.permisos.crear") ,PermisosController.createPermiso);
+router.put('/:id', checkPermissions("auth.permisos.editar"),PermisosController.updatePermiso);
+router.delete('/:id', checkPermissions("auth.permisos.eliminar"), PermisosController.deletePermiso);
+router.get('/', checkPermissions("auth.permisos.ver"), PermisosController.getAllPermisos);
+router.get('/:id', checkPermissions("auth.permisos.ver"),PermisosController.getPermisoById);
 
 export default router;

@@ -2,18 +2,15 @@ import { Router } from "express";
 import AgendaController from "../controllers/AgendaController.js";
 import authenticate from "../../../shared/middlewares/authenticate.js";
 import { checkRoles } from "../../../shared/middlewares/CheckRole.js";
+import checkPermissions from "../../../shared/middlewares/CheckPermissionsMiddleware.js";
 
 
 const router = Router();
+router.use(authenticate);
 
-router.post("/confirmar-carga", authenticate, AgendaController.confirmarCargaCamion)
-router.get("/agenda/hoy", authenticate, checkRoles(["chofer"]), AgendaController.getAgendaCargaDelDia);
-router.post("/", authenticate, AgendaController.createAgenda);
-router.get("/:id", authenticate, AgendaController.getAgendaById);
-/* router.get("/", authenticate, AgendaController.getAll);
-router.get("/agendaChofer", authenticate, checkRoles(["chofer"]), AgendaController.getAgendasByChofer);
-router.get("/activa/chofer", authenticate,AgendaController.getAgendaActiva);
-router.get('/:id', AgendaController.getById);
-router.delete('/:id', AgendaController.delete);  */
+router.post("/confirmar-carga", checkPermissions("entregas.agendacarga.confirmar"), AgendaController.confirmarCargaCamion)
+router.get("/agenda/hoy", checkPermissions("entregas.agendacarga.ver"), checkRoles(["chofer", "administrador"]), AgendaController.getAgendaCargaDelDia);
+router.post("/", checkPermissions("entregas.agendacarga.crear"), AgendaController.createAgenda);
+router.get("/:id",  checkPermissions("entregas.agendacarga.ver"), AgendaController.getAgendaById);
 
 export default router;

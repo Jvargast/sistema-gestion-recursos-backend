@@ -87,7 +87,7 @@ const Venta = sequelize.define(
     },
     id_metodo_pago: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: MetodoPago,
         key: "id_metodo_pago",

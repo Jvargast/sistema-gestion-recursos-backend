@@ -37,7 +37,6 @@ class DocumentoRepository {
       throw new Error(`Error al obtener documentos por venta: ${error.message}`);
     }
   }
-  
 
   async findAll(filters = {}, options = {}) {
     const limit = options.limit || null;

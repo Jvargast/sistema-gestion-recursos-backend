@@ -513,7 +513,7 @@ class PedidoService {
             {
               model: ProductosRepository.getModel(),
               as: "Producto",
-              attributes: ["id_producto", "nombre_producto", "precio"],
+              attributes: ["id_producto", "nombre_producto", "precio", "es_retornable"],
             },
           ],
         },
@@ -544,6 +544,7 @@ class PedidoService {
         cantidad: detalle.cantidad,
         precio_unitario: detalle.Producto?.precio || 0,
         subtotal: detalle.subtotal,
+        es_retornable: detalle.Producto?.es_retornable
       })),
       fecha_pedido: pedido.fecha_pedido,
     }));

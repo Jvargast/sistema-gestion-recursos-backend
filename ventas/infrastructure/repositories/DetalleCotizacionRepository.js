@@ -13,6 +13,16 @@ class DetalleCotizacionRepository {
     });
   }
 
+  async findByDetalleId(id_detalle) {
+    return await DetalleCotizacion.findOne({
+      where: { id_detalle },
+      include: [
+        { model: Cotizacion, as: "cotizacion" },
+        { model: Producto, as: "producto" },
+      ],
+    });
+  }
+
   async create(data) {
     return await DetalleCotizacion.create(data);
   }

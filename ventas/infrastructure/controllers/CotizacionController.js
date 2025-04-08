@@ -10,13 +10,11 @@ class CotizacionController {
         rut
       );
 
-      res
-        .status(201)
-        .json({
-          message: "Cotización creada exitosamente",
-          cotizacion,
-          detalles,
-        });
+      res.status(201).json({
+        message: "Cotización creada exitosamente",
+        cotizacion,
+        detalles,
+      });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -77,12 +75,10 @@ class CotizacionController {
           .json({ error: "Cotización no encontrada o no actualizada" });
       }
 
-      res
-        .status(200)
-        .json({
-          message: "Cotización actualizada exitosamente",
-          updatedCotizacion,
-        });
+      res.status(200).json({
+        message: "Cotización actualizada exitosamente",
+        updatedCotizacion,
+      });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -109,16 +105,47 @@ class CotizacionController {
     try {
       const { id } = req.params;
 
+      const mostrarImpuestos = req.query.mostrar_impuestos === "true";
+
       res.setHeader(
         "Content-Disposition",
         `attachment; filename=cotizacion_${id}.pdf`
       );
       res.setHeader("Content-Type", "application/pdf");
 
-      await CotizacionService.generarCotizacionPdf(id, res);
+      await CotizacionService.generarCotizacionPdf(id, res, mostrarImpuestos);
     } catch (error) {
       console.error("Error al generar PDF de cotización:", error);
       res.status(500).json({ error: error.message || "Error al generar PDF" });
+    }
+  }
+
+  async actualizarCotizacion(req, res) {
+    const { id } = req.params;
+    const {
+      impuesto,
+      descuento_total_porcentaje,
+      notas,
+      fecha_vencimiento,
+      detalles_actualizados,
+    } = req.body;
+
+    try {
+      const cotizacionActualizada =
+        await CotizacionService.actualizarCotizacion(
+          id,
+          impuesto,
+          descuento_total_porcentaje,
+          notas,
+          fecha_vencimiento,
+          detalles_actualizados 
+        );
+
+      return res.json({ cotizacion: cotizacionActualizada });
+    } catch (error) {
+      return res
+        .status(error.status || 500)
+        .json({ message: error.message || "Error al actualizar cotización" });
     }
   }
 }

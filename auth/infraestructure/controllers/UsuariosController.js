@@ -74,7 +74,7 @@ class UsuarioController {
       const filters = req.query;
       let options = {
         page: parseInt(req.query.page, 10) || 1,
-        limit: parseInt(req.query.limit, 20) || 20,
+        limit: parseInt(req.query.limit, 10) || 10,
         search: req.query.search,
       };
       delete filters.limit;

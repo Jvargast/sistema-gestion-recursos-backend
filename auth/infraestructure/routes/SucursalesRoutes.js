@@ -5,11 +5,12 @@ import verifyToken from "../../../shared/middlewares/VerifyTokenMiddleware.js";
 import checkPermissions from "../../../shared/middlewares/CheckPermissionsMiddleware.js";
 
 const router = express.Router();
-router.use(verifyToken);
-router.get("/", authenticate, checkPermissions("ver_sucursales"),SucursalController.getAllSucursals);
-router.get("/:id", authenticate, checkPermissions("ver_sucursal"),SucursalController.getSucursalById);
-router.get("/buscar", authenticate,checkPermissions("buscar_sucursal"), SucursalController.getSucursalByNombre);
-router.get("/usuario/:rutUsuario", authenticate, SucursalController.getSucursalByUsuario);
-router.put("/:id", authenticate, checkPermissions("actualizar_sucursal"), SucursalController.updateSucursal);
+router.use(authenticate);
+
+router.get("/", checkPermissions("auth.sucursal.ver"),SucursalController.getAllSucursals);
+router.get("/:id", checkPermissions("auth.sucursal.ver"),SucursalController.getSucursalById);
+router.get("/buscar",checkPermissions("auth.sucursal.ver"), SucursalController.getSucursalByNombre);
+router.get("/usuario/:rutUsuario",checkPermissions("auth.sucursal.ver") ,SucursalController.getSucursalByUsuario);
+router.put("/:id", checkPermissions("auth.sucursal.editar"), SucursalController.updateSucursal);
 
 export default router;
