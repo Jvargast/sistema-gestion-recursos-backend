@@ -21,11 +21,14 @@ const funcionesPermisos = [
   
     // Entregas y viajes
     { nombre: "entregas.inventariocamion.estado", descripcion: "Ver estado del inventario del camión", categoria: "Entregas" },
+    { nombre: "entregas.inventariocamion.disponible", descripcion: "Ver inventario del camión disponible", categoria: "Entregas" },
     { nombre: "entregas.agendaviaje.finalizar", descripcion: "Finalizar una agenda de viaje", categoria: "Entregas" },
     { nombre: "entregas.entrega.misentregas", descripcion: "Ver entregas asignadas al chofer", categoria: "Entregas" },
     { nombre: "entregas.agendaviaje.misviajes", descripcion: "Ver viajes asignados al chofer", categoria: "Entregas" },
     { nombre: "entregas.agendaviaje.mihistorial", descripcion: "Ver historial personal de viajes", categoria: "Entregas" },
     { nombre: "entregas.ventaschofer.crear", descripcion: "Registrar venta directa del chofer", categoria: "Entregas" },
+    { nombre: "entregas.camion.asignar", descripcion: "Asignar chofer al camión", categoria: "Entregas" },
+    { nombre: "entregas.camion.desasignar", descripcion: "Desasignar chofer al camión", categoria: "Entregas" },
   
     // Agenda carga
     { nombre: "entregas.agendacarga.confirmar", descripcion: "Confirmar la agenda de carga", categoria: "Entregas" },

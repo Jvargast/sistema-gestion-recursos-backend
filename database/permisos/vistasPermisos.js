@@ -102,6 +102,11 @@ const vistasPermisos = [
   },
   {
     nombre: "vistas.camiones.ver",
+    descripcion: "Permiso para ver camiones",
+    categoria: "Vistas",
+  },
+  {
+    nombre: "vistas.camiones.gestionar",
     descripcion: "Permiso para ver y gestionar camiones",
     categoria: "Vistas",
   },

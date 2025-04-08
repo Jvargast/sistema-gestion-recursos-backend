@@ -185,10 +185,18 @@ const vistasDependencias = [
     permiso: "vistas.camiones.ver",
     dependeDe: [
       "entregas.camion.ver",
-      "entregas.camion.crear",
-      "entregas.camion.editar",
-      "entregas.camion.eliminar",
+     
     ],
+  },
+  {
+    permiso: "vistas.camiones.gestionar",
+    dependeDe: [
+        "entregas.camion.crear",
+        "entregas.camion.editar",
+        "entregas.camion.eliminar",
+        "entregas.camion.asignar",
+        "entregas.camion.desasignar"
+    ]
   },
   // 17. ver viajes o ver viaje
   {
@@ -206,6 +214,7 @@ const vistasDependencias = [
       "entregas.inventariocamion.ver",
       "entregas.ventaschofer.ver",
       "entregas.inventariocamion.estado",
+      "entregas.inventariocamion.disponible",
       "entregas.agendaviaje.finalizar",
       "entregas.entrega.misentregas",
       "entregas.agendaviaje.misviajes",

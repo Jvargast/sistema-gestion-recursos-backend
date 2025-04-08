@@ -11,10 +11,10 @@ router.post("/", checkPermissions("entregas.camion.crear"), CamionController.cre
 router.get("/", checkPermissions("entregas.camion.ver"), CamionController.getAll);
 router.get("/capacidad/chofer/:id_chofer", checkPermissions("entregas.camion.capacidad"), CamionController.getCamionCapacityByChoferId)
 router.get("/capacidad/:id_camion", checkPermissions("entregas.camion.capacidad"), CamionController.getCamionCapacity)
-router.get("/:id", authenticate, CamionController.getById);
-router.put("/:id", authenticate, CamionController.update);
-router.patch("/:id/asignar-chofer", authenticate, checkRoles(["administrador"]), CamionController.asignarChofer);
-router.patch("/:id/desasignar-chofer", authenticate, checkRoles(["administrador"]), CamionController.desasignarChofer);
-router.delete("/:id", authenticate, CamionController.delete);
+router.get("/:id", checkPermissions("entregas.camion.ver"), CamionController.getById);
+router.put("/:id", checkPermissions("entregas.camion.editar"), CamionController.update);
+router.patch("/:id/asignar-chofer", checkPermissions("entregas.camion.asignar"), checkRoles(["administrador"]), CamionController.asignarChofer);
+router.patch("/:id/desasignar-chofer", checkPermissions("entregas.camion.desasignar"), checkRoles(["administrador"]), CamionController.desasignarChofer);
+router.delete("/:id", checkPermissions("entregas.camion.eliminar"), CamionController.delete);
 
 export default router;
