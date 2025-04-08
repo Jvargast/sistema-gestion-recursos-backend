@@ -1,6 +1,7 @@
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import sequelize from "../../database/database.js";
 import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
+import { getEstadoCamion } from "../../shared/utils/estadoCamion.js";
 import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
 import VentaService from "../../ventas/application/VentaService.js";
@@ -134,13 +135,12 @@ class EntregaService {
       if (productos_entregados && Array.isArray(productos_entregados)) {
         for (const item of productos_entregados) {
           const reserva =
-            await InventarioCamionRepository.findByCamionProductoAndEstado(
-              agendaViaje.id_camion,
-              item.id_producto,
-              "En Camión - Reservado",
-
-              { transaction }
-            );
+          await InventarioCamionRepository.findParaEntrega(
+            agendaViaje.id_camion,
+            item.id_producto,
+            item.es_retornable || false,
+            transaction
+          );
           if (!reserva || reserva.cantidad < item.cantidad)
             throw new Error(
               `Inventario insuficiente en camión para producto ${item.id_producto}`

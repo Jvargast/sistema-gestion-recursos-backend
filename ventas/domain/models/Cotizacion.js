@@ -35,6 +35,11 @@ const Cotizacion = sequelize.define(
       type: DataTypes.DATE,
       allowNull: false,
     },
+    impuesto: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true, 
+      defaultValue: 0.19, 
+    },
     impuestos_totales: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
@@ -45,7 +50,7 @@ const Cotizacion = sequelize.define(
       allowNull: false,
     },
     descuento_total: {
-      type: DataTypes.DECIMAL(10, 2), // Descuento aplicado al total de la venta
+      type: DataTypes.DECIMAL(10, 2), 
       allowNull: true,
       defaultValue: 0,
     },

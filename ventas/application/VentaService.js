@@ -21,6 +21,7 @@ import PagoService from "./PagoService.js";
 import PedidoService from "./PedidoService.js";
 import sequelize from "../../database/database.js";
 import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
+import CuentaPorCobrarRepository from "../infrastructure/repositories/CuentaPorCobrarRepository.js";
 
 class VentaService {
   async getVentaById(id) {
@@ -137,9 +138,6 @@ class VentaService {
       const caja = id_caja
         ? await CajaRepository.findById(id_caja, { transaction })
         : null;
-      const metodoPago = await MetodoPagoRepository.findById(id_metodo_pago, {
-        transaction,
-      });
 
       if (id_cliente && !cliente) {
         throw new Error(`Cliente con ID ${id_cliente} no encontrado.`);
@@ -154,13 +152,25 @@ class VentaService {
           );
         }
       }
-      if (!metodoPago) {
-        throw new Error(
-          `Método de pago con ID ${id_metodo_pago} no encontrado.`
-        );
+      if (tipo_documento !== "factura") {
+        const metodoPago = await MetodoPagoRepository.findById(id_metodo_pago, {
+          transaction,
+        });
+
+        if (!metodoPago) {
+          throw new Error(
+            `Método de pago con ID ${id_metodo_pago} no encontrado.`
+          );
+        }
       }
 
-      // Obtener la sucursal del vendedor
+      if (
+        tipo_documento === "factura" &&
+        (!cliente?.rut || !cliente?.razon_social)
+      ) {
+        throw new Error("Cliente no tiene datos válidos para emitir factura.");
+      }
+
       const sucursal = vendedor.id_sucursal;
       if (!sucursal) {
         throw new Error(
@@ -322,26 +332,43 @@ class VentaService {
         { transaction }
       );
 
+      if (tipo_documento === "factura") {
+        const fechaVencimiento = new Date();
+        fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
+        await CuentaPorCobrarRepository.create(
+          {
+            id_venta: venta.id_venta,
+            id_documento: documento.id_documento,
+            monto_total: totalConImpuesto,
+            monto_pagado: 0,
+            saldo_pendiente: totalConImpuesto,
+            fecha_emision: new Date(),
+            fecha_vencimiento: fechaVencimiento,
+            estado: "pendiente",
+          },
+          { transaction }
+        );
+      }
+
       const estadoPago = await EstadoPagoRepository.findByNombre(
         tipo_documento === "boleta" ? "Pagado" : "Pendiente",
         { transaction }
       );
 
-      await PagoRepository.create(
-        {
-          id_venta: venta.id_venta,
-          id_documento: documento.id_documento,
-          id_metodo_pago,
-          id_estado_pago: estadoPago.id_estado_pago,
-          monto: totalConImpuesto,
-          fecha_pago: tipo_documento === "boleta" ? new Date(): null,
-          referencia: referencia || null,
-        },
-        { transaction }
-      );
-
       if (tipo_documento === "boleta") {
-        // Registrar movimiento en caja solo si es efectivo
+        await PagoRepository.create(
+          {
+            id_venta: venta.id_venta,
+            id_documento: documento.id_documento,
+            id_metodo_pago,
+            id_estado_pago: estadoPago.id_estado_pago,
+            monto: totalConImpuesto,
+            fecha_pago: new Date(),
+            referencia: referencia || null,
+          },
+          { transaction }
+        );
+
         const metodo = await MetodoPagoRepository.findById(id_metodo_pago, {
           transaction,
         });
@@ -385,7 +412,6 @@ class VentaService {
       }
 
       // Crear pedido automáticamente solo si es despacho
-      console.log(id_pedido_asociado)
       if (tipo_entrega === "despacho_a_domicilio" && !id_pedido_asociado) {
         await PedidoService.createPedido(
           {

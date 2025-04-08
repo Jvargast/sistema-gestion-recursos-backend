@@ -5,6 +5,7 @@ import Permisos from "./models/Permisos.js";
 import Empresa from "./models/Empresa.js";
 import Sucursal from "./models/Sucursal.js";
 import AuditLogs from "./models/AuditLogs.js";
+import PermisosDependencias from "./models/PermisosDependencias.js";
 
 function loadAuthAssociations() {
   // Relación: Un Usuario pertenece a un Rol
@@ -68,6 +69,20 @@ function loadAuthAssociations() {
     onDelete: "CASCADE", // Si se elimina un usuario, se eliminan sus logs
     onUpdate: "CASCADE",
   });
+
+  Permisos.belongsToMany(Permisos, {
+    as: "Dependencias",
+    through: PermisosDependencias,
+    foreignKey: "permisoId",
+    otherKey: "dependeDeId",
+  });
+  Permisos.belongsToMany(Permisos, {
+    as: 'RequierenEste',
+    through: PermisosDependencias,
+    foreignKey: 'dependeDeId',
+    otherKey: 'permisoId',
+  });
+  
 
   console.log("Asociaciones del módulo de autenticación cargadas");
 }

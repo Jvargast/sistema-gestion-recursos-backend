@@ -22,7 +22,6 @@ const Producto = sequelize.define(
     },
     codigo_barra: {
       type: DataTypes.STRING,
-      unique: true, 
       allowNull: true, 
     },
     precio: {

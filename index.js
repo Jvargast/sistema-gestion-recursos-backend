@@ -45,6 +45,7 @@ import LogVentasRoutes from "./ventas/infrastructure/routes/LogVentasRoutes.js";
 import EstadosVentasRoutes from "./ventas/infrastructure/routes/EstadoVentaRoutes.js";
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
 import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js";
+import cuentasPorCobrarRoutes from "./ventas/infrastructure/routes/CuentaPorCobrarRoutes.js";
 /* 
 import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
@@ -158,6 +159,7 @@ app.use("/api/log-ventas", LogVentasRoutes);
 app.use("/api/estados-ventas", EstadosVentasRoutes);
 app.use("/api/pagos", PagosRoutes);
 app.use("/api/documentos", DocumentosRoutes);
+app.use("/api/cuentas-por-cobrar", cuentasPorCobrarRoutes);
 
 /* MÓDULO ANÁLISIS */
 app.use("/api/analisis", VentasEstadisticasRoutes);

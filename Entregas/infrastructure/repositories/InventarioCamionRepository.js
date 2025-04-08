@@ -4,6 +4,7 @@ import { Op } from "sequelize";
 import Producto from "../../../inventario/domain/models/Producto.js";
 import Camion from "../../domain/models/Camion.js";
 import InventarioCamion from "../../domain/models/InventarioCamion.js";
+import { getEstadoCamion } from "../../../shared/utils/estadoCamion.js";
 
 class InventarioCamionRepository {
   async create(data) {
@@ -108,22 +109,6 @@ class InventarioCamionRepository {
     }
     return await inventario.destroy();
   }
-  /* 
-  async findByDetalle(id_detalle_transaccion, id_camion) {
-    return await InventarioCamion.findOne({
-      where: {
-        id_detalle_transaccion,
-        id_camion,
-        estado: "En Camión - Reservado",
-      },
-      include: [
-        {
-          model: DetalleTransaccion,
-          as: "detalleTransaccion",
-        },
-      ],
-    });
-  } */
 
   async findByCamionProductoAndEstado(id_camion, id_producto, estado) {
     return await InventarioCamion.findOne({
@@ -132,6 +117,21 @@ class InventarioCamionRepository {
         id_producto,
         estado,
       },
+    });
+  }
+
+  async findParaEntrega(id_camion, id_producto, es_retornable, transaction) {
+    const estado = es_retornable
+      ? "En Camión - Reservado"
+      : "En Camión - Reservado - Entrega";
+  
+    return await InventarioCamion.findOne({
+      where: {
+        id_camion,
+        id_producto,
+        estado,
+      },
+      transaction,
     });
   }
 
@@ -153,24 +153,17 @@ class InventarioCamionRepository {
     });
   }
 
-  async findByCamionAndProduct(
-    id_camion,
-    id_producto,
-    estado,
-  ) {
+  async findByCamionAndProduct(id_camion, id_producto, estado) {
     return await InventarioCamion.findOne({
       where: { id_camion, id_producto, estado },
     });
   }
 
-  async findByCamionAndInsumo(
-    id_camion,
-    id_insumo,
-    estado,
-  ) {
+  async findByCamionAndInsumo(id_camion, id_insumo, estado) {
     return await InventarioCamion.findOne({
       where: { id_camion, id_insumo, estado },
-ƒ    });
+      ƒ,
+    });
   }
 
   async deleteProductInCamion(id_camion, id_producto, estado) {

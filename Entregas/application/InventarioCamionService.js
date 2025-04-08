@@ -260,11 +260,11 @@ class InventarioCamionService {
     return {
       id_camion,
       capacidad_total: camion.capacidad,
-      disponibles,                  
-      reservados_retornables,       
-      reservados_no_retornables,   
-      retorno,                      
-      vacios,   
+      disponibles,
+      reservados_retornables,
+      reservados_no_retornables,
+      retorno,
+      vacios,
     };
   }
 
@@ -411,8 +411,10 @@ class InventarioCamionService {
       tipo,
       es_retornable,
     },
-    { transaction } = {}
+    options = {} 
   ) {
+    const { transaction } = options;
+
     try {
       let itemEnCamion = null;
 
@@ -436,8 +438,9 @@ class InventarioCamionService {
         itemEnCamion.cantidad += cantidad;
         itemEnCamion.fecha_actualizacion = new Date();
         await itemEnCamion.save({ transaction });
+        return itemEnCamion;
       } else {
-        await InventarioCamionRepository.create(
+        const nuevoItem = await InventarioCamionRepository.create(
           {
             id_camion,
             id_producto,
@@ -450,10 +453,10 @@ class InventarioCamionService {
           },
           { transaction }
         );
+        return nuevoItem;
       }
-      return itemEnCamion;
     } catch (error) {
-      console.log(error);
+      console.error("Error en addOrUpdateProductoCamion:", error);
       throw error;
     }
   }

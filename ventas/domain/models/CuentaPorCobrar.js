@@ -2,13 +2,12 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Venta from "./Venta.js";
 import Documento from "./Documento.js";
-import MetodoPago from "./MetodoPago.js";
-import EstadoPago from "./EstadoPago.js";
 
-const Pago = sequelize.define(
-  "Pago",
+
+const CuentaPorCobrar = sequelize.define(
+  "CuentaPorCobrar",
   {
-    id_pago: {
+    id_cxc: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
@@ -23,45 +22,47 @@ const Pago = sequelize.define(
     },
     id_documento: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       references: {
         model: Documento,
         key: "id_documento",
       },
     },
-    id_metodo_pago: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: MetodoPago,
-        key: "id_metodo_pago",
-      },
-    },
-    id_estado_pago: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: EstadoPago, 
-        key: "id_estado_pago",
-      },
-    },
-    monto: {
+    monto_total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
-    fecha_pago: {
+    monto_pagado: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.0,
+    },
+    saldo_pendiente: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+    },
+    fecha_emision: {
       type: DataTypes.DATE,
       allowNull: false,
     },
-    referencia: {
+    fecha_vencimiento: {
+      type: DataTypes.DATE,
+      allowNull: true, 
+    },
+    estado: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: "pendiente", // otros valores: "pagado", "vencido", "en mora"
+    },
+    observaciones: {
       type: DataTypes.STRING,
       allowNull: true,
     },
   },
   {
-    tableName: "Pago",
+    tableName: "CuentaPorCobrar",
     timestamps: false,
   }
 );
 
-export default Pago;
+export default CuentaPorCobrar;

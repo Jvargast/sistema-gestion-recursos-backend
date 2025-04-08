@@ -5,33 +5,19 @@ import authenticate from '../../../shared/middlewares/authenticate.js';
 import { checkRoles } from '../../../shared/middlewares/CheckRole.js';
 
 const router = Router();
+router.use(authenticate);
 
-
-
-// Ruta para crear usuario, protegida con el middleware para verificar el permiso 'crear_usuario'
-router.post('/', authenticate, checkPermissions('crear_usuarios'), UsuariosController.create);
-// Ruta para crear usuario sin servicio de correo.
-router.post('/crear', authenticate, checkPermissions('crear_usuarios'), UsuariosController.createNewUser);
-// Obtener todos los usuarios del sistema
-router.get('/', authenticate, checkPermissions('ver_usuarios'), UsuariosController.getAllUsers);
-// Obtener todos los usuarios rol chofer
-router.get('/choferes', authenticate, checkRoles(["administrador", "chofer"]), /* checkPermissions('ver_choferes'),  */UsuariosController.getAllChoferes);
-
-router.get('/vendedores', authenticate, checkPermissions('ver_usuarios'), UsuariosController.getAllVendedores);
-
-// Obtener mi perfil propio
-router.get('/mi-perfil', authenticate, UsuariosController.getOwnProfile);
-// Obtener un usuario por RUT
-router.get('/:rut', authenticate, checkPermissions('ver_usuario'), UsuariosController.findByRut);
-// Actualizar perfil propio
-router.put('/mi-perfil', authenticate, UsuariosController.updateOwnProfile);
-// Cambiar contraseña
-router.put("/:rut/change-password", authenticate, UsuariosController.updateUserPassword);
-// Actualizar un usuario
-router.put('/:rut', authenticate, checkPermissions('editar_usuarios'), UsuariosController.update);
-// Desactivar un usuario
-router.delete('/:rut', authenticate, checkPermissions('eliminar_usuarios'), UsuariosController.deactivate);
-// Cambiar la contraseña de un usuario
-router.post('/change-password', authenticate, UsuariosController.changePassword); 
+router.post('/', checkPermissions("auth.usuarios.crear"), UsuariosController.create);
+router.post('/crear', checkPermissions("auth.usuarios.crear"), UsuariosController.createNewUser);
+router.get('/', checkPermissions('auth.usuarios.ver'), UsuariosController.getAllUsers);
+router.get('/choferes', checkRoles(["administrador", "chofer"]), checkPermissions("auth.usuario.choferes"), UsuariosController.getAllChoferes);
+router.get('/vendedores', checkPermissions("auth.usuario.vendedores"), UsuariosController.getAllVendedores);
+router.get('/mi-perfil', checkPermissions("auth.perfil.ver"),UsuariosController.getOwnProfile);
+router.get('/:rut', checkPermissions('auth.usuario.ver'), UsuariosController.findByRut);
+router.put('/mi-perfil', checkPermissions("auth.perfil.actualizar"), UsuariosController.updateOwnProfile);
+router.put("/:rut/change-password", checkPermissions("auth.perfil.actualizar"), UsuariosController.updateUserPassword);
+router.put('/:rut', checkPermissions('auth.usuario.editar'), UsuariosController.update);
+router.delete('/:rut', checkPermissions('auth.usuario.eliminar'), UsuariosController.deactivate);
+router.post('/change-password', checkPermissions("auth.perfil.actualizar"), UsuariosController.changePassword); 
 
 export default router;

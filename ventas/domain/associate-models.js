@@ -6,6 +6,7 @@ import Producto from "../../inventario/domain/models/Producto.js";
 import Caja from "./models/Caja.js";
 import Cliente from "./models/Cliente.js";
 import Cotizacion from "./models/Cotizacion.js";
+import CuentaPorCobrar from "./models/CuentaPorCobrar.js";
 import DetalleCotizacion from "./models/DetalleCotizacion.js";
 import DetallePedido from "./models/DetallePedido.js";
 import DetalleVenta from "./models/DetalleVenta.js";
@@ -308,6 +309,28 @@ function loadPOSAssociations() {
   Usuarios.hasMany(LogCotizacion, {
     foreignKey: "usuario",
     as: "logsCotizaciones",
+  });
+
+  CuentaPorCobrar.belongsTo(Venta, {
+    foreignKey: "id_venta",
+    as: "venta",
+  });
+
+  // CuentaPorCobrar pertenece a un Documento
+  CuentaPorCobrar.belongsTo(Documento, {
+    foreignKey: "id_documento",
+    as: "documento",
+  });
+
+  Venta.hasOne(CuentaPorCobrar, {
+    foreignKey: "id_venta",
+    as: "cuenta_por_cobrar",
+  });
+
+  // Documento tiene una CuentaPorCobrar
+  Documento.hasOne(CuentaPorCobrar, {
+    foreignKey: "id_documento",
+    as: "cuenta_por_cobrar",
   });
 
   console.log("Asociaciones del módulo POS cargadas correctamente.");

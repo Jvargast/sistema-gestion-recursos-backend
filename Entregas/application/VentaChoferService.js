@@ -112,7 +112,6 @@ class VentaChoferService {
           throw new Error("Monto recibido insuficiente.");
         }
       }
-
       const nuevaVenta = await VentasChoferRepository.create(
         {
           id_camion,
@@ -121,7 +120,8 @@ class VentaChoferService {
           id_metodo_pago,
           total_venta: totalVenta,
           tipo_venta: "productos",
-          estadoPago,
+          estadoPago: estadoPago,
+          echaHoraVenta: new Date(),
         },
         { transaction }
       );
@@ -160,7 +160,6 @@ class VentaChoferService {
           transaction
         );
 
-        // Registrar botellón retornable reutilizable recibido
         await ProductoRetornableRepository.create(
           {
             id_producto: retornable.id_producto,
@@ -188,7 +187,7 @@ class VentaChoferService {
           id_estado_pago: estadoPago === "pagado" ? 2 : 1,
           estado: "emitido",
           observaciones: "Venta rápida chofer",
-          id_venta_chofer: nuevaVenta.id_venta_chofer
+          id_venta_chofer: nuevaVenta.id_venta_chofer,
         },
         { transaction }
       );

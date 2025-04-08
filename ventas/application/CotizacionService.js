@@ -122,9 +122,10 @@ class CotizacionService {
       fecha: new Date(),
       fecha_vencimiento,
       total: totalConImpuesto,
+      impuesto,
       impuestos_totales,
       descuento_total: descuentoTotal,
-      estado: "activa", // Estado inicial de la cotización
+      estado: "activa",
       notas,
     });
 
@@ -169,7 +170,7 @@ class CotizacionService {
     }
   }
 
-  async generarCotizacionPdf(id, stream) {
+  async generarCotizacionPdf(id, stream, mostrarImpuestos = true) {
     const cotizacionData = await this.getCotizacionById(id);
     const empresa = await EmpresaService.obtenerEmpresaPorId(1);
     const { cotizacion, detalles } = cotizacionData;
@@ -312,19 +313,64 @@ class CotizacionService {
     doc.moveTo(50, position).lineTo(550, position).stroke("#cccccc");
 
     // TOTALES
-    const iva = totalNeto * 0.19;
-    const totalFinal = totalNeto + iva;
+    const impuesto = cotizacion.impuesto || 0.19;
+    const descuento = cotizacion.descuento_total || 0;
+    const totalAntesDescuento = totalNeto;
+    const totalConDescuento = totalAntesDescuento - descuento;
+    const iva = totalConDescuento * impuesto;
+    const totalFinal = totalConDescuento + iva;
 
+    let yTotales = position + 10;
     doc
       .fontSize(10)
-      .text(`Subtotal: $${totalNeto.toLocaleString()}`, 400, position + 10)
-      .text(`IVA (19%): $${iva.toLocaleString()}`, 400, position + 25)
-      .font("Helvetica-Bold")
-      .text(`Total: $${totalFinal.toLocaleString()}`, 400, position + 40, {
-        align: "right",
-        underline: true,
-      })
-      .font("Helvetica");
+      .text(
+        `Subtotal: $${totalAntesDescuento.toLocaleString("es-CL")}`,
+        400,
+        yTotales
+      );
+
+    if (mostrarImpuestos && descuento > 0) {
+      yTotales += 15;
+      doc.text(
+        `Descuento: -$${descuento.toLocaleString("es-CL")}`,
+        400,
+        yTotales
+      );
+    }
+
+    if (mostrarImpuestos) {
+      yTotales += 15;
+      doc.text(
+        `IVA (${(impuesto * 100).toFixed(0)}%): $${iva.toLocaleString(
+          "es-CL"
+        )}`,
+        400,
+        yTotales
+      );
+
+      yTotales += 15;
+      doc
+        .font("Helvetica-Bold")
+        .text(`Total: $${totalFinal.toLocaleString("es-CL")}`, 400, yTotales, {
+          align: "right",
+          underline: true,
+        })
+        .font("Helvetica");
+    } else {
+      yTotales += 15;
+      doc
+        .font("Helvetica-Bold")
+        .text(
+          `Total: $${totalConDescuento.toLocaleString("es-CL")}`,
+          400,
+          yTotales,
+          {
+            align: "right",
+            underline: true,
+          }
+        )
+        .font("Helvetica");
+    }
 
     // MENSAJE FINAL
     doc
@@ -339,6 +385,71 @@ class CotizacionService {
         }
       );
     doc.end();
+  }
+
+  async actualizarCotizacion(
+    id_cotizacion,
+    impuesto,
+    descuento_total_porcentaje,
+    notas,
+    fecha_vencimiento,
+    detalles_actualizados
+  ) {
+    const cotizacion = await CotizacionRepository.findById(id_cotizacion);
+    if (!cotizacion) {
+      const error = new Error("Cotización no encontrada");
+      error.status = 404;
+      throw error;
+    }
+
+    // 1. Si se proporcionan detalles, actualizarlos
+    if (
+      Array.isArray(detalles_actualizados) &&
+      detalles_actualizados.length > 0
+    ) {
+      for (const detalle of detalles_actualizados) {
+        const { id_detalle, cantidad, precio_unitario } = detalle;
+
+        const detalleExistente =
+          await DetalleCotizacionRepository.findByDetalleId(id_detalle);
+
+        if (!detalleExistente) {
+          throw new Error(`Detalle con ID ${id_detalle} no encontrado.`);
+        }
+
+        await detalleExistente.update({
+          cantidad,
+          precio_unitario,
+          subtotal: cantidad * precio_unitario,
+        });
+      }
+    }
+
+    const detalles = await DetalleCotizacionRepository.findByCotizacionId(
+      id_cotizacion
+    );
+
+    let subtotal = detalles.reduce(
+      (acc, d) => acc + (d.cantidad || 0) * (d.precio_unitario || 0),
+      0
+    );
+
+    const descuento = subtotal * (descuento_total_porcentaje || 0);
+
+    const totalAntesImpuesto = subtotal - descuento;
+    const impuestos_totales = totalAntesImpuesto * (impuesto || 0);
+    const total = totalAntesImpuesto + impuestos_totales;
+
+    await cotizacion.update({
+      impuesto,
+      descuento_total: descuento,
+      impuestos_totales,
+      total,
+      notas,
+      fecha_vencimiento,
+    });
+
+    return cotizacion;
   }
 }
 
