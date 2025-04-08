@@ -1,7 +1,7 @@
-import { Op } from 'sequelize';
-import PermisosRepository from '../../auth/infraestructure/repositories/PermisosRepository.js';
-import createFilter from '../../shared/utils/helpers.js';
-import paginate from '../../shared/utils/pagination.js';
+import { Op } from "sequelize";
+import PermisosRepository from "../../auth/infraestructure/repositories/PermisosRepository.js";
+import createFilter from "../../shared/utils/helpers.js";
+import paginate from "../../shared/utils/pagination.js";
 
 class PermisosService {
   async createPermiso(data) {
@@ -9,10 +9,12 @@ class PermisosService {
 
     // Verificar si ya existe un permiso con el mismo nombre
     const permisoExistente = await PermisosRepository.findAll();
-    const existe = permisoExistente.some((permiso) => permiso.nombre === nombre);
+    const existe = permisoExistente.some(
+      (permiso) => permiso.nombre === nombre
+    );
 
     if (existe) {
-      throw new Error('Ya existe un permiso con este nombre');
+      throw new Error("Ya existe un permiso con este nombre");
     }
 
     return await PermisosRepository.create(data);
@@ -21,7 +23,7 @@ class PermisosService {
   async updatePermiso(id, data) {
     const permiso = await PermisosRepository.findById(id);
     if (!permiso) {
-      throw new Error('Permiso no encontrado');
+      throw new Error("Permiso no encontrado");
     }
 
     return await PermisosRepository.update(id, data);
@@ -30,7 +32,7 @@ class PermisosService {
   async deletePermiso(id) {
     const permiso = await PermisosRepository.findById(id);
     if (!permiso) {
-      throw new Error('Permiso no encontrado');
+      throw new Error("Permiso no encontrado");
     }
 
     return await PermisosRepository.delete(id);
@@ -42,8 +44,19 @@ class PermisosService {
     if (options.search) {
       where[Op.or] = [{ nombre: { [Op.like]: `%${options.search}%` } }];
     }
+    const include = [
+      {
+        model: PermisosRepository.getModel(),
+        as: "Dependencias",
+        through: {
+          attributes: [],
+        },
+        attributes: ["id", "nombre", "categoria"],
+      },
+    ];
     const result = await paginate(PermisosRepository.getModel(), options, {
       where,
+      include,
       order: [["id", "ASC"]],
     });
     return result;
@@ -52,7 +65,7 @@ class PermisosService {
   async getPermisoById(id) {
     const permiso = await PermisosRepository.findById(id);
     if (!permiso) {
-      throw new Error('Permiso no encontrado');
+      throw new Error("Permiso no encontrado");
     }
 
     return permiso;
