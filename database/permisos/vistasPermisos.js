@@ -59,7 +59,7 @@ const vistasPermisos = [
     nombre: "vistas.clientes.ver",
     descripcion: "Permiso para ver clientes",
     categoria: "Vistas",
-  },
+  }, 
   {
     nombre: "vistas.productos.ver",
     descripcion: "Permiso para ver listado de productos",
@@ -116,8 +116,8 @@ const vistasPermisos = [
     categoria: "Vistas",
   },
   {
-    nombre: "vistas.viajes.chofer",
-    descripcion: "Permiso para ver viajes del chofer y su historial",
+    nombre: "vistas.entregas.ver",
+    descripcion: "Permiso para ver entregas.",
     categoria: "Vistas",
   },
   {
@@ -127,7 +127,12 @@ const vistasPermisos = [
   },
   {
     nombre: "vistas.agendaCarga.ver",
-    descripcion: "Permiso para ver la agenda de carga",
+    descripcion: "Permiso para ver las agendas de carga",
+    categoria: "Vistas",
+  },
+  {
+    nombre: "vistas.agendaCarga.crear",
+    descripcion: "Permiso para crear las agendas de cargas",
     categoria: "Vistas",
   },
   {

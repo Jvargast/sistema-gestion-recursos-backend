@@ -4,13 +4,14 @@ import authenticate from '../../../shared/middlewares/authenticate.js';
 import checkPermissions from '../../../shared/middlewares/CheckPermissionsMiddleware.js';
 
 const router = Router();
+router.use(authenticate);
 
-router.get('/disponible', authenticate, checkPermissions("ver_productos_disponibles"), ProductoController.getAvailableProductos)
-router.get('/:id', authenticate, checkPermissions("ver_producto"),ProductoController.getProductoById);
-router.get('/', authenticate, checkPermissions("ver_productos"),ProductoController.getAllProductos);
-router.post('/', authenticate, checkPermissions("crear_producto"),ProductoController.createProducto);
-router.put('/:id', authenticate, checkPermissions("editar_producto"),ProductoController.updateProducto);
-router.patch('/', authenticate, checkPermissions("borrar_productos"),ProductoController.deleteProductos);
-router.delete('/:id', authenticate, checkPermissions("borrar_producto"),ProductoController.deleteProducto);
+router.get('/disponible', checkPermissions("inventario.producto.disponible"), ProductoController.getAvailableProductos)
+router.get('/:id', checkPermissions("inventario.producto.ver"),ProductoController.getProductoById);
+router.get('/', checkPermissions("inventario.producto.ver"),ProductoController.getAllProductos);
+router.post('/', checkPermissions("inventario.producto.crear"),ProductoController.createProducto);
+router.put('/:id', checkPermissions("inventario.producto.editar"),ProductoController.updateProducto);
+router.patch('/', checkPermissions("inventario.producto.eliminar"),ProductoController.deleteProductos);
+router.delete('/:id', checkPermissions("inventario.producto.eliminar"),ProductoController.deleteProducto);
 
 export default router;

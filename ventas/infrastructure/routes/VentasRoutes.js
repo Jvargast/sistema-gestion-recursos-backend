@@ -1,12 +1,15 @@
 import { Router } from "express";
 import VentaController from "../controllers/VentaController.js";
 import authenticate from "../../../shared/middlewares/authenticate.js";
+import checkPermissions from "../../../shared/middlewares/CheckPermissionsMiddleware.js";
 
 const router = Router();
+router.use(authenticate);
 
-router.get("/", authenticate, VentaController.getAllVentas);
-router.get("/:id", authenticate, VentaController.getVentaById);
-router.post("/", authenticate, VentaController.createVenta);
+router.get("/", checkPermissions("ventas.venta.ver"), VentaController.getAllVentas);
+router.get("/:id", checkPermissions("ventas.venta.ver"), VentaController.getVentaById);
+router.post("/", checkPermissions("ventas.venta.crear"), VentaController.createVenta);
+/* router.post("/", checkPermissions("ventas.venta.editar"), VentaController.createVenta); */
 
 
 

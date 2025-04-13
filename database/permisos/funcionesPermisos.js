@@ -13,11 +13,26 @@ const funcionesPermisos = [
     // Mis pedidos y pedidos
     { nombre: "ventas.pedido.confirmar", descripcion: "Confirmar pedido para entrega", categoria: "Ventas" },
     { nombre: "ventas.pedido.asignados", descripcion: "Ver pedidos asignados", categoria: "Ventas" },
+    { nombre: "ventas.pedido.noasignados", descripcion: "Ver pedidos no-asignados", categoria: "Ventas" },
     { nombre: "ventas.pedido.historial", descripcion: "Consultar historial de pedidos", categoria: "Ventas" },
     { nombre: "ventas.pedido.pago", descripcion: "Registrar pago del pedido", categoria: "Ventas" },
+    { nombre: "ventas.pedido.confirmados", descripcion: "Ver pedidos confirmados para carga", categoria: "Ventas" },
+    { nombre: "ventas.pedido.propios", descripcion: "Ver mis pedidos para carga", categoria: "Ventas" },
+
+
+    // Cotización
+    { nombre: "ventas.cotizacion.pdf", descripcion: "Generar documento PDF cotización", categoria: "Ventas" },
   
     // Facturas
     { nombre: "ventas.factura.registrar", descripcion: "Registrar factura en el sistema", categoria: "Ventas" },
+    { nombre: "ventas.factura.pdf", descripcion: "Generar documento PDF factura", categoria: "Ventas" },
+
+    // Clientes
+    { nombre:  "ventas.cliente.buscar", descripcion: "Buscar cliente", categoria: "Ventas" },
+    { nombre:  "ventas.cliente.desactivar", descripcion: "Desactivar cliente", categoria: "Ventas" },
+    { nombre:  "ventas.cliente.reactivar", descripcion: "Reactivar cliente", categoria: "Ventas" },
+    { nombre:  "ventas.cliente.porcentaje", descripcion: "Porcentaje clientes", categoria: "Ventas" },
+
   
     // Entregas y viajes
     { nombre: "entregas.inventariocamion.estado", descripcion: "Ver estado del inventario del camión", categoria: "Entregas" },
@@ -32,7 +47,6 @@ const funcionesPermisos = [
   
     // Agenda carga
     { nombre: "entregas.agendacarga.confirmar", descripcion: "Confirmar la agenda de carga", categoria: "Entregas" },
-    { nombre: "ventas.pedido.confirmados", descripcion: "Ver pedidos confirmados para carga", categoria: "Ventas" },
   
     // Usuario por rol
     { nombre: "auth.usuario.choferes", descripcion: "Consultar usuarios con rol chofer", categoria: "Usuarios" },

@@ -14,7 +14,24 @@ class RolRepository extends IRolRepository {
       include: {
         model: RolesPermisos,
         as: "rolesPermisos",
-        include: { model: Permisos, as: "permiso" },
+        include: [
+          {
+            model: Permisos,
+            as: "permiso",
+            include: [
+              {
+                model: Permisos,
+                as: "Dependencias",
+                through: { attributes: [] },
+              },
+              {
+                model: Permisos,
+                as: "RequierenEste",
+                through: { attributes: [] },
+              },
+            ],
+          },
+        ],
       },
     });
   }
