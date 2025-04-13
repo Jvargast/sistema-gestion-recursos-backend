@@ -4,20 +4,12 @@ import authenticate from "../../../shared/middlewares/authenticate.js";
 import checkPermissions from "../../../shared/middlewares/CheckPermissionsMiddleware.js";
 
 const router = Router();
+router.use(authenticate)
 
-// Obtener un producto retornable por ID
-router.get("/:id", authenticate, checkPermissions("ver_producto_retornable"), ProductoRetornableController.getProductoRetornableById);
-
-// Obtener todos los productos retornables
-router.post("/", authenticate, checkPermissions("ver_productos_retornables"), ProductoRetornableController.getAllProductosRetornables);
-
-// Crear un nuevo producto retornable
-router.post("/create", authenticate, checkPermissions("crear_producto_retornable"), ProductoRetornableController.createProductoRetornable);
-
-// Actualizar un producto retornable
-router.put("/:id", authenticate, checkPermissions("editar_producto_retornable"), ProductoRetornableController.updateProductoRetornable);
-
-// Eliminar un producto retornable
-router.delete("/:id", authenticate, checkPermissions("borrar_producto_retornable"), ProductoRetornableController.deleteProductoRetornable);
+router.get("/:id", checkPermissions("inventario.productoretornable.ver"), ProductoRetornableController.getProductoRetornableById);
+router.post("/", checkPermissions("inventario.productoretornable.ver"), ProductoRetornableController.getAllProductosRetornables);
+router.post("/create", checkPermissions("inventario.productoretornable.crear"), ProductoRetornableController.createProductoRetornable);
+router.put("/:id", checkPermissions("inventario.productoretornable.editar"), ProductoRetornableController.updateProductoRetornable);
+router.delete("/:id", checkPermissions("inventario.productoretornable.eliminar"), ProductoRetornableController.deleteProductoRetornable);
 
 export default router;

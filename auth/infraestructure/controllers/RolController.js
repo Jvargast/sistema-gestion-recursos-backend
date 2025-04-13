@@ -25,7 +25,6 @@ class RolController {
   async updateRole(req, res) {
     const { id } = req.params;
     const { nombre, descripcion, permisos } = req.body.updatedRole;
-    console.log(req.body)
 
     try {
       const updatedRol = await RolesService.updateRol(id, {

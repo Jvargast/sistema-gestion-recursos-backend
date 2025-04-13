@@ -525,6 +525,35 @@ class AgendaCargaService {
     }
   }
 
+  async findAll(filters, options){
+    const where = {};
+  
+    if (filters.fecha_inicio && filters.fecha_fin) {
+      where.fecha_carga = {
+        [Op.between]: [filters.fecha_inicio, filters.fecha_fin],
+      };
+    }
+  
+    if (filters.id_chofer) {
+      where.id_chofer = filters.id_chofer;
+    }
+  
+    if (filters.estado) {
+      where.estado = filters.estado;
+    }
+
+    const result = await paginate(AgendaCargaRepository.getModel(), options, {
+      where,
+      include: [
+        { model: UsuariosRepository.getModel(), as: "chofer", attributes: ["rut", "nombre"] },
+        { model: CamionRepository.getModel(), as: "camion", attributes: ["id", "patente"] },
+      ],
+      order: [["fecha_carga", "DESC"]],
+    })
+  
+    return result;
+  };
+
   async getAgendaById(id) {
     const agenda = await AgendaCargaRepository.findById(id);
 

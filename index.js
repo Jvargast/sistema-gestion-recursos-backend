@@ -98,7 +98,7 @@ const io = new Server(server, {
 WebSocketServer.setupWebSocket(io);
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 /* app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); */
 if (process.env.NODE_ENV === "production") {
@@ -108,7 +108,7 @@ if (process.env.NODE_ENV === "production") {
 // 📝 Logging
 app.use(morgan(env === "production" ? "combined" : "dev"));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({limit: "10mb", extended: true }));
 app.use(cookieParser());
 
 /* const allowedOrigins = [

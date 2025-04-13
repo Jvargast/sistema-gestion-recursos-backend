@@ -1,6 +1,23 @@
 import AgendaCargaService from "../../application/AgendaCargaService.js";
 
 class AgendaCargaController {
+  async getAllAgendas(req, res) {
+    try {
+      const filters = req.query;
+
+      let options = {
+        page: parseInt(req.query.page, 10) || 1,
+        limit: parseInt(req.query.limit, 10) || 10,
+        search: req.query.search,
+      };
+
+      const agendas = await AgendaCargaService.findAll(filters, options);
+      res.status(200).json({ data: agendas.data, total: agendas.pagination });
+    } catch (error) {
+      res.status(500).json({ error: "Error al obtener agendas de carga" });
+    }
+  }
+
   async createAgenda(req, res) {
     try {
       const {
@@ -97,7 +114,7 @@ class AgendaCargaController {
   async getAgendaCargaDelDia(req, res) {
     try {
       const id_chofer = req.user.id; // ID del chofer autenticado
-      
+
       const fecha = new Date();
       fecha.setHours(0, 0, 0, 0); // Asegurar que no se desborde al siguiente día
       const fechaFormateada = fecha.toISOString().split("T")[0];

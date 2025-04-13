@@ -50,6 +50,7 @@ const vistasDependencias = [
       "ventas.cotizacion.ver",
       "ventas.cotizacion.editar",
       "ventas.cotizacion.eliminar",
+      "ventas.cotizacion.pdf",
     ],
   },
   // 6. punto-pedido
@@ -81,7 +82,9 @@ const vistasDependencias = [
       "entregas.agendaviaje.ver",
       "ventas.pedido.confirmar",
       "ventas.pedido.asignados",
+      "ventas.pedido.noasignados",
       "ventas.pedido.historial",
+      "ventas.pedido.propios",
     ],
   },
   // 9. ver pedidos y ver pedido
@@ -115,6 +118,7 @@ const vistasDependencias = [
       "ventas.factura.editar",
       "ventas.factura.eliminar",
       "ventas.documento.ver",
+      "ventas.factura.pdf",
       "ventas.factura.registrar",
     ],
   },
@@ -206,7 +210,7 @@ const vistasDependencias = [
     ],
   },
   {
-    permiso: "vistas.viajes.chofer",
+    permiso: "vistas.viajes.ver",
     dependeDe: [
       "entregas.agendaviaje.ver",
       "ventas.pedido.ver",
@@ -230,7 +234,7 @@ const vistasDependencias = [
   },
   // 19. ver agendacargas o ver agendacarga
   {
-    permiso: "vistas.agendaCarga.ver",
+    permiso: "vistas.agendaCarga.crear",
     dependeDe: [
       "entregas.agendacarga.ver",
       "entregas.agendacarga.editar",

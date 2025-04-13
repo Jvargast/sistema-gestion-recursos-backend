@@ -37,21 +37,17 @@ class RolesService {
   async updateRol(id, data) {
     const { nombre, descripcion, permisos = [] } = data;
 
-    // Validar que el rol exista
     const rol = await RolRepository.findById(id);
     if (!rol) {
       throw new Error("El rol especificado no existe");
     }
 
-    // Validar que los permisos existen
     await validatePermissionsExist(permisos);
 
     await RolRepository.update(id, { nombre, descripcion });
 
-    // Obtener los permisos actualmente asociados al rol
     const permisosActuales = rol.rolesPermisos.map((rp) => rp.permisoId);
 
-    // Identificar permisos a agregar y a eliminar
     const permisosAgregar = permisos.filter(
       (permiso) => !permisosActuales.includes(permiso)
     );
@@ -59,7 +55,6 @@ class RolesService {
       (permiso) => !permisos.includes(permiso)
     );
 
-    // Actualizar asociaciones de permisos
     if (permisosAgregar.length > 0) {
       await RolRepository.addPermisos(id, permisosAgregar);
     }

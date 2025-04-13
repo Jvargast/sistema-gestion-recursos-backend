@@ -53,6 +53,11 @@ class PermisosService {
         },
         attributes: ["id", "nombre", "categoria"],
       },
+      {
+        model: PermisosRepository.getModel(),
+        as: "RequierenEste",
+        through: { attributes: [] },
+      },
     ];
     const result = await paginate(PermisosRepository.getModel(), options, {
       where,

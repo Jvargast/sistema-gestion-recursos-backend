@@ -7,6 +7,7 @@ const vendedorPermisos = [
   
     // Punto de venta y ventas
     "vistas.puntoventa.ver",
+    "ventas.estadoventa.ver",
     "ventas.venta.crear",
     "ventas.venta.ver",
     "ventas.documento.crear",
@@ -40,6 +41,7 @@ const vendedorPermisos = [
     "vistas.categorias.ver",
     "vistas.tipoinsumos.ver",
     "vistas.perfil.ver",
+    "vistas.clientes.ver",
   ];
   
   export default vendedorPermisos;

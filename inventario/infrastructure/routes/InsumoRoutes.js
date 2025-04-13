@@ -4,22 +4,13 @@ import authenticate from "../../../shared/middlewares/authenticate.js";
 import checkPermissions from "../../../shared/middlewares/CheckPermissionsMiddleware.js";
 
 const router = Router();
+router.use(authenticate);
 
-// Obtener todos los insumos
-router.get("/", authenticate, checkPermissions("ver_insumos"), InsumoController.getAllInsumos);
-
-router.get("/vendibles", authenticate, checkPermissions("ver_insumos"), InsumoController.getAllInsumosVendibles);
-
-// Obtener un insumo por ID
-router.get("/:id", authenticate, checkPermissions("ver_insumo"), InsumoController.getInsumoById);
-
-// Crear un nuevo insumo
-router.post("/", authenticate, checkPermissions("crear_insumo"),InsumoController.createInsumo);
-
-// Actualizar un insumo
-router.put("/:id", authenticate, checkPermissions("editar_insumo"), InsumoController.updateInsumo);
-
-// Eliminar un insumo
-router.delete("/", authenticate, checkPermissions("borrar_insumo"), InsumoController.deleteInsumo);
+router.get("/", checkPermissions("inventario.insumo.ver"), InsumoController.getAllInsumos);
+router.get("/vendibles", checkPermissions("inventario.insumo.disponible"), InsumoController.getAllInsumosVendibles);
+router.get("/:id", checkPermissions("inventario.insumo.ver"), InsumoController.getInsumoById);
+router.post("/", checkPermissions("inventario.insumo.crear"),InsumoController.createInsumo);
+router.put("/:id", checkPermissions("inventario.insumo.editar"), InsumoController.updateInsumo);
+router.delete("/", checkPermissions("inventario.insumo.eliminar"), InsumoController.deleteInsumo);
 
 export default router;
