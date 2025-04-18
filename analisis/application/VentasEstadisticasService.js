@@ -137,6 +137,70 @@ class VentasEstadisticasService {
 
     return registros;
   }
+  //Calcular por mes
+  async calcularDatosMensuales(anio, mes) {
+    const ventas = await Venta.findAll({
+      where: {
+        fecha: {
+          [Op.between]: [
+            new Date(`${anio}-${mes}-01`),
+            new Date(`${anio}-${mes}-31`),
+          ],
+        },
+      },
+      attributes: [
+        [fn("DATE", col("fecha")), "dia"],
+        [fn("SUM", col("total")), "total_dia"],
+        [fn("COUNT", col("id_venta")), "cantidad_ventas"],
+      ],
+      group: [fn("DATE", col("fecha"))],
+      raw: true,
+    });
+
+    return ventas; 
+  }
+  //Calcular por año
+  async calcularEstadisticasPorAno(anio) {
+    const resultados = await Venta.findAll({
+      where: {
+        fecha: {
+          [Op.between]: [
+            new Date(`${anio}-01-01`),
+            new Date(`${anio}-12-31`),
+          ],
+        },
+      },
+      attributes: [
+        [fn("MONTH", col("fecha")), "mes"],
+        [fn("SUM", col("total")), "total_mes"],
+        [fn("COUNT", col("id_venta")), "cantidad_ventas"],
+      ],
+      group: [fn("MONTH", col("fecha"))],
+      raw: true,
+    });
+  
+    return resultados;
+  }
+
+  //Monitorear ventas recientes
+  async monitorearVentasRecientes() {
+    const haceUnaHora = new Date(Date.now() - 60 * 60 * 1000);
+  
+    const ventas = await Venta.findAll({
+      where: {
+        fecha: {
+          [Op.gte]: haceUnaHora,
+        },
+      },
+      raw: true,
+    });
+  
+    return {
+      ventasRecientes: ventas,
+    };
+  }
+  
+  
 }
 
 export default new VentasEstadisticasService();

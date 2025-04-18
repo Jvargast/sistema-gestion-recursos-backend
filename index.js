@@ -13,7 +13,7 @@ import fs from "fs";
 /**
  * Implementación de tareas
  */
-/* import setupAnalysisCronJobs from "./analisis/infrastructure/cron/analysisCronJobs.js"; */
+import setupAnalysisCronJobs from "./analisis/infrastructure/cron/analysisCronJobs.js";
 
 // Rutas para arquitectura hexagonal
 /* MÓDULO AUTH */
@@ -179,8 +179,8 @@ const PORT = process.env.PORT || 9000;
 /* Sequelize y Servidor */
 initializeDatabase()
   .then(() => {
-    /* setupAnalysisCronJobs();  falta configurarlo*/
-    /* console.log("Tareas [CRON] configuradas."); */
+    setupAnalysisCronJobs();
+    console.log("Tareas [CRON] configuradas.");
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`Servidor escuchando en el puerto http://0.0.0.0:${PORT}`);
     });
