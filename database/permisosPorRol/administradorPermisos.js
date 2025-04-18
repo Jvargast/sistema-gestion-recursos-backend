@@ -166,6 +166,7 @@ const administradorPermisos = [
   "ventas.pedido.pago",
   "ventas.pedido.asignar",
   "ventas.pedido.desasignar",
+  "ventas.pedido.confirmados",
   "ventas.factura.registrar",
   "ventas.factura.pdf",
   "entregas.ventaschofer.ver",

@@ -11,6 +11,14 @@ const PedidosEstadisticas = sequelize.define(
     total_pedidos: { type: DataTypes.INTEGER, defaultValue: 0 },
     pedidos_pagados: { type: DataTypes.INTEGER, defaultValue: 0 },
     monto_total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+    estado_pago: {
+      type: DataTypes.ENUM("Pagado", "Pendiente"),
+      allowNull: false,
+    },
+    id_estado_pedido: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     tableName: "PedidosEstadisticas",

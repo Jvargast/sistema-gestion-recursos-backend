@@ -11,7 +11,6 @@ const choferPermisos = [
     "vistas.pedidos.ver",
     "vistas.clientes.ver",
     "vistas.perfil.ver",
-    "vistas.camiones.ver",
     "vistas.entregas.ver",
     "vistas.agendaCarga.crear",
   
@@ -29,6 +28,8 @@ const choferPermisos = [
     "ventas.pedido.asignados",
     "ventas.pedido.propios",
     "ventas.pedido.historial",
+    "ventas.caja.asignada",
+    "ventas.pedido.confirmados",
   
     // Entregas y viajes
     "entregas.entrega.misentregas",
@@ -46,6 +47,7 @@ const choferPermisos = [
     "entregas.agendacarga.confirmar",
     "entregas.agendacarga.ver",
     "entregas.agendacarga.crear",
+    "entregas.ventaschofer.crear",
   
     // Clientes
     "ventas.cliente.ver",

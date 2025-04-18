@@ -18,6 +18,8 @@ import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesR
 import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteRepository.js";
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 import { getEstadoCamion } from "../../shared/utils/estadoCamion.js";
+import VentaRepository from "../../ventas/infrastructure/repositories/VentaRepository.js";
+import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
 
 class AgendaCargaService {
   // Pedido de Confirmado -> En Preparación
@@ -471,7 +473,6 @@ class AgendaCargaService {
       if (!pedidosEnPreparacion.length)
         throw new Error("No hay pedidos en preparación para este viaje.");
 
-      const destinos = [];
       const estadoEnEntrega = await EstadoVentaRepository.findByNombre(
         "En Entrega",
         { transaction }
@@ -479,8 +480,16 @@ class AgendaCargaService {
       if (!estadoEnEntrega)
         throw new Error("Estado 'En Entrega' no configurado.");
 
+      const destinos = [];
       for (const pedido of pedidosEnPreparacion) {
         const cliente = await ClienteRepository.findById(pedido.id_cliente);
+        let tipo_documento = null;
+        if (pedido.id_venta) {
+          const documento = await DocumentoRepository.findByVentaId(pedido.id_venta, {
+            transaction,
+          })
+          tipo_documento = documento[0]?.tipo_documento ;
+        }
 
         destinos.push({
           id_pedido: pedido.id_pedido,
@@ -488,6 +497,7 @@ class AgendaCargaService {
           nombre_cliente: cliente.nombre,
           direccion: pedido.direccion_entrega,
           notas: pedido.notas || "",
+          tipo_documento: tipo_documento || "boleta",
         });
         await PedidoRepository.update(
           pedido.id_pedido,
@@ -525,34 +535,48 @@ class AgendaCargaService {
     }
   }
 
-  async findAll(filters, options){
-    const where = {};
-  
-    if (filters.fecha_inicio && filters.fecha_fin) {
-      where.fecha_carga = {
-        [Op.between]: [filters.fecha_inicio, filters.fecha_fin],
-      };
-    }
-  
-    if (filters.id_chofer) {
-      where.id_chofer = filters.id_chofer;
-    }
-  
-    if (filters.estado) {
-      where.estado = filters.estado;
-    }
+  async findAll(filters, options) {
+    try {
+      const where = {};
 
-    const result = await paginate(AgendaCargaRepository.getModel(), options, {
-      where,
-      include: [
-        { model: UsuariosRepository.getModel(), as: "chofer", attributes: ["rut", "nombre"] },
-        { model: CamionRepository.getModel(), as: "camion", attributes: ["id", "patente"] },
-      ],
-      order: [["fecha_carga", "DESC"]],
-    })
-  
-    return result;
-  };
+      if (filters.fecha_inicio && filters.fecha_fin) {
+        where.fecha_carga = {
+          [Op.between]: [filters.fecha_inicio, filters.fecha_fin],
+        };
+      }
+
+      if (filters.id_chofer) {
+        where.id_chofer = filters.id_chofer;
+      }
+
+      if (filters.estado) {
+        where.estado = filters.estado;
+      }
+
+      const result = await paginate(AgendaCargaRepository.getModel(), options, {
+        where,
+        include: [
+          {
+            model: UsuariosRepository.getModel(),
+            as: "chofer",
+            attributes: ["rut", "nombre"],
+          },
+          {
+            model: CamionRepository.getModel(),
+            as: "camion",
+            attributes: ["id_camion", "placa"],
+          },
+        ],
+        order: [["fecha_hora", "DESC"]],
+      });
+      console.log(result);
+
+      return result;
+    } catch (error) {
+      console.log(error);
+      throw new Error();
+    }
+  }
 
   async getAgendaById(id) {
     const agenda = await AgendaCargaRepository.findById(id);

@@ -16,6 +16,7 @@ import MovimientoCajaService from "../../ventas/application/MovimientoCajaServic
 import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 import sequelize from "../../database/database.js";
+import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
 
 class VentaChoferService {
   async getVentasChofer(filters = {}, options) {
@@ -62,7 +63,7 @@ class VentaChoferService {
     const result = await paginate(VentasChoferRepository.getModel(), options, {
       where,
       include,
-      order: [["fechaHoraVenta", "DESC"]],
+      order: [["id_venta_chofer", "DESC"]],
     });
 
     return result;
@@ -121,7 +122,7 @@ class VentaChoferService {
           total_venta: totalVenta,
           tipo_venta: "productos",
           estadoPago: estadoPago,
-          echaHoraVenta: new Date(),
+          fechaHoraVenta: new Date(),
         },
         { transaction }
       );
@@ -264,6 +265,100 @@ class VentaChoferService {
         await transaction.rollback();
       }
       throw new Error(`Error al registrar venta del chofer: ${error.message}`);
+    }
+  }
+
+  async obtenerMisVentas({ id_chofer, page, limit, search }) {
+    const options = {
+      page,
+      limit,
+      search,
+      id_chofer,
+    };
+
+    const where = {
+      id_chofer,
+    };
+
+    if (search) {
+      where[Op.or] = [
+        { "$cliente.nombre$": { [Op.iLike]: `%${search}%` } },
+        { "$camion.placa$": { [Op.iLike]: `%${search}%` } },
+      ];
+    }
+
+    const include = [
+      {
+        model: ClienteRepository.getModel(),
+        as: "cliente",
+        attributes: ["id_cliente", "rut", "nombre"],
+      },
+      {
+        model: CamionRepository.getModel(),
+        as: "camion",
+        attributes: ["placa"],
+      },
+      {
+        model: MetodoPagoRepository.getModel(),
+        as: "metodoPago",
+        attributes: ["nombre"],
+      },
+    ];
+
+    return await paginate(VentasChoferRepository.getModel(), options, {
+      where,
+      include,
+      order: [["id_venta_chofer", "DESC"]],
+    });
+  }
+
+  async getVentaChoferById(id_venta, id_usuario, rol) {
+    try {
+      const where = { id_venta_chofer: id_venta };
+
+      if (rol === "chofer") {
+        where.id_chofer = id_usuario;
+      }
+
+      const venta = await VentasChoferRepository.getModel().findOne({
+        where,
+        include: [
+          {
+            model: ClienteRepository.getModel(),
+            as: "cliente",
+            attributes: ["id_cliente", "nombre", "rut", "email"],
+          },
+          {
+            model: CamionRepository.getModel(),
+            as: "camion",
+            attributes: ["placa", "estado"],
+          },
+          {
+            model: MetodoPagoRepository.getModel(),
+            as: "metodoPago",
+            attributes: ["nombre"],
+          },
+          {
+            model: DetallesVentaChoferRepository.getModel(),
+            as: "detallesChofer",
+            attributes: [
+              "id_producto",
+              "cantidad",
+              "precioUnitario",
+              "subtotal",
+            ],
+            include: [{
+              model: ProductosRepository.getModel(),
+              as: "producto",
+            }]
+          },
+        ],
+      });
+
+      return venta;
+    } catch (error) {
+      console.log(error);
+      return new Error();
     }
   }
 }

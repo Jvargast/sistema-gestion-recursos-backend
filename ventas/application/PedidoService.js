@@ -16,6 +16,7 @@ import InsumoRepository from "../../inventario/infrastructure/repositories/Insum
 import VentaService from "./VentaService.js";
 import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
 import WebSocketServer from "../../shared/websockets/WebSocketServer.js";
+import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
 
 class PedidoService {
   // Se crea en Pendiente
@@ -30,6 +31,7 @@ class PedidoService {
         productos,
         notas,
         pagado,
+        tipo_documento,
       } = data;
 
       let cliente = await ClienteRepository.findById(id_cliente);
@@ -115,12 +117,16 @@ class PedidoService {
 
       let ventaRegistrada = null;
 
-      if (pagado) {
+      const requiereFactura = tipo_documento === "factura";
+      const ventaPagada = pagado && !requiereFactura;
+      const asignada = await CajaRepository.findByAsignado(id_creador);
+
+      if (ventaPagada || requiereFactura) {
         ventaRegistrada = await VentaService.createVenta(
           {
             id_cliente,
             id_vendedor: id_creador,
-            id_caja,
+            id_caja: asignada.id_caja,
             tipo_entrega: "pedido_pagado_anticipado",
             direccion_entrega,
             productos,
@@ -129,11 +135,11 @@ class PedidoService {
             notas,
             impuesto: 0,
             tipo_documento,
-            pago_recibido,
-            referencia,
+            pago_recibido: ventaPagada ? pago_recibido : null,
+            referencia: ventaPagada ? referencia : null,
             id_pedido_asociado: nuevoPedido.id_pedido,
           },
-          id_creador, // usuario que crea el pedido
+          id_creador,
           transaction
         );
 
@@ -143,7 +149,7 @@ class PedidoService {
           {
             id_venta: ventaRegistrada.venta.id_venta,
             id_estado_pedido: estadoInicial.id_estado_venta, // Puede ser otro estado según lógica de negocio.
-            estado_pago: "Pagado",
+            estado_pago: requiereFactura ? "Pendiente" : "Pagado",
           },
           { transaction }
         );
@@ -427,12 +433,21 @@ class PedidoService {
           });
         }
 
+        const documento = await DocumentoRepository.findByVentaId(
+          pedido.id_venta,
+          {
+            transaction,
+          }
+        );
+        const tipo_documento = documento[0]?.tipo_documento || "boleta";
+
         const nuevoDestino = {
           id_pedido: pedido.id_pedido,
           id_cliente: cliente.id_cliente,
           nombre_cliente: cliente.nombre,
           direccion: pedido.direccion_entrega,
           notas: pedido.notas || "",
+          tipo_documento,
         };
 
         const destinosActuales = viajeActivo.destinos || [];
@@ -470,19 +485,19 @@ class PedidoService {
       });
 
       await transaction.commit();
+      if (viajeActivo) {
+        WebSocketServer.emitToUser(id_chofer, {
+          type: "actualizar_agenda_chofer",
+          data: {
+            mensaje: `Tu agenda se actualizó con el pedido ${id_pedido}`,
+          },
+        });
+      }
     } catch (error) {
       await transaction.rollback();
       throw new Error(`Error al confirmar pedido: ${error.message}`);
     }
 
-    if (viajeActivo) {
-      WebSocketServer.emitToUser(id_chofer, {
-        type: "actualizar_agenda_chofer",
-        data: {
-          mensaje: `Tu agenda se actualizó con el pedido ${id_pedido}`,
-        },
-      });
-    }
     return PedidoRepository.findById(id_pedido);
   }
 
@@ -513,7 +528,12 @@ class PedidoService {
             {
               model: ProductosRepository.getModel(),
               as: "Producto",
-              attributes: ["id_producto", "nombre_producto", "precio", "es_retornable"],
+              attributes: [
+                "id_producto",
+                "nombre_producto",
+                "precio",
+                "es_retornable",
+              ],
             },
           ],
         },
@@ -544,7 +564,7 @@ class PedidoService {
         cantidad: detalle.cantidad,
         precio_unitario: detalle.Producto?.precio || 0,
         subtotal: detalle.subtotal,
-        es_retornable: detalle.Producto?.es_retornable
+        es_retornable: detalle.Producto?.es_retornable,
       })),
       fecha_pedido: pedido.fecha_pedido,
     }));

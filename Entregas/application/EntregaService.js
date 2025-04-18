@@ -40,6 +40,11 @@ class EntregaService {
     const transaction = await sequelize.transaction();
 
     try {
+      console.log(tipo_documento);
+      if (!tipo_documento) {
+        throw new Error("El tipo_documento no fue especificado para la venta.");
+      }
+
       const pedido = await PedidoRepository.findById(id_pedido, {
         transaction,
       });
@@ -86,19 +91,22 @@ class EntregaService {
         throw new Error("Agenda de viaje no encontrada");
       }
 
-      const isPaid = pedido.pagado;
       let ventaRegistrada = null;
-
       let pago_recibido = null;
+      let metodo = null;
 
-      const metodo = await MetodoPagoRepository.findById(id_metodo_pago, {
-        transaction,
-      });
-      if (metodo && metodo.nombre.toLowerCase() === "efectivo") {
-        pago_recibido = monto_total;
+      if (id_metodo_pago) {
+        metodo = await MetodoPagoRepository.findById(id_metodo_pago, {
+          transaction,
+        });
+        if (metodo && metodo.nombre.toLowerCase() === "efectivo") {
+          pago_recibido = monto_total;
+        }
       }
 
-      if (!isPaid) {
+      if (!pedido.id_venta) {
+        const esFactura = tipo_documento === "factura";
+
         const data = {
           id_cliente: pedido.id_cliente,
           id_vendedor: id_chofer,
@@ -116,16 +124,38 @@ class EntregaService {
           pago_recibido,
           id_pedido_asociado: pedido.id_pedido,
         };
+
         ventaRegistrada = await VentaService.createVenta(data, id_chofer, {
           transaction,
         });
 
-        pedido.pagado = true;
-        pedido.estado_pago = "Pagado";
+        pedido.id_venta = ventaRegistrada.id_venta;
+
+        if (esFactura) {
+          pedido.pagado = false;
+          pedido.estado_pago = "Pendiente";
+        } else {
+          pedido.pagado = true;
+          pedido.estado_pago = "Pagado";
+        }
       } else {
-        ventaRegistrada = pedido.id_venta
-          ? await VentaRepository.findById(pedido.id_venta, { transaction })
-          : null;
+        // Ya tiene venta asociada
+        ventaRegistrada = await VentaRepository.findById(pedido.id_venta, {
+          transaction,
+        });
+
+        const documento = await DocumentoRepository.findByVentaId(
+          pedido.id_venta,
+          {
+            transaction,
+          }
+        );
+
+        const tipoDocumento = documento?.[0]?.tipo_documento || "boleta";
+        const esFactura = tipoDocumento === "factura";
+
+        pedido.pagado = !esFactura;
+        pedido.estado_pago = esFactura ? "Pendiente" : "Pagado";
       }
 
       pedido.id_estado_pedido = estadoCompletada.id_estado_venta;
@@ -134,8 +164,7 @@ class EntregaService {
 
       if (productos_entregados && Array.isArray(productos_entregados)) {
         for (const item of productos_entregados) {
-          const reserva =
-          await InventarioCamionRepository.findParaEntrega(
+          const reserva = await InventarioCamionRepository.findParaEntrega(
             agendaViaje.id_camion,
             item.id_producto,
             item.es_retornable || false,
@@ -215,7 +244,7 @@ class EntregaService {
           productos_entregados: productos_entregados || null,
           insumo_entregados: insumo_entregados || null,
           botellones_retorno: botellones_retorno || null,
-          es_entrega_directa: false, // según tu lógica de negocio, podrías modificarlo
+          es_entrega_directa: false,
           monto_total,
           estado_entrega: "completada",
           fecha_hora: new Date(),

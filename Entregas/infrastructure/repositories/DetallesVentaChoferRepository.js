@@ -27,8 +27,12 @@ class DetallesVentaChoferRepository {
     }
 
     return await DetallesVentaChofer.update(updateData, {
-      where: { id_inventario_camion }
+      where: { id_inventario_camion },
     });
+  }
+
+  getModel() {
+    return DetallesVentaChofer;
   }
 }
 

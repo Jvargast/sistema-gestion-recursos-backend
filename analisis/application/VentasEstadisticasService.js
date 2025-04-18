@@ -28,6 +28,7 @@ class VentasEstadisticasService {
       return {
         message: "No se encontraron ventas para la fecha indicada",
         count: 0,
+        registros: [],
       };
     }
 
