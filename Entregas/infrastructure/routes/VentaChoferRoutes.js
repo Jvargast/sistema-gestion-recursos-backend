@@ -7,7 +7,29 @@ import checkPermissions from "../../../shared/middlewares/CheckPermissionsMiddle
 const router = Router();
 router.use(authenticate);
 
-router.get("/", checkPermissions("entregas.ventaschofer.ver"), VentaChoferController.getVentasChofer);
-router.post("/rapida", checkPermissions("entregas.ventaschofer.crear"), checkRoles(["chofer"]), VentaChoferController.realizarVentaRapida);
+router.get(
+  "/",
+  checkPermissions("entregas.ventaschofer.ver"),
+  VentaChoferController.getVentasChofer
+);
+router.get(
+  "/misventas",
+  checkPermissions("entregas.ventaschofer.ver"),
+  checkRoles(["chofer"]),
+  VentaChoferController.getMisVentas
+);
+
+router.get(
+  "/venta/:id",
+  checkPermissions("entregas.ventaschofer.ver"),
+  VentaChoferController.getVentaChoferById
+);
+
+router.post(
+  "/rapida",
+  checkPermissions("entregas.ventaschofer.crear"),
+  checkRoles(["chofer"]),
+  VentaChoferController.realizarVentaRapida
+);
 
 export default router;

@@ -27,6 +27,17 @@ class PedidosEstadisticasController {
       return res.status(500).json({ error: "Error interno del servidor" });
     }
   }
+
+  async obtenerKpiDelDia(req, res) {
+    try {
+      const hoy = new Date().toISOString().split("T")[0];
+      const datos = await PedidosEstadisticasService.obtenerKpiPorFecha(hoy);
+      return res.status(200).json(datos);
+    } catch (error) {
+      console.error("Error al obtener KPI de pedidos:", error.message);
+      return res.status(500).json({ error: "Error interno del servidor" });
+    }
+  }
 }
 
 export default new PedidosEstadisticasController();

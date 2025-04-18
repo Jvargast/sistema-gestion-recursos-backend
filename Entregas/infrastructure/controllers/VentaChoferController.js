@@ -63,6 +63,57 @@ class VentaChoferController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  async getMisVentas(req, res) {
+    try {
+      const id_chofer = req.user.id;
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 10;
+      const search = req.query.search;
+
+      const result = await VentaChoferService.obtenerMisVentas({
+        id_chofer,
+        page,
+        limit,
+        search,
+      });
+
+      return res.status(200).json({
+        data: result.data,
+        total: result.pagination,
+      });
+    } catch (error) {
+      console.error("Error al obtener mis ventas:", error.message);
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getVentaChoferById(req, res) {
+    try {
+      const id_venta = req.params.id;
+      const rut = req.user.id;
+      const rol = req.user.rol;
+
+      const venta = await VentaChoferService.getVentaChoferById(
+        id_venta,
+        rut,
+        rol
+      );
+
+      if (!venta) {
+        return res
+          .status(404)
+          .json({ error: "Venta no encontrada o no autorizada." });
+      }
+
+      res.status(200).json({ data: venta });
+    } catch (error) {
+      console.error("Error al obtener venta del chofer:", error.message);
+      res
+        .status(500)
+        .json({ error: "Error interno al obtener la venta del chofer." });
+    }
+  }
 }
 
 export default new VentaChoferController();

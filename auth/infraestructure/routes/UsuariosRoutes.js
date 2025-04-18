@@ -13,11 +13,11 @@ router.get('/', checkPermissions('auth.usuarios.ver'), UsuariosController.getAll
 router.get('/choferes', checkRoles(["administrador", "chofer"]), checkPermissions("auth.usuario.choferes"), UsuariosController.getAllChoferes);
 router.get('/vendedores', checkPermissions("auth.usuario.vendedores"), UsuariosController.getAllVendedores);
 router.get('/mi-perfil', checkPermissions("auth.perfil.ver"),UsuariosController.getOwnProfile);
-router.get('/:rut', checkPermissions('auth.usuario.ver'), UsuariosController.findByRut);
+router.get('/:rut', checkPermissions('auth.usuarios.ver'), UsuariosController.findByRut);
 router.put('/mi-perfil', checkPermissions("auth.perfil.actualizar"), UsuariosController.updateOwnProfile);
 router.put("/:rut/change-password", checkPermissions("auth.perfil.actualizar"), UsuariosController.updateUserPassword);
-router.put('/:rut', checkPermissions('auth.usuario.editar'), UsuariosController.update);
-router.delete('/:rut', checkPermissions('auth.usuario.eliminar'), UsuariosController.deactivate);
+router.put('/:rut', checkPermissions('auth.usuarios.editar'), UsuariosController.update);
+router.delete('/:rut', checkPermissions('auth.usuarios.eliminar'), UsuariosController.deactivate);
 router.post('/change-password', checkPermissions("auth.perfil.actualizar"), UsuariosController.changePassword); 
 
 export default router;

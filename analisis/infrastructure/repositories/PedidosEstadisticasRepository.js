@@ -12,6 +12,31 @@ class PedidosEstadisticasRepository {
   async deleteByFecha(fecha) {
     return await PedidosEstadisticas.destroy({ where: { fecha } });
   }
+
+  async updateById(id, data) {
+    return await PedidosEstadisticas.update(data, {
+      where: { id },
+    });
+  }
+
+  async findByFechaEstadoPagoYEstadoPedido(
+    fecha,
+    estado_pago,
+    id_estado_pedido
+  ) {
+    return await PedidosEstadisticas.findOne({
+      where: {
+        fecha,
+        estado_pago,
+        id_estado_pedido,
+      },
+    });
+  }
+  async findByFecha(fecha) {
+    return await PedidosEstadisticas.findAll({
+      where: { fecha },
+    });
+  }
 }
 
 export default new PedidosEstadisticasRepository();
