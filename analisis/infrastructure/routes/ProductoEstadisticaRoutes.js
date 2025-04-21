@@ -10,6 +10,17 @@ router.post(
   ProductoEstadisticasController.generar
 );
 router.get(
+  "/productos/kpi-hoy",
+  authenticate,
+  ProductoEstadisticasController.obtenerKpiDelDia
+);
+router.get(
+  "/productos/resumen-por-fecha",
+  authenticate,
+  ProductoEstadisticasController.obtenerResumenPorFecha
+);
+
+router.get(
   "/productos",
   authenticate,
   ProductoEstadisticasController.obtenerPorMes

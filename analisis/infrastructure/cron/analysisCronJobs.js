@@ -1,9 +1,10 @@
 import cron from "node-cron";
 import VentasEstadisticasService from "../../application/VentasEstadisticasService.js";
 import PedidosEstadisticasService from "../../application/PedidosEstadisticasService.js";
+import ProductoEstadisticasService from "../../application/ProductoEstadisticasService.js";
 
 const setupCronJobs = () => {
-  // 📆 Generación diaria de estadísticas 
+  // 📆 Generación diaria de estadísticas
   cron.schedule("5 0 * * *", async () => {
     const fecha = new Date().toISOString().split("T")[0];
     console.log(`[CRON] Generando estadísticas para el día ${fecha}`);
@@ -11,6 +12,8 @@ const setupCronJobs = () => {
     try {
       await VentasEstadisticasService.generarEstadisticasPorDia(fecha);
       await PedidosEstadisticasService.generarEstadisticasPorDia(fecha);
+      await ProductoEstadisticasService.generarEstadisticasPorDia(fecha);
+
       console.log("[CRON] ✅ Estadísticas diarias generadas con éxito.");
     } catch (error) {
       console.error(
@@ -20,7 +23,7 @@ const setupCronJobs = () => {
     }
   });
 
-  // 📆 Generación mensual de estadísticas 
+  // 📆 Generación mensual de estadísticas
   cron.schedule("10 0 1 * *", async () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -32,6 +35,9 @@ const setupCronJobs = () => {
 
     try {
       await VentasEstadisticasService.calcularDatosMensuales(year, month);
+      await PedidosEstadisticasService.calcularDatosMensuales(year, month);
+      await ProductoEstadisticasService.calcularDatosMensuales(year, month);
+
       console.log("[CRON] ✅ Estadísticas mensuales generadas.");
     } catch (error) {
       console.error(
@@ -48,6 +54,8 @@ const setupCronJobs = () => {
 
     try {
       await VentasEstadisticasService.calcularEstadisticasPorAno(year);
+      await PedidosEstadisticasService.calcularEstadisticasPorAno(year);
+      await ProductoEstadisticasService.calcularEstadisticasPorAno(year);
       console.log("[CRON] ✅ Estadísticas anuales generadas.");
     } catch (error) {
       console.error("[CRON] ❌ Error en estadísticas anuales:", error.message);

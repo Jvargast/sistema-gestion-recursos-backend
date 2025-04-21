@@ -11,6 +11,12 @@ router.post(
 );
 router.get("/ventas", authenticate, VentasEstadisticasController.obtenerPorMes);
 router.get(
+  "/ventas/tendencia-mensual",
+  authenticate,
+  VentasEstadisticasController.obtenerTendenciaMensual
+);
+
+router.get(
   "/ventas/kpi-hoy",
   authenticate,
   VentasEstadisticasController.obtenerKpiDelDia
@@ -19,6 +25,12 @@ router.get(
   "/ventas/resumen-semanal",
   authenticate,
   VentasEstadisticasController.obtenerResumenSemanal
+);
+
+router.get(
+  "/ventas/resumen-por-tipo-entrega",
+  authenticate,
+  VentasEstadisticasController.resumenPorTipoEntrega
 );
 
 export default router;

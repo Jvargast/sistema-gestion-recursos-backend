@@ -1,22 +1,27 @@
+// utils/fechaUtils.js
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-/**
- * Dado un string "YYYY-MM-DD" en hora Chile, retorna el rango UTC para hacer un filtro Sequelize.
- * Ej: "2025-03-29" => { inicioUTC: Date, finUTC: Date }
- */
-export const obtenerRangoUTCDesdeFechaLocal = (fechaLocal) => {
-  const inicioUTC = dayjs
-    .tz(`${fechaLocal} 00:00:00`, "America/Santiago")
-    .utc()
-    .toDate();
-  const finUTC = dayjs
-    .tz(`${fechaLocal} 23:59:59`, "America/Santiago")
-    .utc()
-    .toDate();
-  return { inicioUTC, finUTC };
+const ZONA_HORARIA = "America/Santiago";
+
+export const obtenerFechaActualChile = (formato = null) => {
+  return formato
+    ? dayjs().tz(ZONA_HORARIA).format(formato)
+    : dayjs().tz(ZONA_HORARIA).format();
+};
+
+export const convertirFechaLocal = (fechaUtc, formato = null) => {
+  return formato
+    ? dayjs.utc(fechaUtc).tz(ZONA_HORARIA).format(formato)
+    : dayjs.utc(fechaUtc).tz(ZONA_HORARIA);
+};
+
+export const convertirALaUtc = (fechaLocal, formato = null) => {
+  return formato
+    ? dayjs(fechaLocal).tz(ZONA_HORARIA).utc().format(formato)
+    : dayjs(fechaLocal).tz(ZONA_HORARIA).utc();
 };

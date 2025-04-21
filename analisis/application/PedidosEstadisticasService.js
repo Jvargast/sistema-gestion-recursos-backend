@@ -93,28 +93,26 @@ class PedidosEstadisticasService {
       return {
         fecha,
         total_pedidos: 0,
-        detalles: {},
+        detalles: [],
       };
     }
 
     let total = 0;
-    const detalles = {};
+    const detalles = [];
 
     for (const r of registros) {
       const cantidad = parseInt(r.total_pedidos || 0);
       total += cantidad;
 
-      const estadoNombre = await EstadoVentaRepository.findNombreById(
-        r.id_estado_pedido
-      );
+      const estado = await EstadoVentaRepository.findById(r.id_estado_pedido);
 
-      const clave = `${estadoNombre} / ${r.estado_pago}`;
-
-      detalles[clave] = {
+      detalles.push({
+        estado_pedido: estado.nombre_estado,
+        estado_pago: r.estado_pago,
         cantidad,
         pedidos_pagados: r.pedidos_pagados,
         monto_total: parseFloat(r.monto_total),
-      };
+      });
     }
 
     return {
@@ -122,6 +120,26 @@ class PedidosEstadisticasService {
       total_pedidos: total,
       detalles,
     };
+  }
+
+  async calcularDatosMensuales(anio, mes) {
+    const registros = await PedidosEstadisticasRepository.findAllByMesYAnio(
+      mes,
+      anio
+    );
+
+    const resumen = registros.reduce(
+      (acc, registro) => {
+        acc.total += registro.total_pedidos || 0;
+        acc.pagados += registro.pedidos_pagados || 0;
+        acc.monto += parseFloat(registro.monto_total || 0);
+        return acc;
+      },
+      { total: 0, pagados: 0, monto: 0 }
+    );
+
+    // Puedes guardar o retornar el resumen mensual si deseas almacenarlo
+    return resumen;
   }
 }
 
