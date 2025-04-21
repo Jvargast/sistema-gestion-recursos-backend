@@ -1,7 +1,8 @@
-import moment from "moment";
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
+import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
 import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
 import HistorialCajaRepository from "../infrastructure/repositories/HistorialCajaRepository.js";
+const fecha = obtenerFechaActualChile();
 
 class CajaService {
   async getCajaById(id) {
@@ -61,7 +62,6 @@ class CajaService {
       throw new Error("Usuario no encontrado.");
     }
 
-
     const caja = await CajaRepository.findByAsignado(rutUsuario);
 
     if (!caja) return null;
@@ -81,7 +81,7 @@ class CajaService {
     const datosActualizados = {
       estado: "abierta",
       saldo_inicial: saldoInicial,
-      fecha_apertura: new Date(),
+      fecha_apertura: fecha,
       usuario_apertura: rutUsuario,
     };
 
@@ -99,23 +99,21 @@ class CajaService {
       throw new Error("La caja ya está cerrada.");
     }
 
-
-
     // Registrar el historial antes de actualizar el estado de la caja
     await HistorialCajaRepository.create({
       id_caja: idCaja,
       id_sucursal: caja.id_sucursal,
-      fecha_cierre: new Date(),
+      fecha_cierre: fecha,
       saldo_final: caja.saldo_final,
       usuario_cierre: rutUsuario,
-      observaciones: `Cierre de caja registrado el ${new Date().toLocaleString()}`,
+      observaciones: `Cierre de caja registrado el ${fecha}`,
     });
 
     // Actualizar la caja a estado "cerrada"
     const datosActualizados = {
       estado: "cerrada",
       saldo_final: null,
-      fecha_cierre: new Date(),
+      fecha_cierre: fecha,
       usuario_cierre: rutUsuario,
     };
 

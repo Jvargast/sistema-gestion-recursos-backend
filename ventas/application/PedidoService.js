@@ -17,6 +17,14 @@ import VentaService from "./VentaService.js";
 import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
 import WebSocketServer from "../../shared/websockets/WebSocketServer.js";
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
+import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
+/* import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+const ZONA_HORARIA = "America/Santiago"; */
 
 class PedidoService {
   // Se crea en Pendiente
@@ -32,6 +40,9 @@ class PedidoService {
         notas,
         pagado,
         tipo_documento,
+        pago_recibido,
+        referencia,
+        id_venta = null,
       } = data;
 
       let cliente = await ClienteRepository.findById(id_cliente);
@@ -51,7 +62,9 @@ class PedidoService {
       );
       if (!estadoInicial) throw new Error("Estado inicial no configurado.");
 
-      const fecha_pedido = new Date();
+      //const fecha_pedido = dayjs().tz(ZONA_HORARIA).format()
+      const fecha_pedido = obtenerFechaActualChile(); /* .toDate(); */
+
       console.log("Fecha Chile:", fecha_pedido);
       const nuevoPedido = await PedidoRepository.create(
         {
@@ -121,7 +134,9 @@ class PedidoService {
       const ventaPagada = pagado && !requiereFactura;
       const asignada = await CajaRepository.findByAsignado(id_creador);
 
-      if (ventaPagada || requiereFactura) {
+      const vieneDesdeVenta = Boolean(data.id_venta);
+
+      if (!vieneDesdeVenta && (ventaPagada || requiereFactura)) {
         ventaRegistrada = await VentaService.createVenta(
           {
             id_cliente,
@@ -150,6 +165,18 @@ class PedidoService {
             id_venta: ventaRegistrada.venta.id_venta,
             id_estado_pedido: estadoInicial.id_estado_venta, // Puede ser otro estado según lógica de negocio.
             estado_pago: requiereFactura ? "Pendiente" : "Pagado",
+          },
+          { transaction }
+        );
+      }
+
+      if (vieneDesdeVenta) {
+        await PedidoRepository.update(
+          nuevoPedido.id_pedido,
+          {
+            id_venta,
+            id_estado_pedido: estadoInicial.id_estado_venta,
+            estado_pago: pagado ? "Pagado" : "Pendiente",
           },
           { transaction }
         );

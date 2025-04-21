@@ -1,7 +1,8 @@
-import { Op, fn, col } from "sequelize";
+import { Op, fn, col, cast } from "sequelize";
 import Venta from "../../ventas/domain/models/Venta.js";
 import VentasEstadisticasRepository from "../infrastructure/repositories/VentasEstaditiscasRepository.js";
 import sequelize from "../../database/database.js";
+import EstadoVentaRepository from "../../ventas/infrastructure/repositories/EstadoVentaRepository.js";
 
 class VentasEstadisticasService {
   async generarEstadisticasPorDia(fecha) {
@@ -157,35 +158,52 @@ class VentasEstadisticasService {
       raw: true,
     });
 
-    return ventas; 
+    return ventas;
   }
   //Calcular por año
-  async calcularEstadisticasPorAno(anio) {
-    const resultados = await Venta.findAll({
-      where: {
-        fecha: {
-          [Op.between]: [
-            new Date(`${anio}-01-01`),
-            new Date(`${anio}-12-31`),
-          ],
-        },
+  async calcularEstadisticasPorAno(anio, filtros = {}) {
+    const estadoPagada = await EstadoVentaRepository.findByNombre("Pagada");
+
+    const where = {
+      fecha: {
+        [Op.between]: [
+          new Date(`${anio}-01-01T00:00:00-04:00`),
+          new Date(`${anio}-12-31T23:59:59-04:00`),
+        ],
       },
+      total: { [Op.ne]: null },
+      id_estado_venta: estadoPagada.id_estado_venta,
+    };
+
+    if (filtros.id_vendedor) {
+      where.id_vendedor = filtros.id_vendedor;
+    }
+
+    if (filtros.id_sucursal) {
+      where.id_sucursal = filtros.id_sucursal;
+    }
+
+    if (filtros.tipo_entrega) {
+      where.tipo_entrega = filtros.tipo_entrega; // Ej: 'retiro_en_sucursal'
+    }
+    const resultados = await Venta.findAll({
+      where,
       attributes: [
-        [fn("MONTH", col("fecha")), "mes"],
-        [fn("SUM", col("total")), "total_mes"],
+        [sequelize.literal(`EXTRACT(MONTH FROM "fecha")`), "mes"],
+        [fn("SUM", cast(col("total"), "float")), "total_mes"],
         [fn("COUNT", col("id_venta")), "cantidad_ventas"],
       ],
-      group: [fn("MONTH", col("fecha"))],
+      group: [sequelize.literal(`EXTRACT(MONTH FROM "fecha")`)],
       raw: true,
     });
-  
+
+    console.log(resultados);
     return resultados;
   }
-
   //Monitorear ventas recientes
   async monitorearVentasRecientes() {
     const haceUnaHora = new Date(Date.now() - 60 * 60 * 1000);
-  
+
     const ventas = await Venta.findAll({
       where: {
         fecha: {
@@ -194,13 +212,41 @@ class VentasEstadisticasService {
       },
       raw: true,
     });
-  
+
     return {
       ventasRecientes: ventas,
     };
   }
-  
-  
+
+  async resumenVentasPorTipoEntrega(fecha) {
+    const registros = await Venta.findAll({
+      where: {
+        fecha: {
+          [Op.between]: [`${fecha} 00:00:00`, `${fecha} 23:59:59`],
+        },
+        tipo_entrega: {
+          [Op.ne]: null,
+        },
+      },
+      attributes: ["tipo_entrega", [fn("COUNT", col("id_venta")), "total"]],
+      group: ["tipo_entrega"],
+      raw: true,
+    });
+
+    return registros.map((r) => ({
+      name: this.formatearTipoEntrega(r.tipo_entrega),
+      value: Number(r.total),
+    }));
+  }
+
+  formatearTipoEntrega(tipo) {
+    const map = {
+      despacho_a_domicilio: "Despacho a Domicilio",
+      retiro_en_sucursal: "Retiro en Sucursal",
+      pedido_pagado_anticipado: "Pagado Anticipado",
+    };
+    return map[tipo] || "Otro";
+  }
 }
 
 export default new VentasEstadisticasService();

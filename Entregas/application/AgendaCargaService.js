@@ -18,8 +18,10 @@ import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesR
 import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteRepository.js";
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 import { getEstadoCamion } from "../../shared/utils/estadoCamion.js";
-import VentaRepository from "../../ventas/infrastructure/repositories/VentaRepository.js";
 import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
+import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
+
+const fecha = obtenerFechaActualChile();
 
 class AgendaCargaService {
   // Pedido de Confirmado -> En Preparación
@@ -84,6 +86,7 @@ class AgendaCargaService {
       if (!pedidosConfirmados.length)
         throw new Error("Sin pedidos confirmados.");
 
+
       const nuevaAgenda = await AgendaCargaRepository.create(
         {
           id_usuario_chofer,
@@ -92,7 +95,7 @@ class AgendaCargaService {
           prioridad,
           estado: "Pendiente",
           notas,
-          fecha_hora: new Date(),
+          fecha_hora: fecha,
         },
         { transaction: t }
       );
@@ -430,7 +433,7 @@ class AgendaCargaService {
         cajaAsignada.id_caja,
         {
           estado: "abierta",
-          fecha_apertura: new Date(),
+          fecha_apertura: fecha,
           saldo_inicial: cajaAsignada.monto_apertura || 0,
         },
         { transaction }
@@ -447,7 +450,7 @@ class AgendaCargaService {
           estado: "Completada",
           validada_por_chofer: true,
           notas: notasChofer || agendaCarga.notas,
-          hora_estimacion_fin: new Date(),
+          hora_estimacion_fin: fecha,
         },
         { transaction }
       );
@@ -516,7 +519,7 @@ class AgendaCargaService {
           inventario_inicial: productosCargados,
           destinos,
           estado: "En Tránsito",
-          fecha_inicio: new Date(),
+          fecha_inicio: fecha,
           notas: `Viaje iniciado. Agenda carga: ${id_agenda_carga}`,
           validado_por_chofer: true,
         },

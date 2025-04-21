@@ -1,8 +1,5 @@
-import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import sequelize from "../../database/database.js";
-import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
-import { getEstadoCamion } from "../../shared/utils/estadoCamion.js";
-import createFilter from "../../shared/utils/helpers.js";
+import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
 import paginate from "../../shared/utils/pagination.js";
 import VentaService from "../../ventas/application/VentaService.js";
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
@@ -11,12 +8,13 @@ import DetallePedidoRepository from "../../ventas/infrastructure/repositories/De
 import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
 import EstadoVentaRepository from "../../ventas/infrastructure/repositories/EstadoVentaRepository.js";
 import MetodoPagoRepository from "../../ventas/infrastructure/repositories/MetodoPagoRepository.js";
-import PagoRepository from "../../ventas/infrastructure/repositories/PagoRepository.js";
 import PedidoRepository from "../../ventas/infrastructure/repositories/PedidoRepository.js";
 import VentaRepository from "../../ventas/infrastructure/repositories/VentaRepository.js";
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import EntregaRepository from "../infrastructure/repositories/EntregaRepository.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
+
+const fecha = obtenerFechaActualChile();
 
 class EntregaService {
   // Pedido de En Entrega -> Completada
@@ -247,7 +245,7 @@ class EntregaService {
           es_entrega_directa: false,
           monto_total,
           estado_entrega: "completada",
-          fecha_hora: new Date(),
+          fecha_hora: fecha,
           id_documento: ventaRegistrada?.documento?.id_documento || null,
           motivo_fallo: null,
           id_pedido: pedido.id_pedido,

@@ -22,6 +22,7 @@ import PedidoService from "./PedidoService.js";
 import sequelize from "../../database/database.js";
 import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
 import CuentaPorCobrarRepository from "../infrastructure/repositories/CuentaPorCobrarRepository.js";
+import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
 
 class VentaService {
   async getVentaById(id) {
@@ -129,6 +130,7 @@ class VentaService {
     const transaction = await sequelize.transaction();
     try {
       // 1. Validaciones iniciales
+      const fechaActual = obtenerFechaActualChile();
       const cliente = id_cliente
         ? await ClienteRepository.findById(id_cliente, { transaction })
         : null;
@@ -218,7 +220,9 @@ class VentaService {
       const estadoVentaNombre =
         tipo_documento === "boleta" &&
         (tipo_entrega === "retiro_en_sucursal" ||
-          tipo_entrega === "pedido_pagado_anticipado")
+          tipo_entrega === "pedido_pagado_anticipado" ||
+          (tipo_entrega === "despacho_a_domicilio" &&
+            (pago_recibido || referencia)))
           ? "Pagada"
           : "Pendiente de Pago";
 
@@ -240,7 +244,7 @@ class VentaService {
             tipo_entrega === "pedido_pagado_anticipado"
               ? direccion_entrega
               : null,
-          fecha: new Date(),
+          fecha: fechaActual,
           total: totalConImpuesto,
           impuestos_totales,
           id_estado_venta: estadoVenta.id_estado_venta,
@@ -295,7 +299,7 @@ class VentaService {
                 retornable.estado === "defectuoso"
                   ? retornable.tipo_defecto
                   : null,
-              fecha_retorno: new Date(),
+              fecha_retorno: fechaActual,
             },
             { transaction }
           );
@@ -318,7 +322,7 @@ class VentaService {
           numero: `${tipo_documento === "boleta" ? "B" : "F"}-${
             venta.id_venta
           }`,
-          fecha_emision: new Date(),
+          fecha_emision: fechaActual,
           id_cliente,
           id_usuario_creador,
           subtotal,
@@ -333,7 +337,9 @@ class VentaService {
       );
 
       if (tipo_documento === "factura") {
-        const fechaVencimiento = new Date();
+        /* const fechaVencimiento = fechaActual; */
+        const fechaVencimiento = new Date(fechaActual);
+        console.log("fecha-vencimiento: ", fechaVencimiento);
         fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
         await CuentaPorCobrarRepository.create(
           {
@@ -342,7 +348,7 @@ class VentaService {
             monto_total: totalConImpuesto,
             monto_pagado: 0,
             saldo_pendiente: totalConImpuesto,
-            fecha_emision: new Date(),
+            fecha_emision: fechaActual,
             fecha_vencimiento: fechaVencimiento,
             estado: "pendiente",
           },
@@ -363,7 +369,7 @@ class VentaService {
             id_metodo_pago,
             id_estado_pago: estadoPago.id_estado_pago,
             monto: totalConImpuesto,
-            fecha_pago: new Date(),
+            fecha_pago: fechaActual,
             referencia: referencia || null,
           },
           { transaction }
@@ -446,7 +452,7 @@ class VentaService {
         {
           id_venta: venta.id_venta,
           accion: "creación",
-          fecha: new Date(),
+          fecha: fechaActual,
           usuario: id_usuario_creador,
           detalle: `Venta creada con documento ${tipo_documento.toUpperCase()}-${
             documento ? documento.numero : "Sin Pagar aún"
@@ -455,6 +461,7 @@ class VentaService {
         { transaction }
       );
 
+      console.log("fecha", fechaActual);
       // 9. Respuesta final
       await transaction.commit();
       return {
