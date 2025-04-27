@@ -1,3 +1,4 @@
+import Insumo from "../../../inventario/domain/models/Insumo.js";
 import Producto from "../../../inventario/domain/models/Producto.js";
 import Cotizacion from "../../domain/models/Cotizacion.js";
 import DetalleCotizacion from "../../domain/models/DetalleCotizacion.js";
@@ -9,6 +10,7 @@ class DetalleCotizacionRepository {
       include: [
         { model: Cotizacion, as: "cotizacion" },
         { model: Producto, as: "producto" },
+        { model: Insumo, as: "insumo"}
       ],
     });
   }

@@ -1,3 +1,4 @@
+import { obtenerFechaActualChile } from "../../../shared/utils/fechaUtils.js";
 import ProductoEstadisticasService from "../../application/ProductoEstadisticasService.js";
 
 class ProductoEstadisticasController {
@@ -35,8 +36,10 @@ class ProductoEstadisticasController {
   }
   async obtenerKpiDelDia(req, res) {
     try {
-      const hoy = new Date().toISOString().split("T")[0];
-      const data = await ProductoEstadisticasService.obtenerKpiPorFecha(hoy);
+      const fechaHoy = obtenerFechaActualChile("YYYY-MM-DD");
+      const data = await ProductoEstadisticasService.obtenerKpiPorFecha(
+        fechaHoy
+      );
       return res.status(200).json(data);
     } catch (error) {
       console.error("Error al obtener KPI de productos:", error.message);

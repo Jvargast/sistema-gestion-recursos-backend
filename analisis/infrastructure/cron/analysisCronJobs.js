@@ -2,11 +2,12 @@ import cron from "node-cron";
 import VentasEstadisticasService from "../../application/VentasEstadisticasService.js";
 import PedidosEstadisticasService from "../../application/PedidosEstadisticasService.js";
 import ProductoEstadisticasService from "../../application/ProductoEstadisticasService.js";
+import { obtenerFechaActualChile } from "../../../shared/utils/fechaUtils.js";
 
 const setupCronJobs = () => {
   // 📆 Generación diaria de estadísticas
   cron.schedule("5 0 * * *", async () => {
-    const fecha = new Date().toISOString().split("T")[0];
+    const fecha = obtenerFechaActualChile("YYYY-MM-DD");
     console.log(`[CRON] Generando estadísticas para el día ${fecha}`);
 
     try {
@@ -25,9 +26,9 @@ const setupCronJobs = () => {
 
   // 📆 Generación mensual de estadísticas
   cron.schedule("10 0 1 * *", async () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+    const now = obtenerFechaActualChile();
+    const year = now.year();
+    const month = now.month() + 1;
 
     console.log(
       `[CRON] Generando estadísticas mensuales para ${year}-${month}`
@@ -49,7 +50,7 @@ const setupCronJobs = () => {
 
   // 📆 Estadísticas anuales
   cron.schedule("15 0 1 1 *", async () => {
-    const year = new Date().getFullYear() - 1;
+    const year = obtenerFechaActualChile().year() - 1;
     console.log(`[CRON] Generando estadísticas anuales para ${year}`);
 
     try {
@@ -63,7 +64,7 @@ const setupCronJobs = () => {
   });
 
   // 🕒 Monitoreo horario recientes
-  cron.schedule("0 * * * *", async () => {
+  /* cron.schedule("0 * * * *", async () => {
     console.log("[CRON] Monitoreando ventas recientes...");
 
     try {
@@ -85,7 +86,7 @@ const setupCronJobs = () => {
         error.message
       );
     }
-  });
+  }); */
 };
 
 export default setupCronJobs;

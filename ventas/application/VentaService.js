@@ -23,6 +23,26 @@ import sequelize from "../../database/database.js";
 import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
 import CuentaPorCobrarRepository from "../infrastructure/repositories/CuentaPorCobrarRepository.js";
 import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
+import { estadosInvalidosVenta } from "../../shared/utils/estadoUtils.js";
+
+function clasificarProductos(productos) {
+  const productosSolo = [];
+  const insumosSolo = [];
+
+  for (const item of productos) {
+    if (typeof item.id_producto === "number") {
+      productosSolo.push(item);
+    } else if (
+      typeof item.id_producto === "string" &&
+      item.id_producto.startsWith("insumo_")
+    ) {
+      const id_insumo = parseInt(item.id_producto.replace("insumo_", ""));
+      insumosSolo.push({ ...item, id_insumo });
+    }
+  }
+
+  return { productosSolo, insumosSolo };
+}
 
 class VentaService {
   async getVentaById(id) {
@@ -180,11 +200,13 @@ class VentaService {
         );
       }
 
+      const { productosSolo, insumosSolo } = clasificarProductos(productos);
+
       // 2. Calcular totales
       let subtotal = 0;
       let descuentoTotalProductos = 0;
 
-      const detalles = productos.map((producto) => {
+      const detalles = productosSolo.map((producto) => {
         const {
           cantidad,
           precio_unitario,
@@ -254,6 +276,37 @@ class VentaService {
         },
         { transaction }
       );
+
+      for (const insumo of insumosSolo) {
+        const {
+          id_insumo,
+          cantidad,
+          precio_unitario,
+          descuento_porcentaje = 0,
+        } = insumo;
+
+        const subtotalInsumo = cantidad * precio_unitario;
+        const descuentoInsumo = (subtotalInsumo * descuento_porcentaje) / 100;
+
+        await DetalleVentaRepository.create(
+          {
+            id_venta: venta.id_venta,
+            id_insumo,
+            cantidad,
+            precio_unitario,
+            descuento: descuentoInsumo,
+            subtotal: subtotalInsumo - descuentoInsumo,
+            retornable: false,
+          },
+          { transaction }
+        );
+
+        if (tipo_entrega === "retiro_en_sucursal") {
+          await InventarioService.decrementarStockInsumo(id_insumo, cantidad, {
+            transaction,
+          });
+        }
+      }
 
       // 4. Registrar los detalles de la venta
       for (const detalle of detalles) {
@@ -339,7 +392,6 @@ class VentaService {
       if (tipo_documento === "factura") {
         /* const fechaVencimiento = fechaActual; */
         const fechaVencimiento = new Date(fechaActual);
-        console.log("fecha-vencimiento: ", fechaVencimiento);
         fechaVencimiento.setDate(fechaVencimiento.getDate() + 30);
         await CuentaPorCobrarRepository.create(
           {
@@ -478,6 +530,45 @@ class VentaService {
       await transaction.rollback();
       throw error;
     }
+  }
+
+  async rejectVenta(idVenta, usuario) {
+    const venta = await VentaRepository.findById(idVenta);
+
+    if (!venta) {
+      throw new Error("Venta no encontrada.");
+    }
+
+    const estadoRechazada = await EstadoVentaRepository.findByNombre(
+      "Rechazada"
+    );
+
+    if (!estadoRechazada) {
+      throw new Error("Estado 'Rechazada' no encontrado en la base de datos.");
+    }
+
+    await VentaRepository.update(idVenta, {
+      id_estado_venta: estadoRechazada.id_estado_venta,
+    });
+  }
+
+  async softDeleteVenta(idVenta, usuario) {
+    const venta = await VentaRepository.findById(idVenta);
+
+    if (!venta) {
+      throw new Error("Venta no encontrada.");
+    }
+
+    if (!estadosInvalidosVenta.includes(venta.id_estado_venta)) {
+      throw new Error(
+        "No se puede eliminar una venta que no está en estado permitido."
+      );
+    }
+
+    await VentaRepository.update(idVenta, {
+      id_estado_venta: 10,
+      usuario_modificacion: usuario?.rut || null,
+    });
   }
 }
 

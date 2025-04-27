@@ -8,6 +8,7 @@ import EstadoProductoRepository from "../infrastructure/repositories/EstadoProdu
 import CategoriaProductoRepository from "../infrastructure/repositories/CategoriaProductoRepository.js";
 import { Op } from "sequelize";
 import InventarioRepository from "../infrastructure/repositories/InventarioRepository.js";
+import InsumoRepository from "../infrastructure/repositories/InsumoRepository.js";
 
 class ProductoService {
   async getProductoById(id) {
@@ -29,7 +30,7 @@ class ProductoService {
       "precio",
       "id_categoria",
       "id_estado_producto",
-      "id_inventario"
+      "id_inventario",
     ];
     const where = createFilter(filters, allowedFields);
 
@@ -46,7 +47,7 @@ class ProductoService {
           "$estadoProducto.nombre_estado$": {
             [Op.like]: `%${options.search}%`,
           },
-        }, 
+        },
         { marca: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
         { descripcion: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
         { nombre_producto: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
@@ -296,7 +297,7 @@ class ProductoService {
         as: "inventario",
         attributes: ["cantidad"], // Campos relevantes del inventario
         where: {
-          cantidad: { [Op.gt]: 200 },
+          cantidad: { [Op.gt]: 50 },
         },
       },
     ];
@@ -307,6 +308,70 @@ class ProductoService {
       order: [["id_producto", "ASC"]],
     });
     return result;
+  }
+
+  async getAvailableVendibles(filters = {}, options = {}) {
+    // 1. Obtener productos
+    const productosRaw = await this.getAvailableProductos(filters, {
+      ...options,
+      page: 1,
+      limit: 9999, // Obtener todos para mezclar
+    });
+
+    const productosFormateados = Array.isArray(productosRaw?.data)
+      ? productosRaw?.data?.map((p) => ({
+          ...p,
+          tipo: "producto",
+        }))
+      : [];
+
+    // 2. Obtener insumos vendibles
+    const insumosVendibles = await InsumoRepository.getModel().findAll({
+      where: {
+        es_para_venta: true,
+      },
+      include: [
+        {
+          model: InventarioRepository.getModel(),
+          as: "inventario",
+          attributes: ["cantidad"],
+          where: { cantidad: { [Op.gt]: 0 } },
+        },
+      ],
+      attributes: ["id_insumo", "nombre_insumo", "precio", "descripcion"],
+      order: [["id_insumo", "ASC"]],
+    });
+
+    const insumosFormateados = Array.isArray(insumosVendibles)
+      ? insumosVendibles.map((insumo) => ({
+          id_producto: `insumo_${insumo.id_insumo}`,
+          nombre_producto: insumo.nombre_insumo,
+          precio: insumo.precio,
+          descripcion: insumo.descripcion,
+          tipo: "insumo",
+          inventario: {
+            cantidad: insumo.inventario?.cantidad || 0, 
+          },
+        }))
+      : [];
+
+    // 🔀 Unificar productos e insumos
+    const combinado = [...productosFormateados, ...insumosFormateados];
+
+    // 📦 Paginar manualmente
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const offset = (page - 1) * limit;
+    const paginated = combinado.slice(offset, offset + limit);
+
+    return {
+      data: paginated,
+      pagination: {
+        page,
+        totalItems: combinado.length,
+        totalPages: Math.ceil(combinado.length / limit),
+      },
+    };
   }
 }
 

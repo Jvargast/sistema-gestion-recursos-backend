@@ -3,6 +3,8 @@ import Venta from "../../ventas/domain/models/Venta.js";
 import VentasEstadisticasRepository from "../infrastructure/repositories/VentasEstaditiscasRepository.js";
 import sequelize from "../../database/database.js";
 import EstadoVentaRepository from "../../ventas/infrastructure/repositories/EstadoVentaRepository.js";
+import { getWhereEstadoVentaValido } from "../../shared/utils/estadoUtils.js";
+import dayjs from "dayjs";
 
 class VentasEstadisticasService {
   async generarEstadisticasPorDia(fecha) {
@@ -15,6 +17,7 @@ class VentasEstadisticasService {
         fecha: {
           [Op.between]: [`${fechaStr} 00:00:00`, `${fechaStr} 23:59:59`],
         },
+        ...getWhereEstadoVentaValido(),
       },
       attributes: [
         "tipo_entrega",
@@ -80,11 +83,15 @@ class VentasEstadisticasService {
   }
 
   async obtenerKpiPorFecha(fecha) {
-    const registros = await VentasEstadisticasRepository.findByFecha(fecha);
+    const fechaFormato = dayjs(fecha).format("YYYY-MM-DD"); 
+
+    const registros = await VentasEstadisticasRepository.findByFecha(
+      fechaFormato
+    );
 
     if (!registros || registros.length === 0) {
       return {
-        fecha,
+        fecha: fechaFormato,
         total_ventas: 0,
         detalles: {},
       };
@@ -105,7 +112,7 @@ class VentasEstadisticasService {
     });
 
     return {
-      fecha,
+      fecha: fechaFormato,
       total_ventas: totalIngresos,
       detalles,
     };
@@ -126,6 +133,7 @@ class VentasEstadisticasService {
         fecha: {
           [Op.between]: [inicioSemana, finSemana],
         },
+        ...getWhereEstadoVentaValido(),
       },
       attributes: [
         [sequelize.fn("DATE", sequelize.col("fecha")), "dia"],
@@ -147,6 +155,7 @@ class VentasEstadisticasService {
             new Date(`${anio}-${mes}-01`),
             new Date(`${anio}-${mes}-31`),
           ],
+          ...getWhereEstadoVentaValido(),
         },
       },
       attributes: [
@@ -209,6 +218,7 @@ class VentasEstadisticasService {
         fecha: {
           [Op.gte]: haceUnaHora,
         },
+        ...getWhereEstadoVentaValido(),
       },
       raw: true,
     });
@@ -227,6 +237,7 @@ class VentasEstadisticasService {
         tipo_entrega: {
           [Op.ne]: null,
         },
+        ...getWhereEstadoVentaValido(),
       },
       attributes: ["tipo_entrega", [fn("COUNT", col("id_venta")), "total"]],
       group: ["tipo_entrega"],

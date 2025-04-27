@@ -18,7 +18,7 @@ class ProductoController {
         limit: parseInt(req.query.limit, 20) || 20,
         search: req.query.search,
         estado: req.query.estado,
-        categoria: req.query.categoria
+        categoria: req.query.categoria,
       };
       delete filters.limit;
       delete filters.offset;
@@ -76,28 +76,30 @@ class ProductoController {
 
   async getAvailableProductos(req, res) {
     try {
-      const filters = req.query; // Filtros enviados en los query params
+      const filters = req.query;
 
-      let options = {
+      const options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
         search: req.query.search,
-        categoria: req.query.categoria
+        categoria: req.query.categoria,
       };
+
       delete filters.limit;
       delete filters.offset;
 
-      const productos = await ProductoService.getAvailableProductos(
+      const productos = await ProductoService.getAvailableVendibles(
         filters,
         options
       );
 
-      res
-        .status(200)
-        .json({ data: productos.data, total: productos.pagination });
+      return res.status(200).json({
+        data: productos.data,
+        total: productos.pagination,
+      });
     } catch (error) {
-      res.status(404).json({ error: error.message });
-
+      console.error("Error al obtener productos e insumos:", error);
+      return res.status(500).json({ error: error.message });
     }
   }
 }

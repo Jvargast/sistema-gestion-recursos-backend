@@ -275,24 +275,19 @@ class InventarioCamionService {
     );
   }
 
-  async getInventarioByCamion(id_camion) {
+  async getInventarioByCamion(id_camion, { transaction } = {}) {
     try {
       if (!id_camion) {
         throw new Error("Se requiere el ID del camión.");
       }
       const inventario = await InventarioCamionRepository.findAllByCamionId(
-        id_camion
+        id_camion,
+        { transaction }
       );
-      return inventario.map((item) => ({
-        id_inventario_camion: item.id_inventario_camion,
-        id_producto: item.producto.id_producto,
-        nombre_producto: item.producto.nombre_producto,
-        cantidad: item.cantidad,
-        estado: item.estado, // "Disponible" o "Reservado"
-        es_retornable: item.es_retornable,
-      }));
+
+      return inventario;
     } catch (error) {
-      return error;
+      throw error;
     }
   }
 
@@ -314,16 +309,23 @@ class InventarioCamionService {
 
       if (!productoEnCamion) {
         throw new Error(
-          `El producto ID ${id_producto} en estado "${estado}" no está en el camión.`
+          `🔴 El producto ID ${id_producto} en estado "${estado}" no está en el camión.`
+        );
+      }
+
+      if (typeof productoEnCamion.cantidad !== "number") {
+        throw new Error(
+          `🔴 Error de datos: La cantidad disponible para el producto ID ${id_producto} es inválida.`
         );
       }
 
       if (cantidad > productoEnCamion.cantidad) {
         throw new Error(
-          `Cantidad a retirar mayor que la disponible en el camión (disponible: ${productoEnCamion.cantidad}).`
+          `⚠️ Cantidad a retirar mayor que la disponible (Disponible: ${productoEnCamion.cantidad}, Intentando retirar: ${cantidad}).`
         );
       }
 
+      // Actualizar cantidad
       productoEnCamion.cantidad -= cantidad;
 
       if (productoEnCamion.cantidad === 0) {
@@ -334,10 +336,15 @@ class InventarioCamionService {
           { transaction }
         );
       } else {
+        if (!productoEnCamion.save) {
+          throw new Error(
+            `🔴 El objeto productoEnCamion no es una instancia válida de Sequelize.`
+          );
+        }
         await productoEnCamion.save({ transaction });
       }
 
-      // Opcional: Registrar movimiento en InventarioCamionLogs
+      // Registrar movimiento de regreso
       await InventarioCamionLogsRepository.create(
         {
           id_camion,
@@ -350,6 +357,7 @@ class InventarioCamionService {
         { transaction }
       );
     } catch (error) {
+      console.error("Error en retirarProductoDelCamion:", error.message);
       throw error;
     }
   }
@@ -411,7 +419,7 @@ class InventarioCamionService {
       tipo,
       es_retornable,
     },
-    options = {} 
+    options = {}
   ) {
     const { transaction } = options;
 

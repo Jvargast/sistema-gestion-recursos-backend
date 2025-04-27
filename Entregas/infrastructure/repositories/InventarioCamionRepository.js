@@ -162,7 +162,6 @@ class InventarioCamionRepository {
   async findByCamionAndInsumo(id_camion, id_insumo, estado) {
     return await InventarioCamion.findOne({
       where: { id_camion, id_insumo, estado },
-      ƒ,
     });
   }
 

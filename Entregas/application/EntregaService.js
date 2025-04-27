@@ -38,7 +38,6 @@ class EntregaService {
     const transaction = await sequelize.transaction();
 
     try {
-      console.log(tipo_documento);
       if (!tipo_documento) {
         throw new Error("El tipo_documento no fue especificado para la venta.");
       }
@@ -182,13 +181,12 @@ class EntregaService {
       if (insumo_entregados && Array.isArray(insumo_entregados)) {
         for (const item of insumo_entregados) {
           const reserva =
-            await InventarioCamionRepository.findByCamionProductoAndEstado(
+            await InventarioCamionRepository.findByCamionAndInsumo(
               agendaViaje.id_camion,
               item.id_insumo,
-              "En Camión - Reservado",
+              "En Camión - Reservado - Entrega",
               { transaction }
             );
-
           if (!reserva || reserva.cantidad < item.cantidad)
             throw new Error(
               `Inventario insuficiente en camión para insumo: ${item.id_insumo}`
@@ -224,6 +222,7 @@ class EntregaService {
                 cantidad: item.cantidad,
                 estado: "En Camión - Retorno",
                 tipo: "Retorno",
+                es_retornable: true,
               },
               { transaction }
             );

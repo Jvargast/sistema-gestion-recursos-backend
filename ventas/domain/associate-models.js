@@ -185,6 +185,16 @@ function loadPOSAssociations() {
     as: "detallesCotizacion",
   });
 
+  // Relación: Insumo -> DetalleCotizacion
+  DetalleCotizacion.belongsTo(Insumo, {
+    foreignKey: "id_insumo",
+    as: "insumo",
+  });
+  Insumo.hasMany(DetalleCotizacion, {
+    foreignKey: "id_insumo",
+    as: "detallesCotizacion",
+  });
+
   Caja.hasMany(HistorialCaja, { foreignKey: "id_caja", as: "historial" });
   HistorialCaja.belongsTo(Caja, { foreignKey: "id_caja", as: "caja" });
 

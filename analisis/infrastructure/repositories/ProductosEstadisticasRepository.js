@@ -13,9 +13,19 @@ class ProductoEstadisticasRepository {
       where: {
         id_producto,
         [Op.and]: [
-          where(fn("DATE", col("fecha")), fecha), // compara solo la fecha
+          where(fn("DATE", col("fecha")), fecha), 
         ],
       },
+    });
+  }
+
+  async findByFechaYInsumo(fecha, idInsumo) {
+    return await ProductosEstadisticas.findOne({
+      where: {
+        fecha,
+        id_insumo: idInsumo,
+      },
+      raw: true,
     });
   }
 
