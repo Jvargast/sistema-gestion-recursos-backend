@@ -83,11 +83,14 @@ class CotizacionService {
       );
     }
 
+    const productosSolo = productos.filter((item) => !!item.id_producto);
+    const insumosSolo = productos.filter((item) => !!item.id_insumo);
+
     // 2. Calcular totales
     let subtotal = 0;
     let descuentoTotalProductos = 0;
 
-    const detalles = productos.map((producto) => {
+    const detalles = productosSolo.map((producto) => {
       const { cantidad, precio_unitario, descuento_porcentaje = 0 } = producto;
 
       const subtotalProducto = cantidad * precio_unitario;
@@ -111,7 +114,12 @@ class CotizacionService {
 
     // Calcular impuestos y total final
     const totalAntesImpuestos = subtotal - descuentoTotal;
-    const impuestos_totales = totalAntesImpuestos * (impuesto || 0.19); // 19% por defecto
+
+    const impuestos_totales =
+      typeof impuesto === "number"
+        ? totalAntesImpuestos * impuesto
+        : totalAntesImpuestos * 0.19;
+
     const totalConImpuesto = totalAntesImpuestos + impuestos_totales;
 
     // 3. Registrar la cotización
@@ -129,12 +137,40 @@ class CotizacionService {
       notas,
     });
 
+    const detallesGuardados = [];
+
+    for (const insumo of insumosSolo) {
+      const {
+        id_insumo,
+        cantidad,
+        precio_unitario,
+        descuento_porcentaje = 0,
+      } = insumo;
+      const subtotalInsumo = cantidad * precio_unitario;
+      const descuentoInsumo = (subtotalInsumo * descuento_porcentaje) / 100;
+
+      subtotal += subtotalInsumo;
+      descuentoTotalProductos += descuentoInsumo;
+
+      const nuevoDetalle = await DetalleCotizacionRepository.create({
+        id_cotizacion: cotizacion.id_cotizacion,
+        id_insumo,
+        cantidad,
+        precio_unitario,
+        descuento: descuentoInsumo,
+        subtotal: subtotalInsumo - descuentoInsumo,
+      });
+
+      detallesGuardados.push(nuevoDetalle);
+    }
+
     // 4. Registrar los detalles de la cotización
     for (const detalle of detalles) {
-      await DetalleCotizacionRepository.create({
+      const nuevoDetalle = await DetalleCotizacionRepository.create({
         id_cotizacion: cotizacion.id_cotizacion,
         ...detalle,
       });
+      detallesGuardados.push(nuevoDetalle);
     }
 
     // 5. Registrar en LogCotizacion
@@ -149,7 +185,7 @@ class CotizacionService {
     // 5. Retornar la cotización creada con sus detalles
     return {
       cotizacion,
-      detalles,
+      detalles: detallesGuardados,
     };
   }
 
@@ -285,16 +321,21 @@ class CotizacionService {
     let position = tableTop + 25;
     let totalNeto = 0;
 
-    detalles.forEach((detalle) => {
+    detalles.forEach((detalle, index) => {
       const subtotal = detalle.cantidad * detalle.precio_unitario;
       totalNeto += subtotal;
 
+      const nombre =
+        detalle.producto?.nombre_producto ||
+        detalle.insumo?.nombre_insumo ||
+        "—";
+
       const row = [
-        detalle.id_producto,
-        detalle.producto.nombre_producto,
+        index + 1,
+        nombre,
         detalle.cantidad,
-        `$${detalle.precio_unitario.toLocaleString()}`,
-        `$${subtotal.toLocaleString()}`,
+        `$${detalle.precio_unitario.toLocaleString("es-CL")}`,
+        `$${subtotal.toLocaleString("es-CL")}`,
       ];
 
       x = 50;

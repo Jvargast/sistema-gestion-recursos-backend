@@ -1,4 +1,5 @@
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
+import Insumo from "../../../inventario/domain/models/Insumo.js";
 import Producto from "../../../inventario/domain/models/Producto.js";
 import Cliente from "../../domain/models/Cliente.js";
 import DetallePedido from "../../domain/models/DetallePedido.js";
@@ -33,6 +34,11 @@ class PedidoRepository {
               as: "Producto",
               attributes: ["nombre_producto", "precio", "codigo_barra", "image_url"],
             },
+            {
+              model: Insumo,
+              as: "Insumo",
+              attributes: ["nombre_insumo", "precio"]
+            }
           ],
         },
       ],

@@ -83,9 +83,13 @@ class AgendaCargaService {
           { transaction: t }
         );
 
-      if (!pedidosConfirmados.length)
-        throw new Error("Sin pedidos confirmados.");
+      const hayAdicionales = Array.isArray(productos) && productos.length > 0;
 
+      if (!pedidosConfirmados.length && !hayAdicionales) {
+        throw new Error(
+          "Debe existir al menos un pedido confirmado o productos adicionales."
+        );
+      }
 
       const nuevaAgenda = await AgendaCargaRepository.create(
         {
@@ -105,8 +109,13 @@ class AgendaCargaService {
           await InventarioCamionService.getInventarioByCamion(id_camion, {
             transaction: t,
           });
+
         for (const item of inventarioActual) {
-          if (item.es_retornable && item.cantidad > 0) {
+          if (
+            item.es_retornable &&
+            item.cantidad > 0 &&
+            item.estado === "En Camión - Retorno"
+          ) {
             await InventarioCamionService.retirarProductoDelCamion(
               id_camion,
               item.id_producto,
@@ -370,7 +379,10 @@ class AgendaCargaService {
         if (item.estado === "En Camión - Disponible") {
           resumenInventarioCamion.disponibles[key] =
             (resumenInventarioCamion.disponibles[key] || 0) + item.cantidad;
-        } else if (item.estado === "En Camión - Reservado") {
+        } else if (
+          item.estado === "En Camión - Reservado" ||
+          item.estado === "En Camión - Reservado - Entrega"
+        ) {
           resumenInventarioCamion.reservados[key] =
             (resumenInventarioCamion.reservados[key] || 0) + item.cantidad;
         }
@@ -473,8 +485,6 @@ class AgendaCargaService {
           id_chofer,
           estadoEnPreparacion.id_estado_venta
         );
-      if (!pedidosEnPreparacion.length)
-        throw new Error("No hay pedidos en preparación para este viaje.");
 
       const estadoEnEntrega = await EstadoVentaRepository.findByNombre(
         "En Entrega",
@@ -484,31 +494,36 @@ class AgendaCargaService {
         throw new Error("Estado 'En Entrega' no configurado.");
 
       const destinos = [];
-      for (const pedido of pedidosEnPreparacion) {
-        const cliente = await ClienteRepository.findById(pedido.id_cliente);
-        let tipo_documento = null;
-        if (pedido.id_venta) {
-          const documento = await DocumentoRepository.findByVentaId(pedido.id_venta, {
-            transaction,
-          })
-          tipo_documento = documento[0]?.tipo_documento ;
-        }
+      if (pedidosEnPreparacion.length) {
+        for (const pedido of pedidosEnPreparacion) {
+          const cliente = await ClienteRepository.findById(pedido.id_cliente);
+          let tipo_documento = null;
+          if (pedido.id_venta) {
+            const documento = await DocumentoRepository.findByVentaId(
+              pedido.id_venta,
+              {
+                transaction,
+              }
+            );
+            tipo_documento = documento[0]?.tipo_documento;
+          }
 
-        destinos.push({
-          id_pedido: pedido.id_pedido,
-          id_cliente: cliente.id_cliente,
-          nombre_cliente: cliente.nombre,
-          direccion: pedido.direccion_entrega,
-          notas: pedido.notas || "",
-          tipo_documento: tipo_documento || "boleta",
-        });
-        await PedidoRepository.update(
-          pedido.id_pedido,
-          {
-            id_estado_pedido: estadoEnEntrega.id_estado_venta,
-          },
-          { transaction }
-        );
+          destinos.push({
+            id_pedido: pedido.id_pedido,
+            id_cliente: cliente.id_cliente,
+            nombre_cliente: cliente.nombre,
+            direccion: pedido.direccion_entrega,
+            notas: pedido.notas || "",
+            tipo_documento: tipo_documento || "boleta",
+          });
+          await PedidoRepository.update(
+            pedido.id_pedido,
+            {
+              id_estado_pedido: estadoEnEntrega.id_estado_venta,
+            },
+            { transaction }
+          );
+        }
       }
 
       const nuevaAgendaViaje = await AgendaViajesRepository.create(

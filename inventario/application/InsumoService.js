@@ -111,7 +111,7 @@ class InsumoService {
     const where = createFilter(filters, allowedFields);
 
     where.es_para_venta = true;
-    
+
     if (options.tipo) {
       where["$tipo_insumo.nombre_tipo$"] = options.tipo;
     }
@@ -185,7 +185,7 @@ class InsumoService {
 
   async updateInsumo(id, data) {
     // Extraer codigo_barra del objeto data
-    const { codigo_barra } = data;
+    const { codigo_barra, stock } = data;
 
     // Verificar que el insumo exista
     const insumoExistente = await this.getInsumoById(id);
@@ -212,6 +212,12 @@ class InsumoService {
     } else {
       // Si no se envió un código de barra válido, eliminarlo del objeto data
       delete data.codigo_barra;
+    }
+
+    if (stock) {
+      await InventarioRepository.updateInsumo(id, {
+        cantidad: stock,
+      });
     }
 
     // Actualizar el insumo

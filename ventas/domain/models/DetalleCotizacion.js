@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Cotizacion from "./Cotizacion.js";
 import Producto from "../../../inventario/domain/models/Producto.js";
+import Insumo from "../../../inventario/domain/models/Insumo.js";
 
 const DetalleCotizacion = sequelize.define(
   "DetalleCotizacion",
@@ -21,12 +22,21 @@ const DetalleCotizacion = sequelize.define(
     },
     id_producto: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: Producto,
         key: "id_producto",
       },
     },
+    id_insumo: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: Insumo, 
+        key: "id_insumo",
+      },
+    },
+    
     cantidad: {
       type: DataTypes.INTEGER,
       allowNull: false,

@@ -1,3 +1,4 @@
+import { obtenerFechaActualChile } from "../../../shared/utils/fechaUtils.js";
 import VentasEstadisticasService from "../../application/VentasEstadisticasService.js";
 
 class VentasEstadisticasController {
@@ -7,8 +8,9 @@ class VentasEstadisticasController {
       if (!fecha) {
         return res.status(400).json({ error: "Se requiere una fecha válida" });
       }
+      const fechaHoy = obtenerFechaActualChile("YYYY-MM-DD");
       const data = await VentasEstadisticasService.generarEstadisticasPorDia(
-        fecha
+        fechaHoy
       );
       return res.status(201).json(data);
     } catch (error) {
@@ -33,7 +35,7 @@ class VentasEstadisticasController {
 
   async obtenerKpiDelDia(req, res) {
     try {
-      const hoy = new Date().toISOString().split("T")[0];
+      const hoy = obtenerFechaActualChile();
       const datos = await VentasEstadisticasService.obtenerKpiPorFecha(hoy);
       return res.status(200).json(datos);
     } catch (error) {

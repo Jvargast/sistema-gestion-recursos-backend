@@ -18,13 +18,6 @@ import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
 import WebSocketServer from "../../shared/websockets/WebSocketServer.js";
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
 import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
-/* import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
-
-dayjs.extend(utc);
-dayjs.extend(timezone);
-const ZONA_HORARIA = "America/Santiago"; */
 
 class PedidoService {
   // Se crea en Pendiente
@@ -116,6 +109,7 @@ class PedidoService {
               cantidad: item.cantidad,
               precio_unitario: insumo.precio,
               subtotal: insumo.precio * item.cantidad,
+              tipo: "insumo",
             },
             { transaction }
           );
@@ -561,6 +555,13 @@ class PedidoService {
                 "precio",
                 "es_retornable",
               ],
+              required: false,
+            },
+            {
+              model: InsumoRepository.getModel(),
+              as: "Insumo",
+              attributes: ["id_insumo", "nombre_insumo", "precio"],
+              required: false,
             },
           ],
         },
@@ -577,7 +578,6 @@ class PedidoService {
       return [];
     }
 
-    // 3️⃣ Formatear respuesta
     return pedidos.map((pedido) => ({
       id_pedido: pedido.id_pedido,
       cliente: {
@@ -585,14 +585,32 @@ class PedidoService {
         nombre: pedido.Cliente?.nombre || "Sin nombre",
         direccion: pedido.Cliente?.direccion || "Sin dirección",
       },
-      productos: pedido.DetallesPedido.map((detalle) => ({
-        id_producto: detalle.Producto?.id_producto || null,
-        nombre_producto: detalle.Producto?.nombre_producto || "Desconocido",
-        cantidad: detalle.cantidad,
-        precio_unitario: detalle.Producto?.precio || 0,
-        subtotal: detalle.subtotal,
-        es_retornable: detalle.Producto?.es_retornable,
-      })),
+      productos: pedido.DetallesPedido.map((detalle) => {
+        if (detalle.Producto) {
+          return {
+            id_producto: detalle.Producto.id_producto,
+            nombre_producto: detalle.Producto.nombre_producto,
+            cantidad: detalle.cantidad,
+            precio_unitario: detalle.Producto.precio,
+            subtotal: detalle.subtotal,
+            es_retornable: detalle.Producto.es_retornable,
+          };
+        } else if (detalle.Insumo) {
+          return {
+            id_insumo: detalle.Insumo.id_insumo,
+            nombre_insumo: detalle.Insumo.nombre_insumo,
+            cantidad: detalle.cantidad,
+            precio_unitario: detalle.Insumo.precio,
+            subtotal: detalle.subtotal,
+          };
+        } else {
+          return {
+            cantidad: detalle.cantidad,
+            subtotal: detalle.subtotal,
+            nombre_producto: "Ítem desconocido",
+          };
+        }
+      }),
       fecha_pedido: pedido.fecha_pedido,
     }));
   }
@@ -678,6 +696,11 @@ class PedidoService {
               "es_retornable",
             ],
           },
+          {
+            model: InsumoRepository.getModel(),
+            as: "Insumo",
+            attributes: ["id_insumo", "nombre_insumo", "precio"],
+          },
         ],
       },
     ];
@@ -730,27 +753,50 @@ class PedidoService {
   async getDetalleConTotal(id_pedido) {
     const pedido = await PedidoRepository.findById(id_pedido);
     if (!pedido) throw new Error("Pedido no encontrado");
-    const detalles = await DetallePedidoRepository.findByPedidoId(id_pedido);
-    const productos = [];
-    let total = 0;
-    for (const item of detalles) {
-      const producto = await ProductosRepository.findById(item.id_producto);
-      const subtotal = producto.precio * item.cantidad;
-      total += subtotal;
 
-      productos.push({
-        id_producto: producto.id_producto,
-        nombre: producto.nombre_producto,
-        cantidad: item.cantidad,
-        precio_unitario: producto.precio,
-        subtotal,
-        es_retornable: producto.es_retornable,
-      });
+    const detalles = await DetallePedidoRepository.findByPedidoId(id_pedido);
+    const items = [];
+    let total = 0;
+
+    for (const item of detalles) {
+      if (item.id_producto) {
+        const producto = await ProductosRepository.findById(item.id_producto);
+        if (!producto) continue;
+
+        const subtotal = producto.precio * item.cantidad;
+        total += subtotal;
+
+        items.push({
+          id_producto: producto.id_producto,
+          nombre: producto.nombre_producto,
+          cantidad: item.cantidad,
+          precio_unitario: producto.precio,
+          subtotal,
+          es_retornable: producto.es_retornable,
+          id_insumo: null,
+        });
+      } else if (item.id_insumo) {
+        const insumo = await InsumoRepository.findById(item.id_insumo);
+        if (!insumo) continue;
+
+        const subtotal = insumo.precio * item.cantidad;
+        total += subtotal;
+
+        items.push({
+          id_insumo: insumo.id_insumo,
+          nombre: insumo.nombre_insumo,
+          cantidad: item.cantidad,
+          precio_unitario: insumo.precio,
+          subtotal,
+          es_retornable: false,
+          id_producto: null,
+        });
+      }
     }
 
     return {
       id_pedido,
-      detalle: productos,
+      detalle: items,
       monto_total: total,
       pagado: pedido.pagado,
     };

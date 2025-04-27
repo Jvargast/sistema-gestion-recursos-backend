@@ -1,3 +1,4 @@
+import { obtenerFechaActualChile } from "../../../shared/utils/fechaUtils.js";
 import PedidosEstadisticasService from "../../application/PedidosEstadisticasService.js";
 
 class PedidosEstadisticasController {
@@ -30,8 +31,8 @@ class PedidosEstadisticasController {
 
   async obtenerKpiDelDia(req, res) {
     try {
-      const hoy = new Date().toISOString().split("T")[0];
-      const datos = await PedidosEstadisticasService.obtenerKpiPorFecha(hoy);
+      const fechaHoy = obtenerFechaActualChile("YYYY-MM-DD");
+      const datos = await PedidosEstadisticasService.obtenerKpiPorFecha(fechaHoy);
       return res.status(200).json(datos);
     } catch (error) {
       console.error("Error al obtener KPI de pedidos:", error.message);

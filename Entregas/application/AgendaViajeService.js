@@ -4,7 +4,6 @@ import sequelize from "../../database/database.js";
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import CamionRepository from "../infrastructure/repositories/CamionRepository.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
-import InventarioCamionService from "./InventarioCamionService.js";
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 import HistorialCajaRepository from "../../ventas/infrastructure/repositories/HistorialCajaRepository.js";
 
@@ -80,14 +79,14 @@ class AgendaViajesService {
         throw new Error("No se encontró la caja asignada para cerrar.");
       }
 
-      await InventarioCamionService.descargarItemsCamion(
+      /* await InventarioCamionService.descargarItemsCamion(
         camion.id_camion,
         {
           descargarRetorno: true,
           descargarDisponibles,
         },
         transaction
-      );
+      ); */
 
       const inventarioCamion =
         await InventarioCamionRepository.findAllByCamionId(camion.id_camion, {

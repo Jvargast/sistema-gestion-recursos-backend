@@ -3,9 +3,7 @@ import DetalleVenta from "../../ventas/domain/models/DetalleVenta.js";
 import ProductosEstadisticasRepository from "../infrastructure/repositories/ProductosEstadisticasRepository.js";
 import Venta from "../../ventas/domain/models/Venta.js";
 import Producto from "../../inventario/domain/models/Producto.js";
-import DetallePedido from "../../ventas/domain/models/DetallePedido.js";
-import Pedido from "../../ventas/domain/models/Pedido.js";
-import sequelize from "../../database/database.js";
+import Insumo from "../../inventario/domain/models/Insumo.js";
 
 class ProductoEstadisticasService {
   async generarEstadisticasPorDia(fecha) {
@@ -14,7 +12,7 @@ class ProductoEstadisticasService {
 
     const fechaDate = new Date(inicioDia);
 
-    const detalles = await DetalleVenta.findAll({
+    const detallesProductos = await DetalleVenta.findAll({
       include: [
         {
           model: Venta,
@@ -27,6 +25,10 @@ class ProductoEstadisticasService {
           attributes: [],
         },
       ],
+      where: {
+        id_producto: { [Op.ne]: null }, // FILTRO que faltaba
+        id_insumo: null, // Asegurar que es solo producto
+      },
       attributes: [
         "id_producto",
         [fn("SUM", col("cantidad")), "cantidad_vendida"],
@@ -36,47 +38,86 @@ class ProductoEstadisticasService {
       raw: true,
     });
 
-    if (!detalles || detalles.length === 0) {
-      return {
-        message: `No se encontraron ventas para la fecha ${fecha}`,
-        count: 0,
-      };
-    }
+    const detallesInsumos = await DetalleVenta.findAll({
+      include: [
+        {
+          model: Venta,
+          as: "venta",
+          where: {
+            fecha: {
+              [Op.between]: [inicioDia, finDia],
+            },
+          },
+          attributes: [],
+        },
+      ],
+      where: {
+        id_insumo: { [Op.ne]: null },
+      },
+      attributes: [
+        "id_insumo",
+        [fn("SUM", col("cantidad")), "cantidad_vendida"],
+        [fn("SUM", col("subtotal")), "monto_total"],
+      ],
+      group: ["id_insumo"],
+      raw: true,
+    });
 
     const mes = fechaDate.getMonth() + 1;
     const anio = fechaDate.getFullYear();
+    const registros = [];
 
-    const registros = await Promise.all(
-      detalles.map(async (d) => {
-        const idProducto = d.id_producto;
-        const cantidad = parseInt(d.cantidad_vendida);
-        const monto = parseFloat(d.monto_total);
+    for (const d of detallesProductos) {
+      const existente =
+        await ProductosEstadisticasRepository.findByFechaYProducto(
+          fecha,
+          d.id_producto
+        );
 
-        const existente =
-          await ProductosEstadisticasRepository.findByFechaYProducto(
-            fecha,
-            idProducto
-          );
+      const data = {
+        id_producto: d.id_producto,
+        id_insumo: null,
+        fecha: fechaDate,
+        mes,
+        anio,
+        cantidad_vendida: parseInt(d.cantidad_vendida),
+        monto_total: parseFloat(d.monto_total),
+      };
 
-        const data = {
-          id_producto: idProducto,
-          fecha: fechaDate,
-          mes,
-          anio,
-          cantidad_vendida: cantidad,
-          monto_total: monto,
-        };
+      if (existente) {
+        registros.push(
+          await ProductosEstadisticasRepository.updateById(existente.id, data)
+        );
+      } else {
+        registros.push(await ProductosEstadisticasRepository.create(data));
+      }
+    }
 
-        if (existente) {
-          return await ProductosEstadisticasRepository.updateById(
-            existente.id,
-            data
-          );
-        } else {
-          return await ProductosEstadisticasRepository.create(data);
-        }
-      })
-    );
+    for (const d of detallesInsumos) {
+      const existente =
+        await ProductosEstadisticasRepository.findByFechaYInsumo(
+          fecha,
+          d.id_insumo
+        );
+
+      const data = {
+        id_producto: null,
+        id_insumo: d.id_insumo,
+        fecha: fechaDate,
+        mes,
+        anio,
+        cantidad_vendida: parseInt(d.cantidad_vendida),
+        monto_total: parseFloat(d.monto_total),
+      };
+
+      if (existente) {
+        registros.push(
+          await ProductosEstadisticasRepository.updateById(existente.id, data)
+        );
+      } else {
+        registros.push(await ProductosEstadisticasRepository.create(data));
+      }
+    }
 
     return {
       message: "Estadísticas de productos generadas correctamente",
@@ -97,6 +138,7 @@ class ProductoEstadisticasService {
         fecha,
         producto_destacado: {
           id_producto: null,
+          id_insumo: null,
           nombre: "Sin datos",
           cantidad: 0,
           monto_total: 0,
@@ -105,6 +147,7 @@ class ProductoEstadisticasService {
       };
     }
 
+    // Buscar el de mayor cantidad vendida
     const productoTop = registros.reduce((max, actual) => {
       return actual.cantidad_vendida > max.cantidad_vendida ? actual : max;
     }, registros[0]);
@@ -116,13 +159,23 @@ class ProductoEstadisticasService {
 
     let productoInfo = {
       id_producto: productoTop.id_producto,
+      id_insumo: productoTop.id_insumo,
       cantidad: productoTop.cantidad_vendida,
       monto_total: productoTop.monto_total,
+      nombre: "Sin nombre", // por defecto
     };
 
-    const producto = await Producto.findByPk(productoTop.id_producto);
-    if (producto) {
-      productoInfo.nombre = producto.nombre_producto;
+    // Buscar nombre del producto o insumo
+    if (productoTop.id_producto) {
+      const producto = await Producto.findByPk(productoTop.id_producto);
+      if (producto) {
+        productoInfo.nombre = producto.nombre_producto;
+      }
+    } else if (productoTop.id_insumo) {
+      const insumo = await Insumo.findByPk(productoTop.id_insumo);
+      if (insumo) {
+        productoInfo.nombre = insumo.nombre_insumo;
+      }
     }
 
     return {
@@ -134,11 +187,22 @@ class ProductoEstadisticasService {
 
   async getResumenPorFecha(fecha) {
     const registros = await ProductosEstadisticasRepository.findByFecha(fecha);
+
+    if (!registros || registros.length === 0) {
+      return [];
+    }
     const productosAgrupados = {};
 
     for (const reg of registros) {
-      const producto = await Producto.findByPk(reg.id_producto);
-      const nombre = producto?.nombre_producto || "Producto Desconocido";
+      let nombre = "Desconocido";
+
+      if (reg.id_producto) {
+        const producto = await Producto.findByPk(reg.id_producto);
+        nombre = producto?.nombre_producto || "Producto Desconocido";
+      } else if (reg.id_insumo) {
+        const insumo = await Insumo.findByPk(reg.id_insumo);
+        nombre = insumo?.nombre_insumo || "Insumo Desconocido";
+      }
 
       if (!productosAgrupados[nombre]) {
         productosAgrupados[nombre] = 0;
@@ -159,8 +223,8 @@ class ProductoEstadisticasService {
     );
 
     const resumen = registros.reduce(
-      (acc, prod) => {
-        acc.total += parseFloat(prod.monto_total || 0);
+      (acc, reg) => {
+        acc.total += parseFloat(reg.monto_total || 0);
         acc.productos += 1;
         return acc;
       },
