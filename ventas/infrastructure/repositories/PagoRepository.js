@@ -12,13 +12,25 @@ class PagoRepository {
           { model: Documento, as: "documento" },
           { model: MetodoPago, as: "metodoPago" },
           { model: Venta, as: "venta" },
-          { model: EstadoPago, as: "estadoPago"}
+          { model: EstadoPago, as: "estadoPago" },
         ],
       });
     } catch (error) {
       console.error("Error en PagoRepository.findById:", error.message);
       throw error;
     }
+  }
+
+  async findAllByVentaId(id_venta) {
+    return await Pago.findAll({
+      where: { id_venta },
+      include: [
+        { model: MetodoPago, as: "metodoPago" },
+        { model: EstadoPago, as: "estadoPago" },
+        { model: Documento, as: "documento" },
+      ],
+      order: [["fecha_pago", "DESC"]],
+    });
   }
 
   async findAll(filters = {}, options = {}) {

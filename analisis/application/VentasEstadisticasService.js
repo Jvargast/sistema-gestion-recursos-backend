@@ -5,17 +5,21 @@ import sequelize from "../../database/database.js";
 import EstadoVentaRepository from "../../ventas/infrastructure/repositories/EstadoVentaRepository.js";
 import { getWhereEstadoVentaValido } from "../../shared/utils/estadoUtils.js";
 import dayjs from "dayjs";
+import {
+  convertirALaUtc,
+  convertirFechaLocal,
+} from "../../shared/utils/fechaUtils.js";
 
 class VentasEstadisticasService {
-  async generarEstadisticasPorDia(fecha) {
-    const fechaStr = fecha;
-    const fechaDate = new Date(`${fechaStr}T00:00:00`);
+  async generarEstadisticasPorDia(fechaUtcIso) {
+    const fechaChile = convertirFechaLocal(fechaUtcIso);
+    const inicioDiaUtc = convertirALaUtc(fechaChile.startOf("day")).toDate();
+    const finDiaUtc = convertirALaUtc(fechaChile.endOf("day")).toDate();
 
-    // Buscar todas las ventas del día completo
     const ventas = await Venta.findAll({
       where: {
         fecha: {
-          [Op.between]: [`${fechaStr} 00:00:00`, `${fechaStr} 23:59:59`],
+          [Op.between]: [inicioDiaUtc, finDiaUtc],
         },
         ...getWhereEstadoVentaValido(),
       },
@@ -36,9 +40,10 @@ class VentasEstadisticasService {
       };
     }
 
-    const dia = fechaDate.getDate();
-    const mes = fechaDate.getMonth() + 1;
-    const anio = fechaDate.getFullYear();
+    const dia = fechaChile.date();
+    const mes = fechaChile.month() + 1;
+    const anio = fechaChile.year();
+    const fechaStr = fechaChile.format("YYYY-MM-DD");
 
     // Upsert por cada tipo_entrega
     const registros = await Promise.all(
@@ -83,7 +88,7 @@ class VentasEstadisticasService {
   }
 
   async obtenerKpiPorFecha(fecha) {
-    const fechaFormato = dayjs(fecha).format("YYYY-MM-DD"); 
+    const fechaFormato = convertirFechaLocal(fecha, "YYYY-MM-DD");
 
     const registros = await VentasEstadisticasRepository.findByFecha(
       fechaFormato

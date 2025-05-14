@@ -9,6 +9,8 @@ const router = Router();
 router.use(authenticate);
 router.get("/", checkPermissions("ventas.factura.ver"), CuentaPorCobrarController.getAll);
 router.get("/:id/pdf", checkPermissions("ventas.factura.pdf"), CuentaPorCobrarController.getCuentaPdf);
+router.get("/venta/:idVenta", checkPermissions("ventas.factura.ver"), CuentaPorCobrarController.getCuentaPorCobrarByVentaId);
+router.get("/documento/:idDocumento", checkPermissions("ventas.factura.ver"), CuentaPorCobrarController.getCuentaPorCobrarByDocumentoId);
 router.get("/:id", checkPermissions("ventas.factura.ver"), CuentaPorCobrarController.getCuentaPorCobrarById);
 router.post("/:id/pago", checkPermissions("ventas.factura.registrar"), CuentaPorCobrarController.registrarPago);
 router.patch('/:id', checkPermissions("ventas.factura.editar"), CuentaPorCobrarController.actualizarCuenta);

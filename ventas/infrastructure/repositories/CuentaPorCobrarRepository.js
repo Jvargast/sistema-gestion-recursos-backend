@@ -46,10 +46,10 @@ class CuentaPorCobrarRepository {
               include: [
                 {
                   model: Producto,
-                  as: "producto"
-                }
-              ]
-            }
+                  as: "producto",
+                },
+              ],
+            },
           ],
         },
         {
@@ -57,6 +57,16 @@ class CuentaPorCobrarRepository {
           as: "documento",
         },
       ],
+    });
+  }
+  async findByIdVenta(idVenta) {
+    return CuentaPorCobrar.findOne({
+      where: { id_venta: idVenta },
+    });
+  }
+  async findByIdDocumento(idDocumento) {
+    return CuentaPorCobrar.findOne({
+      where: { id_documento: idDocumento },
     });
   }
   getModel() {

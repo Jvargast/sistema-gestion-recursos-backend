@@ -1,3 +1,4 @@
+import { obtenerFechaChile } from "../../../shared/utils/fechaUtils.js";
 import AgendaCargaService from "../../application/AgendaCargaService.js";
 
 class AgendaCargaController {
@@ -113,13 +114,9 @@ class AgendaCargaController {
 
   async getAgendaCargaDelDia(req, res) {
     try {
-      const id_chofer = req.user.id; // ID del chofer autenticado
+      const id_chofer = req.user.id; 
+      const fechaFormateada = obtenerFechaChile("YYYY-MM-DD");
 
-      const fecha = new Date();
-      fecha.setHours(0, 0, 0, 0); // Asegurar que no se desborde al siguiente día
-      const fechaFormateada = fecha.toISOString().split("T")[0];
-
-      console.log("Fecha corregida:", fechaFormateada);
       const agenda = await AgendaCargaService.getAgendaCargaDelDia(
         id_chofer,
         fechaFormateada

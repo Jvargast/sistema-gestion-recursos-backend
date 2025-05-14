@@ -8,9 +8,8 @@ class VentasEstadisticasController {
       if (!fecha) {
         return res.status(400).json({ error: "Se requiere una fecha válida" });
       }
-      const fechaHoy = obtenerFechaActualChile("YYYY-MM-DD");
       const data = await VentasEstadisticasService.generarEstadisticasPorDia(
-        fechaHoy
+        fecha
       );
       return res.status(201).json(data);
     } catch (error) {

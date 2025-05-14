@@ -30,16 +30,18 @@ class AuthController {
         httpOnly: true, // Asegura que la cookie no sea accesible desde el frontend (prevención de XSS)
         secure: process.env.NODE_ENV === "production" ? true : false, // Solo enviar la cookie en HTTPS en producción
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", //sameSite: "strict", // Prevenir ataques CSRF
+        /* domain: ".aguasvalentino.com", */
         maxAge: 1 * 60 * 60 * 1000, // Expira en 1 hora
         path: "/", // IMPORTANTE
       });
 
       res.cookie("refreshToken", refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: process.env.NODE_ENV === "production" ? true : false,
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+       /*  domain: ".aguasvalentino.com", */
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
-        path: "/", // IMPORTANTE
+        path: "/", 
       });
 
       res.status(200).json({ success: true, usuario });
@@ -74,12 +76,14 @@ class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        /* domain: ".aguasvalentino.com", */
         path: "/", // IMPORTANTE
       });
       res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+       /*  domain: ".aguasvalentino.com", */
         path: "/", // IMPORTANTE
       });
 
@@ -131,11 +135,6 @@ class AuthController {
       if (!isTokenValid) {
         return res.status(401).json({ error: "Refresh token inválido" });
       }
-
-      if (!isTokenValid) {
-        return res.status(401).json({ error: "Refresh Token inválido" });
-      }
-
       // Generar un nuevo Access Token
       const newAccessToken = jwt.sign(
         { rut: decoded.rut, rolId: decoded.rolId },
@@ -146,8 +145,9 @@ class AuthController {
       // Enviar el nuevo Access Token en una cookie
       res.cookie("authToken", newAccessToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: process.env.NODE_ENV === "production" ? true: false,
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        domain: ".aguasvalentino.com",
         maxAge: 1 * 60 * 60 * 1000, // 1 hora
       });
 

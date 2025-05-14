@@ -171,6 +171,17 @@ async function populateDatabase() {
         id_empresa: empresaCreada.dataValues.id_empresa,
         id_sucursal: sucursalCreada.dataValues.id_sucursal,
       },
+      {
+        rut: "99.999.999-9",
+        nombre: "Chofer 1",
+        apellido: "-",
+        email: "chofer1@aguasvalentino.com",
+        password:
+          "$2a$12$hpZ1Dq.mAvJLKJhZyQq6Ie2FSYsWzx46WJcJFpBXWG/Tvxx2HPibG",
+        rolId: rolesCreados.find((r) => r.nombre === "chofer").id,
+        id_empresa: empresaCreada.dataValues.id_empresa,
+        id_sucursal: sucursalCreada.dataValues.id_sucursal,
+      },
     ];
 
     await Usuarios.bulkCreate(usuariosData);
@@ -277,6 +288,8 @@ async function populateDatabase() {
         nombre_producto: "Botellón 20L",
         cantidad: 250,
         categoria: categoriaBotellones,
+        precio: 2000,
+        es_retornable: true,
       },
       {
         nombre_producto: "Hielo Cubos 1kg",

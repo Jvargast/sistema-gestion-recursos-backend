@@ -216,7 +216,7 @@ class AgendaCargaService {
             cantidad: item.cantidad,
             unidad_medida,
             estado: "Pendiente",
-            notas: `Pedido ID ${pedido.id_pedido}`,
+            notas: `Pedido ID ${pedido?.id_pedido}`,
           });
         }
         // Actualizar pedido a estado 'En Preparación'
@@ -587,8 +587,6 @@ class AgendaCargaService {
         ],
         order: [["fecha_hora", "DESC"]],
       });
-      console.log(result);
-
       return result;
     } catch (error) {
       console.log(error);
@@ -677,7 +675,6 @@ class AgendaCargaService {
       throw new Error("Se requiere el ID del chofer.");
     }
 
-    // Obtener la agenda pendiente del día
     const agenda = await AgendaCargaRepository.findOneByConditions({
       where: {
         id_usuario_chofer: id_chofer,

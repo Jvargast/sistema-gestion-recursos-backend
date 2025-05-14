@@ -11,6 +11,7 @@ import EstadoPagoRepository from "../infrastructure/repositories/EstadoPagoRepos
 import EstadoVentaRepository from "../infrastructure/repositories/EstadoVentaRepository.js";
 import PagoRepository from "../infrastructure/repositories/PagoRepository.js";
 import VentaRepository from "../infrastructure/repositories/VentaRepository.js";
+import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -218,7 +219,14 @@ class CuentaPorCobrarService {
     doc.end();
   }
 
-  async registrarPago({ id_cxc, monto, metodo_pago, observaciones, usuario, referencia }) {
+  async registrarPago({
+    id_cxc,
+    monto,
+    metodo_pago,
+    observaciones,
+    usuario,
+    referencia,
+  }) {
     const cuenta = await CuentaPorCobrarRepository.findById(id_cxc);
     if (!cuenta) throw new Error("Cuenta por cobrar no encontrada");
 
@@ -237,21 +245,22 @@ class CuentaPorCobrarService {
       (parseFloat(cuenta.saldo_pendiente) - pago).toFixed(2)
     );
 
-    cuenta.estado = cuenta.saldo_pendiente <= 0 ? "pagado" : "pendiente";
+    const estaPagada = cuenta.saldo_pendiente <= 0;
+    cuenta.estado = estaPagada ? "pagado" : "pendiente";
     cuenta.observaciones = observaciones;
     await cuenta.save();
 
     const venta = cuenta.venta;
 
-    const id_estado_pago =
-      cuenta.saldo_pendiente <= 0
-        ? (await EstadoPagoRepository.findByNombre("Pagado")).id_estado_pago
-        : (await EstadoPagoRepository.findByNombre("Pendiente")).id_estado_pago;
+    const id_estado_pago = (
+      await EstadoPagoRepository.findByNombre(
+        estaPagada ? "Pagado" : "Pendiente"
+      )
+    ).id_estado_pago;
 
-    const id_estado_venta =
-      cuenta.saldo_pendiente <= 0
-        ? (await EstadoVentaRepository.findByNombre("Pagada")).id_estado_venta
-        : venta.id_estado_venta;
+    const id_estado_venta = estaPagada
+      ? (await EstadoVentaRepository.findByNombre("Pagada")).id_estado_venta
+      : venta.id_estado_venta;
 
     await PagoRepository.create({
       id_venta: cuenta.id_venta,
@@ -260,7 +269,7 @@ class CuentaPorCobrarService {
       id_estado_pago,
       monto: pago,
       fecha_pago: new Date(),
-      referencia: referencia || null, 
+      referencia: referencia || null,
     });
 
     await DocumentoRepository.update(cuenta.id_documento, {
@@ -271,7 +280,27 @@ class CuentaPorCobrarService {
       id_estado_venta,
     });
 
+    const pedidoAsociado = await PedidoRepository.findByIdVenta(
+      cuenta.id_venta
+    );
+
+    if (pedidoAsociado) {
+      await PedidoRepository.update(pedidoAsociado.id_pedido, {
+        pagado: estaPagada,
+        estado_pago: estaPagada ? "Pagado" : "Pendiente",
+      });
+    }
+
     return cuenta;
+  }
+
+  async buscarCuentaPorCobrarPorVentaId(idVenta) {
+    const factura = await CuentaPorCobrarRepository.findByIdVenta(idVenta);
+    return factura;
+  }
+
+  async findByDocumentoId(id_documento) {
+    return await CuentaPorCobrarRepository.findByIdDocumento(id_documento);
   }
 }
 
