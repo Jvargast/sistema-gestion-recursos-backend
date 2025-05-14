@@ -2,11 +2,14 @@ import { Op, fn, col } from "sequelize";
 import Pedido from "../../ventas/domain/models/Pedido.js";
 import PedidosEstadisticasRepository from "../infrastructure/repositories/PedidosEstadisticasRepository.js";
 import EstadoVentaRepository from "../../ventas/infrastructure/repositories/EstadoVentaRepository.js";
+import { convertirALaUtc, convertirFechaLocal } from "../../shared/utils/fechaUtils.js";
 
 class PedidosEstadisticasService {
   async generarEstadisticasPorDia(fecha) {
-    const inicioDia = new Date(`${fecha}T00:00:00`);
-    const finDia = new Date(`${fecha}T23:59:59`);
+    const fechaChile = convertirFechaLocal(fecha);
+
+    const inicioDia = convertirALaUtc(fechaChile.startOf("day")).toDate();
+    const finDia = convertirALaUtc(fechaChile.endOf("day")).toDate();
 
     const estadoCompletado = await EstadoVentaRepository.findByNombre(
       "Completada"
@@ -33,8 +36,8 @@ class PedidosEstadisticasService {
       raw: true,
     });
 
-    const mes = inicioDia.getMonth() + 1;
-    const anio = inicioDia.getFullYear();
+    const mes = fechaChile.month() + 1;
+    const anio = fechaChile.year();
 
     const registros = await Promise.all(
       pedidos.map(async (p) => {
@@ -51,7 +54,7 @@ class PedidosEstadisticasService {
           );
 
         const data = {
-          fecha: inicioDia,
+          fecha: fechaChile.format("YYYY-MM-DD"),
           mes,
           anio,
           estado_pago: estadoPago,

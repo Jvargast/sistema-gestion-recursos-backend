@@ -61,6 +61,10 @@ class PagoService {
     return pago;
   }
 
+  async getPagosByVentaId(id_venta) {
+    return await PagoRepository.findAllByVentaId(id_venta);
+  }
+
   async crearPago(data) {
     if (
       !data ||

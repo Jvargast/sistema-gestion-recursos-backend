@@ -27,21 +27,37 @@ class PedidoRepository {
         {
           model: DetallePedido,
           as: "DetallesPedido",
-          attributes: ["cantidad", "precio_unitario", "subtotal", "id_detalle_pedido"],
+          attributes: [
+            "cantidad",
+            "precio_unitario",
+            "subtotal",
+            "id_detalle_pedido",
+          ],
           include: [
             {
               model: Producto,
               as: "Producto",
-              attributes: ["nombre_producto", "precio", "codigo_barra", "image_url"],
+              attributes: [
+                "nombre_producto",
+                "precio",
+                "codigo_barra",
+                "image_url",
+              ],
             },
             {
               model: Insumo,
               as: "Insumo",
-              attributes: ["nombre_insumo", "precio"]
-            }
+              attributes: ["nombre_insumo", "precio"],
+            },
           ],
         },
       ],
+    });
+  }
+
+  async findByIdVenta(idVenta) {
+    return await Pedido.findOne({
+      where: { id_venta: idVenta },
     });
   }
 

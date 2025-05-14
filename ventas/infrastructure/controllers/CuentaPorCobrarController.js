@@ -43,6 +43,26 @@ class CuentaPorCobrarController {
     }
   }
 
+  async getCuentaPorCobrarByVentaId(req, res) {
+    const { idVenta } = req.params;
+
+    try {
+      const factura =
+        await CuentaPorCobrarService.buscarCuentaPorCobrarPorVentaId(idVenta);
+
+      if (!factura) {
+        return res
+          .status(404)
+          .json({ message: "Factura no encontrada para esta venta." });
+      }
+
+      return res.status(200).json(factura);
+    } catch (error) {
+      console.error("Error al obtener cuenta por cobrar:", error);
+      return res.status(500).json({ message: "Error del servidor." });
+    }
+  }
+
   async getCuentaPdf(req, res) {
     try {
       const id = req.params.id;
@@ -102,6 +122,24 @@ class CuentaPorCobrarController {
         data: cuenta,
       });
     } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getCuentaPorCobrarByDocumentoId(req, res) {
+    const { idDocumento } = req.params;
+    try {
+      const cuenta = await CuentaPorCobrarService.findByDocumentoId(
+        idDocumento
+      );
+      if (!cuenta) {
+        return res
+          .status(404)
+          .json({ message: "Factura no encontrada para este documento." });
+      }
+      res.status(200).json(cuenta);
+    } catch (error) {
+      console.error("Error al obtener cuenta por cobrar:", error);
       res.status(500).json({ error: error.message });
     }
   }

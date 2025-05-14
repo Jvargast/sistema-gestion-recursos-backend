@@ -71,10 +71,26 @@ const envPath = `.env.${env === "production" ? "prod" : "local"}`;
 if (fs.existsSync(envPath)) {
   dotenv.config({ path: envPath });
 } else {
-  dotenv.config(); // fallback por si acaso
+  dotenv.config();
 }
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [];
+/* const corsOptions = {
+  origin: true,
+  credentials: true,
+} */
+
+const app = express();
+
+const allowedOrigins = [
+  "http://sistema-frontend-erp.s3-website-sa-east-1.amazonaws.com",
+  "http://localhost:3000",
+  "http://192.168.1.121:3000",
+  "https://aguasvalentino.com",
+  "https://www.aguasvalentino.com",
+  "https://erp.aguasvalentino.com",
+  "https://d3lsg1lrf34q34.cloudfront.net",
+  "https://sistema-frontend-erp.s3.sa-east-1.amazonaws.com"
+];
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -87,8 +103,6 @@ const corsOptions = {
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
-
-const app = express();
 app.set("trust proxy", 1);
 app.use(cors(corsOptions));
 const server = createServer(app);
@@ -99,8 +113,7 @@ WebSocketServer.setupWebSocket(io);
 
 // Middleware
 app.use(express.json({ limit: "10mb" }));
-/* app.use(helmet());
-app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); */
+app.use(cookieParser());
 if (process.env.NODE_ENV === "production") {
   app.use(helmet());
   app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
@@ -108,24 +121,12 @@ if (process.env.NODE_ENV === "production") {
 // 📝 Logging
 app.use(morgan(env === "production" ? "combined" : "dev"));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({limit: "10mb", extended: true }));
-app.use(cookieParser());
+app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
 
-/* const allowedOrigins = [
-  "http://localhost:3000",
-  "https://jvargast.github.io/sistema-gestion-recursos-frontend",
-]; */
-/* app.use(
-  cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(",") || [
-      "http://localhost:3000",
-    ],
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"], // Métodos permitidos
-    allowedHeaders: ["Content-Type", "Authorization"], // Encabezados permitidos
-  })
-); */
 /* MÓDULO AUTH */
+app.get("/", (req, res) => {
+  res.status(200).send("Backend operativo 🚀");
+});
 app.use("/api/usuarios", UsuariosRoutes);
 app.use("/api/auth", AuthRoutes);
 app.use("/api/empresas", EmpresaRoutes);

@@ -4,13 +4,18 @@ import ProductosEstadisticasRepository from "../infrastructure/repositories/Prod
 import Venta from "../../ventas/domain/models/Venta.js";
 import Producto from "../../inventario/domain/models/Producto.js";
 import Insumo from "../../inventario/domain/models/Insumo.js";
+import {
+  convertirALaUtc,
+  convertirFechaLocal,
+} from "../../shared/utils/fechaUtils.js";
 
 class ProductoEstadisticasService {
-  async generarEstadisticasPorDia(fecha) {
-    const inicioDia = `${fecha}T00:00:00`;
-    const finDia = `${fecha}T23:59:59.999`;
+  async generarEstadisticasPorDia(fechaUtcIso) {
+    const fechaChile = convertirFechaLocal(fechaUtcIso);
 
-    const fechaDate = new Date(inicioDia);
+    const inicioDia = convertirALaUtc(fechaChile.startOf("day")).toDate();
+    const finDia = convertirALaUtc(fechaChile.endOf("day")).toDate();
+    const fechaDate = fechaChile.toDate();
 
     const detallesProductos = await DetalleVenta.findAll({
       include: [
@@ -63,21 +68,23 @@ class ProductoEstadisticasService {
       raw: true,
     });
 
-    const mes = fechaDate.getMonth() + 1;
-    const anio = fechaDate.getFullYear();
+    const mes = fechaChile.month() + 1;
+    const anio = fechaChile.year();
+    const fechaStr = fechaChile.format("YYYY-MM-DD");
+
     const registros = [];
 
     for (const d of detallesProductos) {
       const existente =
         await ProductosEstadisticasRepository.findByFechaYProducto(
-          fecha,
+          fechaStr,
           d.id_producto
         );
 
       const data = {
         id_producto: d.id_producto,
         id_insumo: null,
-        fecha: fechaDate,
+        fecha: fechaStr,
         mes,
         anio,
         cantidad_vendida: parseInt(d.cantidad_vendida),
@@ -96,14 +103,14 @@ class ProductoEstadisticasService {
     for (const d of detallesInsumos) {
       const existente =
         await ProductosEstadisticasRepository.findByFechaYInsumo(
-          fecha,
+          fechaStr,
           d.id_insumo
         );
 
       const data = {
         id_producto: null,
         id_insumo: d.id_insumo,
-        fecha: fechaDate,
+        fecha: fechaStr,
         mes,
         anio,
         cantidad_vendida: parseInt(d.cantidad_vendida),

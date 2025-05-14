@@ -10,6 +10,16 @@ class PagoController {
       res.status(404).json({ error: error.message });
     }
   }
+  async getPagosByVentaId(req, res) {
+    try {
+      const { id_venta } = req.params;
+      const pagos = await PagoService.getPagosByVentaId(id_venta);
+      res.status(200).json(pagos);
+    } catch (error) {
+      console.error("Error al obtener pagos por venta:", error);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  }
   async getAllPagos(req, res) {
     try {
       const filters = req.query;
@@ -46,15 +56,18 @@ class PagoController {
     }
   }
 
-  async updatePago(req, res){
+  async updatePago(req, res) {
     try {
-      const actualizado = await PagoService.actualizarPago(req.params.id, req.body);
+      const actualizado = await PagoService.actualizarPago(
+        req.params.id,
+        req.body
+      );
       res.json(actualizado);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
-  };
-  
+  }
+
   async deletePago(req, res) {
     try {
       await PagoService.eliminarPago(req.params.id);
@@ -62,8 +75,7 @@ class PagoController {
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
-  };
-
+  }
 }
 
 export default new PagoController();

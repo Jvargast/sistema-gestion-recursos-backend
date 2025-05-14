@@ -6,6 +6,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get("/:id", checkPermissions("ventas.pago.ver"), PagosController.getPagoById);
+router.get("/venta/:id_venta", checkPermissions("ventas.pago.ver"), PagosController.getPagosByVentaId);  
 router.get("/", checkPermissions("ventas.pago.ver"), PagosController.getAllPagos);
 router.put("/:id", checkPermissions("ventas.pago.editar"), PagosController.updatePago);
 router.delete("/:id", checkPermissions("ventas.pago.crear"), PagosController.deletePago);
