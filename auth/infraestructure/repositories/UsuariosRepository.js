@@ -105,26 +105,27 @@ class UsuarioRepository extends IUsuariosRepository {
   async findAllVendedoresConCaja(rolId) {
     return await Usuario.findAll({
       where: { rolId },
-      attributes: [
-        "rut",
-        "nombre",
-        "apellido",
-        "email",
-        "fecha_registro"
-      ],
+      attributes: ["rut", "nombre", "apellido", "email", "fecha_registro"],
       include: [
         {
           model: Roles,
           as: "rol",
-          attributes: ["nombre"]
+          attributes: ["nombre"],
         },
         {
           model: Caja,
           as: "cajasAsignadas",
-          attributes: ["id_caja", "saldo_inicial", "saldo_final", "fecha_apertura", "fecha_cierre", "estado"]
-        }
+          attributes: [
+            "id_caja",
+            "saldo_inicial",
+            "saldo_final",
+            "fecha_apertura",
+            "fecha_cierre",
+            "estado",
+          ],
+        },
       ],
-      order: [["fecha_registro", "ASC"]]
+      order: [["fecha_registro", "ASC"]],
     });
   }
 
@@ -160,6 +161,10 @@ class UsuarioRepository extends IUsuariosRepository {
         },
       ],
     });
+  }
+
+  async findByEmail(email) {
+    return await Usuario.findOne({ where: { email } });
   }
 
   async updateLastLogin(rut, fecha) {

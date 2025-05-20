@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import AuthService from "../../auth/application/AuthService.js"; // Servicio para manejar la lógica relacionada con autenticación
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
+import { getCookieSettings } from "../utils/cookieUtil.js";
 
 const authenticate = async (req, res, next) => {
   try {
@@ -44,11 +45,8 @@ const authenticate = async (req, res, next) => {
       );
 
       res.cookie("authToken", newToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production" ? true : false,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", 
-        /* domain: ".aguasvalentino.com", */
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        ...getCookieSettings(),
+        maxAge: 60 * 60 * 1000,
       });
     }
 

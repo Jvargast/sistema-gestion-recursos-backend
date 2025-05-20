@@ -103,6 +103,7 @@ async function populateDatabase() {
       { nombre: "administrador", descripcion: "Rol para administradores" },
       { nombre: "operario", descripcion: "Rol para operarios" },
       { nombre: "chofer", descripcion: "Rol para choferes" },
+      { nombre: "demo", descripcion: "Rol con permisos limitados para demo" },
     ];
 
     const rolesCreados = await Roles.bulkCreate(rolesData);
@@ -158,6 +159,23 @@ async function populateDatabase() {
 
     const sucursalCreada = await Sucursal.create(sucursalData);
     console.log("✅ Sucursal 'Sucursal Central' creada exitosamente.");
+
+    const empresaDemo = await Empresa.create({
+      nombre: "Empresa Demo",
+      direccion: "Av. Ejemplo 123, Santiago",
+      telefono: "+56 9 0000 0000",
+      email: "demo@wou.cl",
+      rut_empresa: "99999999-9",
+    });
+    console.log("✅ Empresa 'Empresa Demo' creada exitosamente.");
+
+    const sucursalDemo = await Sucursal.create({
+      nombre: "Sucursal Demo",
+      direccion: "Av. Ficticia 456, Santiago",
+      telefono: "+56 9 1111 1111",
+      id_empresa: empresaDemo.id_empresa,
+    });
+    console.log("✅ Sucursal 'Sucursal Demo' creada exitosamente.");
     // Crear usuarios
     const usuariosData = [
       {
@@ -170,6 +188,7 @@ async function populateDatabase() {
         rolId: rolesCreados.find((r) => r.nombre === "administrador").id,
         id_empresa: empresaCreada.dataValues.id_empresa,
         id_sucursal: sucursalCreada.dataValues.id_sucursal,
+        tipo_cuenta: "cliente",
       },
       {
         rut: "99.999.999-9",
@@ -181,6 +200,20 @@ async function populateDatabase() {
         rolId: rolesCreados.find((r) => r.nombre === "chofer").id,
         id_empresa: empresaCreada.dataValues.id_empresa,
         id_sucursal: sucursalCreada.dataValues.id_sucursal,
+        tipo_cuenta: "cliente",
+      },
+      {
+        rut: "88.888.888-8",
+        nombre: "Usuario Demo",
+        apellido: "-",
+        email: "demo@demo.cl",
+        password:
+          "$2a$12$hpZ1Dq.mAvJLKJhZyQq6Ie2FSYsWzx46WJcJFpBXWG/Tvxx2HPibG",
+        rolId: rolesCreados.find((r) => r.nombre === "demo").id,
+        id_empresa: empresaDemo.id_empresa,
+        id_sucursal: sucursalDemo.id_sucursal,
+        tipo_cuenta: "demo",
+        fecha_expiracion: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     ];
 
