@@ -1,0 +1,70 @@
+const demoPermisos = [
+  // Vista y navegación general
+  "vistas.dashboard.ver",
+  "vistas.productos.ver",
+  "vistas.insumos.ver",
+  "vistas.categorias.ver",
+  "vistas.tipoinsumos.ver",
+  "vistas.camiones.ver",
+  "vistas.agendaCarga.ver",
+  "vistas.puntoventa.ver",
+  "vistas.pedidos.ver",
+  "vistas.puntopedido.ver",
+  "vistas.puntocotizacion.ver",
+  "vistas.adminpedidos.ver",
+  "vistas.cotizaciones.ver",
+  "vistas.pagos.ver",
+  "vistas.ventas.ver",
+  "vistas.facturas.ver",
+  "vistas.clientes.ver",
+  "vistas.cajas.ver",
+  "vistas.perfil.ver",
+  "vistas.analisis.ver",
+  "vistas.empresas.ver",
+  "vistas.entregas.ver",
+
+  // Inventario
+  "inventario.producto.ver",
+  "inventario.inventario.ver",
+  "inventario.insumo.ver",
+  "inventario.tipoinsumo.ver",
+  "inventario.estadoproducto.ver",
+  "inventario.estadoproductoretornable.ver",
+  "inventario.categoriaproducto.ver",
+  "inventario.productoretornable.ver",
+  "inventario.inventariologs.ver",
+
+  // Entregas
+  "entregas.agendacarga.ver",
+  "entregas.camion.ver",
+  "entregas.entrega.ver",
+  "entregas.inventariocamion.ver",
+  "entregas.inventariocamionlogs.ver",
+  "entregas.historialventaschofer.ver",
+  "entregas.ventaschofer.ver",
+  "entregas.agendaviaje.ver",
+
+  // Ventas y pedidos
+  "ventas.venta.ver",
+  "ventas.pedido.ver",
+  "ventas.cotizacion.ver",
+  "ventas.factura.ver",
+  "ventas.documento.ver",
+  "ventas.pago.ver",
+  "ventas.movimientocaja.ver",
+  "ventas.historialcaja.ver",
+  "ventas.metodopago.ver",
+  "ventas.estadopago.ver",
+  "ventas.estadoventa.ver",
+  "ventas.caja.ver",
+  "ventas.cliente.ver",
+  "ventas.logventa.ver",
+  "ventas.pedido.historial",
+  "ventas.pedido.confirmados",
+
+  // Perfil
+  "auth.perfil.ver",
+  "auth.perfil.actualizar",
+];
+
+export default demoPermisos;

@@ -67,11 +67,19 @@ const Usuarios = sequelize.define(
         model: Sucursal,
         key: "id_sucursal",
       },
-      allowNull: true, 
+      allowNull: true,
     },
     refreshTokens: {
-      type: DataTypes.TEXT, 
-      allowNull: true, 
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    tipo_cuenta: {
+      type: DataTypes.STRING,
+      defaultValue: "cliente",
+    },
+    fecha_expiracion: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   },
   {

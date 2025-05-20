@@ -36,6 +36,10 @@ class RolRepository extends IRolRepository {
     });
   }
 
+  async findByName(nombre) {
+    return await Roles.findOne({ where: { nombre } });
+  }
+
   async findByIdConditions(conditions) {
     return await Roles.findOne(conditions);
   }

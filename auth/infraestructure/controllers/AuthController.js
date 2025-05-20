@@ -1,7 +1,7 @@
+import { getCookieSettings } from "../../../shared/utils/cookieUtil.js";
 import AuditLogsService from "../../application/AuditLogsService.js";
 import AuthService from "../../application/AuthService.js";
 import jwt from "jsonwebtoken";
-import UsuariosRepository from "../repositories/UsuariosRepository.js";
 class AuthController {
   /**
    * Iniciar sesión: manejar solicitud HTTP para autenticación.
@@ -27,21 +27,13 @@ class AuthController {
       );
       // Configurar cookie con el token JWT
       res.cookie("authToken", token, {
-        httpOnly: true, // Asegura que la cookie no sea accesible desde el frontend (prevención de XSS)
-        secure: process.env.NODE_ENV === "production" ? true : false, // Solo enviar la cookie en HTTPS en producción
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", //sameSite: "strict", // Prevenir ataques CSRF
-        /* domain: ".aguasvalentino.com", */
+        ...getCookieSettings(),
         maxAge: 1 * 60 * 60 * 1000, // Expira en 1 hora
-        path: "/", // IMPORTANTE
       });
 
       res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production" ? true : false,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-       /*  domain: ".aguasvalentino.com", */
+        ...getCookieSettings(),
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
-        path: "/", 
       });
 
       res.status(200).json({ success: true, usuario });
@@ -70,22 +62,8 @@ class AuthController {
         "Autenticación",
         ip
       );
-      /*  res.clearCookie("authToken");
-      res.clearCookie("refreshToken"); */
-      res.clearCookie("authToken", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        /* domain: ".aguasvalentino.com", */
-        path: "/", // IMPORTANTE
-      });
-      res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-       /*  domain: ".aguasvalentino.com", */
-        path: "/", // IMPORTANTE
-      });
+      res.clearCookie("authToken", getCookieSettings());
+      res.clearCookie("refreshToken", getCookieSettings());
 
       res.status(200).json({ message: "Cierre de sesión exitoso" });
     } catch (error) {
@@ -144,11 +122,8 @@ class AuthController {
 
       // Enviar el nuevo Access Token en una cookie
       res.cookie("authToken", newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production" ? true: false,
-        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        domain: ".aguasvalentino.com",
-        maxAge: 1 * 60 * 60 * 1000, // 1 hora
+        ...getCookieSettings(),
+        maxAge: 1 * 60 * 60 * 1000,
       });
 
       res.status(200).json({ success: true, message: "Token renovado" });
