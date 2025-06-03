@@ -11,9 +11,9 @@ class ProductoRepository extends IProductoRepository {
         { model: CategoriaProducto, as: "categoria" },
         { model: EstadoProducto, as: "estadoProducto" },
         {
-          model: Inventario, //Se incluye para optimizar la consulta, solo prueba
+          model: Inventario, 
           as: "inventario",
-          attributes: ["cantidad", "fecha_actualizacion"], // Solo los campos necesarios
+          attributes: ["cantidad", "fecha_actualizacion"], 
         },
       ],
     });
