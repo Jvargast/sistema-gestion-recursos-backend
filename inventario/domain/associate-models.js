@@ -6,8 +6,9 @@ import InventarioLog from "./models/InventarioLogs.js";
 import Insumo from "./models/Insumo.js";
 import TipoInsumo from "./models/TipoInsumo.js";
 import ProductoRetornable from "./models/ProductoRetornable.js";
-/* import EstadoProductoRetornable from "./models/EstadoProductoRetornable.js"; */
 import Venta from "../../ventas/domain/models/Venta.js";
+import FormulaProducto from "./models/FormulaProducto.js";
+import FormulaProductoDetalle from "./models/FormulaProductoDetalle.js";
 
 function loadInventarioAssociations() {
   // Relación Producto - EstadoProducto
@@ -18,6 +19,37 @@ function loadInventarioAssociations() {
   EstadoProducto.hasMany(Producto, {
     foreignKey: "id_estado_producto",
     as: "productos",
+  });
+
+  Producto.hasMany(FormulaProducto, {
+    foreignKey: "id_producto_final",
+    sourceKey: "id_producto",
+  });
+
+  FormulaProducto.belongsTo(Producto, {
+    foreignKey: "id_producto_final",
+    targetKey: "id_producto",
+  });
+
+  // Formula tiene muchos detalles
+  FormulaProducto.hasMany(FormulaProductoDetalle, {
+    foreignKey: "id_formula",
+    sourceKey: "id_formula",
+  });
+
+  FormulaProductoDetalle.belongsTo(FormulaProducto, {
+    foreignKey: "id_formula",
+    targetKey: "id_formula",
+  });
+
+  Insumo.hasMany(FormulaProductoDetalle, {
+    foreignKey: "id_insumo",
+    sourceKey: "id_insumo",
+  });
+
+  FormulaProductoDetalle.belongsTo(Insumo, {
+    foreignKey: "id_insumo",
+    targetKey: "id_insumo",
   });
 
   // Relación Producto - CategoriaProducto
@@ -64,7 +96,7 @@ function loadInventarioAssociations() {
   Venta.hasMany(ProductoRetornable, { foreignKey: "id_venta" });
   ProductoRetornable.belongsTo(Venta, { foreignKey: "id_venta" });
 
-/*   ProductoRetornable.belongsTo(EstadoProductoRetornable, {
+  /*   ProductoRetornable.belongsTo(EstadoProductoRetornable, {
     foreignKey: "id_estado",
     as: "estadoRetornable",
   });
@@ -73,7 +105,6 @@ function loadInventarioAssociations() {
     foreignKey: "id_estado",
     as: "productoRetornable",
   }); */
-
 
   // Relación: Producto -> InventarioLog (1:N)
   Producto.hasMany(InventarioLog, {

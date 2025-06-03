@@ -135,13 +135,11 @@ class ProductoService {
   async updateProducto(id, data) {
     const { stock, codigo_barra, ...productoData } = data;
 
-    // Obtener el producto por ID
     const producto = await this.getProductoById(id);
     if (!producto) {
       throw new Error("El producto no existe");
     }
 
-    // Validar que el código de barras no se repita
     const productoConCodigo = await ProductosRepository.findByCodigo(
       codigo_barra
     );
@@ -155,7 +153,6 @@ class ProductoService {
       );
     }
 
-    // Intentar actualizar el producto
     const updatedRows = await ProductosRepository.update(id, {
       ...productoData,
       codigo_barra,
@@ -167,7 +164,6 @@ class ProductoService {
       );
     }
 
-    // Actualizar el stock si se envía
     if (stock) {
       await InventarioRepository.update(producto.id_producto, {
         cantidad: stock,
@@ -177,7 +173,6 @@ class ProductoService {
     return await this.getProductoById(id);
   }
 
-  // Eliminar el producto
   async deleteProducto(id) {
     await InventarioService.deleteInventario(id);
     await ProductosRepository.delete(id);
@@ -185,7 +180,6 @@ class ProductoService {
   }
 
   async cambiarEstadoProducto(idProducto, nuevoEstado) {
-    // Actualizar el estado del producto
     const updated = await ProductosRepository.updateEstadoProducto(
       idProducto,
       nuevoEstado
@@ -197,12 +191,10 @@ class ProductoService {
     };
   }
 
-  // Buscar productos según un estado específico.
   async obtenerProductosPorEstado(id) {
     return await ProductosRepository.findProductosByEstado(id);
   }
 
-  // Verificar si hay suficiente inventario para procesar un pedido antes de crear una transacción.
   async validarInventarioParaPedido(productos) {
     for (const { id_producto, cantidad } of productos) {
       const inventario = await InventarioService.getInventarioByProductoId(

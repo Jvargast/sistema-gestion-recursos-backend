@@ -34,6 +34,7 @@ import InsumoRoutes from "./inventario/infrastructure/routes/InsumoRoutes.js";
 import ProductoRetonableRoutes from "./inventario/infrastructure/routes/ProductoRetornableRoutes.js";
 import TipoInsumoRoutes from "./inventario/infrastructure/routes/TipoInsumoRoutes.js";
 import ProductoImageRoutes from "./inventario/infrastructure/routes/ProductoImageRoutes.js";
+import FormulaProductoRoutes from "./inventario/infrastructure/routes/FormulaProductoRoutes.js";
 /* MÓDULO VENTAS */
 import ClienteRoutes from "./ventas/infrastructure/routes/ClienteRoutes.js";
 import VentasRoutes from "./ventas/infrastructure/routes/VentasRoutes.js";
@@ -64,6 +65,8 @@ import PedidosEstadisticasRoutes from "./analisis/infrastructure/routes/PedidosE
 import ProductoEstadisticasRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
 import WebSocketServer from "./shared/websockets/WebSocketServer.js";
 
+import SearchRoutes from "./busqueda/infrastructure/routes/SearchRoutes.js";
+
 /* Configuración */
 const env = process.env.NODE_ENV || "development";
 const envPath = `.env.${env === "production" ? "prod" : "local"}`;
@@ -74,22 +77,18 @@ if (fs.existsSync(envPath)) {
   dotenv.config();
 }
 
-/* const corsOptions = {
-  origin: true,
-  credentials: true,
-} */
-
 const app = express();
 
 const allowedOrigins = [
   "http://sistema-frontend-erp.s3-website-sa-east-1.amazonaws.com",
   "http://localhost:3000",
   "http://192.168.1.121:3000",
+  "http://192.168.100.139:3000",
   "https://aguasvalentino.com",
   "https://www.aguasvalentino.com",
   "https://erp.aguasvalentino.com",
   "https://d3lsg1lrf34q34.cloudfront.net",
-  "https://sistema-frontend-erp.s3.sa-east-1.amazonaws.com"
+  "https://sistema-frontend-erp.s3.sa-east-1.amazonaws.com",
 ];
 const corsOptions = {
   origin: function (origin, callback) {
@@ -144,6 +143,7 @@ app.use("/api/productos", ProductoRoutes);
 app.use("/api/insumos", InsumoRoutes);
 app.use("/api/producto-retornable", ProductoRetonableRoutes);
 app.use("/api/tipo-insumo", TipoInsumoRoutes);
+app.use("/api/formulas", FormulaProductoRoutes);
 /**
  * Para carga de fotos
  */
@@ -174,6 +174,9 @@ app.use("/api/agendas", AgendaCargaRoutes);
 app.use("/api/entregas", EntregaRoutes);
 app.use("/api/agenda-viajes", AgendaViajesRoutes);
 app.use("/api/ventas-chofer", VentaChoferRoutes);
+
+/* MÓDULO SEARCH*/
+app.use("/api/search", SearchRoutes);
 
 const PORT = process.env.PORT || 9000;
 

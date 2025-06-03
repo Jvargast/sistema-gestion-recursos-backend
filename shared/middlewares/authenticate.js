@@ -5,7 +5,6 @@ import { getCookieSettings } from "../utils/cookieUtil.js";
 
 const authenticate = async (req, res, next) => {
   try {
-    // Obtener el token desde la cookie
     const token = req.cookies?.authToken;
     if (!token) {
       return res.status(401).json({ error: "Token no encontrado" });
@@ -16,13 +15,12 @@ const authenticate = async (req, res, next) => {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
       if (error.name === "TokenExpiredError") {
-        res.clearCookie("authToken"); // Elimina la cookie si el token es inválido
+        res.clearCookie("authToken");
         return res.status(401).json({ error: "Token expirado" });
       }
       return res.status(401).json({ error: "Token inválido" });
     }
 
-    // Obtener el usuario relacionado al token
     const user = await AuthService.getUserFromToken(decoded);
 
     if (!user) {
@@ -32,11 +30,9 @@ const authenticate = async (req, res, next) => {
     const now = new Date();
     await UsuariosRepository.updateLastLogin(user.rut, now);
 
-    // Calcular el tiempo restante para la expiración del token
     const currentTime = Math.floor(Date.now() / 1000);
     const timeToExpire = decoded.exp - currentTime;
 
-    // Renovar el token si faltan menos de 15 minutos para expirar
     if (timeToExpire < 60 * 15) {
       const newToken = jwt.sign(
         { rut: user.rut, rolId: user.rolId },
@@ -50,7 +46,6 @@ const authenticate = async (req, res, next) => {
       });
     }
 
-    // Agregar el usuario al objeto de la solicitud para uso posterior
     req.user = {
       id: user.rut,
       nombre: user.nombre,
@@ -58,7 +53,7 @@ const authenticate = async (req, res, next) => {
       id_sucursal: user.id_sucursal,
       email: user.email,
       rol: user.rol,
-      permisos: user.permisos, // Asegúrate de que este campo esté presente
+      permisos: user.permisos,
     };
 
     next();
