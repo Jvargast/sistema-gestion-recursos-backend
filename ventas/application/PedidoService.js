@@ -152,12 +152,11 @@ class PedidoService {
           transaction
         );
 
-        // Actualizar el pedido asociándolo a la venta creada
         await PedidoRepository.update(
           nuevoPedido.id_pedido,
           {
             id_venta: ventaRegistrada.venta.id_venta,
-            id_estado_pedido: estadoInicial.id_estado_venta, // Puede ser otro estado según lógica de negocio.
+            id_estado_pedido: estadoInicial.id_estado_venta,
             estado_pago: requiereFactura ? "Pendiente" : "Pagado",
           },
           { transaction }

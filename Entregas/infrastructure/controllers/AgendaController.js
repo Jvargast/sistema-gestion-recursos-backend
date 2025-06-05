@@ -1,4 +1,7 @@
-import { obtenerFechaChile } from "../../../shared/utils/fechaUtils.js";
+import {
+  obtenerFechaChile,
+  obtenerLimitesUTCParaDiaChile,
+} from "../../../shared/utils/fechaUtils.js";
 import AgendaCargaService from "../../application/AgendaCargaService.js";
 
 class AgendaCargaController {
@@ -114,12 +117,15 @@ class AgendaCargaController {
 
   async getAgendaCargaDelDia(req, res) {
     try {
-      const id_chofer = req.user.id; 
+      const id_chofer = req.user.id;
       const fechaFormateada = obtenerFechaChile("YYYY-MM-DD");
+      const [inicioUTC, finUTC] =
+        obtenerLimitesUTCParaDiaChile(fechaFormateada);
 
       const agenda = await AgendaCargaService.getAgendaCargaDelDia(
         id_chofer,
-        fechaFormateada
+        inicioUTC,
+        finUTC
       );
 
       if (!agenda || agenda.length === 0) {

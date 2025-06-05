@@ -14,7 +14,7 @@ const Inventario = sequelize.define(
     cantidad: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 0, // Cantidad inicial por defecto
+      defaultValue: 0, 
     },
     fecha_actualizacion: {
       type: DataTypes.DATE,
