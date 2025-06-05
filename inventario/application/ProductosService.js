@@ -15,7 +15,6 @@ class ProductoService {
     const producto = await ProductosRepository.findById(id);
     if (!producto) throw new Error("Producto no encontrado.");
 
-    // Incluir información de inventario
     const inventario = await InventarioService.getInventarioByProductoId(id);
     producto.dataValues.inventario = inventario;
 
@@ -48,9 +47,9 @@ class ProductoService {
             [Op.like]: `%${options.search}%`,
           },
         },
-        { marca: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
-        { descripcion: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
-        { nombre_producto: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+        { marca: { [Op.like]: `%${options.search}%` } },
+        { descripcion: { [Op.like]: `%${options.search}%` } }, 
+        { nombre_producto: { [Op.like]: `%${options.search}%` } },
       ];
     }
     const include = [
@@ -67,7 +66,7 @@ class ProductoService {
       {
         model: InventarioRepository.getModel(),
         as: "inventario",
-        attributes: ["cantidad", "fecha_actualizacion"], // Campos relevantes del inventario
+        attributes: ["cantidad", "fecha_actualizacion"],
       },
     ];
 

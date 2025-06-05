@@ -19,12 +19,14 @@ import ClienteRepository from "../../ventas/infrastructure/repositories/ClienteR
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 import { getEstadoCamion } from "../../shared/utils/estadoCamion.js";
 import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
-import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
-
-const fecha = obtenerFechaActualChile();
+import {
+  obtenerFechaActualChileUTC,
+  obtenerLimitesUTCParaDiaChile,
+} from "../../shared/utils/fechaUtils.js";
 
 class AgendaCargaService {
   // Pedido de Confirmado -> En Preparación
+
   async createAgenda(
     id_usuario_chofer,
     rut,
@@ -90,6 +92,8 @@ class AgendaCargaService {
           "Debe existir al menos un pedido confirmado o productos adicionales."
         );
       }
+
+      const fecha = obtenerFechaActualChileUTC();
 
       const nuevaAgenda = await AgendaCargaRepository.create(
         {
@@ -350,6 +354,8 @@ class AgendaCargaService {
       if (agendaCarga.id_usuario_chofer !== id_chofer)
         throw new Error("Este chofer no está asignado a la agenda.");
 
+      const fecha = obtenerFechaActualChileUTC();
+
       const camion = await CamionRepository.findById(agendaCarga.id_camion, {
         transaction,
       });
@@ -403,7 +409,6 @@ class AgendaCargaService {
         return acc;
       }, {});
 
-      // Ahora crear resumen de cantidades cargadas por producto/insumo
       const resumenCargado = productosCargados.reduce((acc, item) => {
         const key = item.id_producto
           ? `producto_${item.id_producto}`
@@ -412,7 +417,6 @@ class AgendaCargaService {
         return acc;
       }, {});
 
-      //const productosAdicionales = {};
       for (const key of Object.keys(resumenDetalleAgenda)) {
         const cantidadPlanificada = resumenDetalleAgenda[key] || 0;
         const cantidadCargada = resumenCargado[key] || 0;
@@ -432,7 +436,6 @@ class AgendaCargaService {
             );
           }
         } else {
-          // 🔹 Si no había en el camión antes, validar solo la carga actual
           if (cantidadCargada !== cantidadPlanificada) {
             throw new Error(
               `Diferencia en carga para ${key}: Esperado ${cantidadPlanificada}, pero cargado ${cantidadCargada}.`
@@ -625,9 +628,9 @@ class AgendaCargaService {
     }
 
     if (options.date) {
+      const [inicioUTC, finUTC] = obtenerLimitesUTCParaDiaChile(options.date);
       where.fechaHora = {
-        [Sequelize.Op.gte]: `${options.date} 00:00:00`,
-        [Sequelize.Op.lt]: `${options.date} 23:59:59`,
+        [Sequelize.Op.between]: [inicioUTC, finUTC],
       };
     }
     const include = [
@@ -670,7 +673,7 @@ class AgendaCargaService {
     );
   }
 
-  async getAgendaCargaDelDia(id_chofer, fecha) {
+  async getAgendaCargaDelDia(id_chofer, inicioUTC, finUTC) {
     if (!id_chofer) {
       throw new Error("Se requiere el ID del chofer.");
     }
@@ -679,7 +682,7 @@ class AgendaCargaService {
       where: {
         id_usuario_chofer: id_chofer,
         fecha_hora: {
-          [Op.between]: [`${fecha} 00:00:00`, `${fecha} 23:59:59`],
+          [Op.between]: [inicioUTC, finUTC],
         },
         estado: "Pendiente",
         validada_por_chofer: false,

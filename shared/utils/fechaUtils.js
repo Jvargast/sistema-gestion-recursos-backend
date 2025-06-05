@@ -7,9 +7,17 @@ dayjs.extend(timezone);
 
 const ZONA_HORARIA = "America/Santiago";
 
-
 export const obtenerFechaActualChile = () => {
-  return dayjs().tz(ZONA_HORARIA).utc().toDate(); // 🔁 CORREGIDO
+  return dayjs().tz(ZONA_HORARIA).utc().toDate();
+};
+export const obtenerFechaActualChileUTC = () => {
+  return dayjs().utc().toDate();
+};
+
+export const obtenerLimitesUTCParaDiaChile = (fechaChileYYYYMMDD) => {
+  const startChile = dayjs.tz(`${fechaChileYYYYMMDD} 00:00:00`, ZONA_HORARIA);
+  const endChile = dayjs.tz(`${fechaChileYYYYMMDD} 23:59:59`, ZONA_HORARIA);
+  return [startChile.utc().format(), endChile.utc().format()];
 };
 
 export const obtenerFechaChile = (formato = null) => {

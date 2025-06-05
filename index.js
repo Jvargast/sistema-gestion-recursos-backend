@@ -10,9 +10,6 @@ import { createServer } from "http";
 import { Server } from "socket.io";
 import fs from "fs";
 
-/**
- * Implementación de tareas
- */
 import setupAnalysisCronJobs from "./analisis/infrastructure/cron/analysisCronJobs.js";
 
 // Rutas para arquitectura hexagonal
@@ -64,8 +61,11 @@ import VentasEstadisticasRoutes from "./analisis/infrastructure/routes/VentasEst
 import PedidosEstadisticasRoutes from "./analisis/infrastructure/routes/PedidosEstadisticasRoutes.js";
 import ProductoEstadisticasRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
 import WebSocketServer from "./shared/websockets/WebSocketServer.js";
+/* MÓDULO PRODUCCIÓN */
+import ProduccionRoutes from "./produccion/infrastructure/routes/ProduccionRoutes.js"
 
 import SearchRoutes from "./busqueda/infrastructure/routes/SearchRoutes.js";
+
 
 /* Configuración */
 const env = process.env.NODE_ENV || "development";
@@ -177,6 +177,9 @@ app.use("/api/ventas-chofer", VentaChoferRoutes);
 
 /* MÓDULO SEARCH*/
 app.use("/api/search", SearchRoutes);
+
+/* MÓDULO DE PRODUCCIÓN */
+app.use("/api/produccion", ProduccionRoutes);
 
 const PORT = process.env.PORT || 9000;
 

@@ -3,6 +3,7 @@ import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
 import moment from "moment/moment.js";
+import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
 
 class ClienteService {
   async getClienteById(id) {
@@ -51,7 +52,6 @@ class ClienteService {
   async createCliente(data, rut) {
     const { nombre, direccion, telefono } = data;
 
-    // Validar campos básicos
     if (!nombre || !direccion || !telefono) {
         throw new Error("Faltan campos básicos: nombre, dirección y teléfono son obligatorios.");
     }
@@ -60,10 +60,12 @@ class ClienteService {
     if (existingCliente) {
         throw new Error("Ya existe un cliente registrado con esta dirección.");
     }
+    const fecha_registro = obtenerFechaActualChile();
 
     const newData = {
         ...data,
         creado_por: rut,
+        fecha_registro: fecha_registro
     };
 
     return await ClienteRepository.create(newData);
