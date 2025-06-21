@@ -492,6 +492,44 @@ class CotizacionService {
 
     return cotizacion;
   }
+
+  async deleteCotizacion(id_cotizacion, usuario = null) {
+    try {
+      const detalles = await DetalleCotizacionRepository.findByCotizacionId(
+        id_cotizacion
+      );
+
+      for (const detalle of detalles) {
+        await DetalleCotizacionRepository.delete(detalle.id_detalle);
+      }
+
+      const deleted = await CotizacionRepository.delete(id_cotizacion);
+
+      if (deleted) {
+        if (usuario) {
+          try {
+            await LogCotizacionRepository.create({
+              id_cotizacion,
+              accion: "anulación",
+              fecha: new Date(),
+              usuario,
+              detalle: `Cotización ${id_cotizacion} eliminada`,
+            });
+          } catch (logError) {
+            console.error(
+              "Error registrando log de eliminación de cotización:",
+              logError
+            );
+          }
+        }
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      throw new Error(`Error al eliminar la cotización: ${error.message}`);
+    }
+  }
 }
 
 export default new CotizacionService();

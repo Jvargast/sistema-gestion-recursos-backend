@@ -11,6 +11,11 @@ router.get("/:id/pdf", checkPermissions("ventas.cotizacion.pdf"), CotizacionCont
 router.get("/:id", checkPermissions("ventas.cotizacion.ver"), CotizacionController.getCotizacionById);
 router.put("/:id", checkPermissions("ventas.cotizacion.editar"), CotizacionController.actualizarCotizacion);
 router.post("/", checkPermissions("ventas.cotizacion.crear"), CotizacionController.createCotizacion);
+router.delete(
+  "/:id",
+  checkPermissions("ventas.cotizacion.eliminar"),
+  CotizacionController.deleteCotizacion
+);
 
 
 
