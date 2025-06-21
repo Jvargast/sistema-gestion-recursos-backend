@@ -28,6 +28,10 @@ class DetallePedidoRepository {
     return await DetallePedido.destroy({ where: { id_detalle_pedido: id } });
   }
 
+  async deleteByPedidoId(id_pedido) {
+    return await DetallePedido.destroy({ where: { id_pedido } });
+  }
+
   getModel() {
     return DetallePedido;
   }

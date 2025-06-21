@@ -18,6 +18,7 @@ import CajaRepository from "../infrastructure/repositories/CajaRepository.js";
 import WebSocketServer from "../../shared/websockets/WebSocketServer.js";
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
 import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
+import { estadosInvalidosPedido } from "../../shared/utils/estadoUtils.js";
 
 class PedidoService {
   // Se crea en Pendiente
@@ -817,6 +818,17 @@ class PedidoService {
   }
 
   async deletePedido(id_pedido) {
+    const pedido = await PedidoRepository.findById(id_pedido);
+    if (!pedido) {
+      return null;
+    }
+
+    if (!estadosInvalidosPedido.includes(pedido.id_estado_pedido)) {
+      throw new Error(
+        "No se puede eliminar un pedido que no está en estado permitido."
+      );
+    }
+
     await DetallePedidoRepository.deleteByPedidoId(id_pedido);
     return await PedidoRepository.delete(id_pedido);
   }
