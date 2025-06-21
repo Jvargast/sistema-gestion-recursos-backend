@@ -626,6 +626,37 @@ class PedidoService {
   }
 
   async rejectPedido(id_pedido) {
+    const pedido = await PedidoRepository.findById(id_pedido);
+
+    if (!pedido) {
+      throw new Error("Pedido no encontrado.");
+    }
+
+    if (pedido.estado_pago === "Pagado" || pedido.pagado) {
+      throw new Error(
+        "No se puede rechazar un pedido que ya fue pagado."
+      );
+    }
+
+    const estadoActual = await EstadoVentaRepository.findById(
+      pedido.id_estado_pedido
+    );
+
+    if (!estadoActual) {
+      throw new Error("Estado de pedido inválido.");
+    }
+
+    const estadosPermitidos = [
+      "Pendiente",
+      "Pendiente de Confirmación",
+    ];
+
+    if (!estadosPermitidos.includes(estadoActual.nombre_estado)) {
+      throw new Error(
+        "Solo puedes rechazar pedidos en estado 'Pendiente' o 'Pendiente de Confirmación'."
+      );
+    }
+
     const estadoRechazado = await EstadoVentaRepository.findByNombre(
       "Rechazado"
     );
