@@ -625,6 +625,22 @@ class PedidoService {
     return await PedidoRepository.findById(id_pedido);
   }
 
+  async rejectPedido(id_pedido) {
+    const estadoRechazado = await EstadoVentaRepository.findByNombre(
+      "Rechazado"
+    );
+
+    if (!estadoRechazado) {
+      throw new Error("Estado 'Rechazado' no configurado.");
+    }
+
+    await PedidoRepository.update(id_pedido, {
+      id_estado_pedido: estadoRechazado.id_estado_venta,
+    });
+
+    return await PedidoRepository.findById(id_pedido);
+  }
+
   async getPedidoById(id_pedido) {
     return await PedidoRepository.findById(id_pedido);
   }

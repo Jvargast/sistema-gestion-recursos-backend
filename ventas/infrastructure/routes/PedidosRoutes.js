@@ -20,6 +20,11 @@ router.put("/desasignar/:id_pedido", checkPermissions("ventas.pedido.desasignar"
 router.post("/", checkPermissions("ventas.pedido.crear"), PedidoController.createPedido);
 router.post("/registrar-desde-pedido", checkPermissions("ventas.pedido.pago"), PedidoController.registrarDesdePedido);
 router.patch("/:id_pedido/confirmacion", checkPermissions("ventas.pedido.confirmar"), checkRoles(['chofer']), PedidoController.confirmarPedido);
+router.put(
+  "/:id_pedido/rechazar",
+  checkPermissions("ventas.pedido.editar"),
+  PedidoController.rechazarPedido
+);
 router.delete(
   "/:id_pedido",
   checkPermissions("ventas.pedido.eliminar"),
