@@ -87,7 +87,8 @@ class CotizacionController {
   async deleteCotizacion(req, res) {
     try {
       const { id } = req.params; // ID de la cotización enviada en la URL
-      const deleted = await CotizacionService.deleteCotizacion(id);
+      const rut = req.user?.id;
+      const deleted = await CotizacionService.deleteCotizacion(id, rut);
 
       if (!deleted) {
         return res
