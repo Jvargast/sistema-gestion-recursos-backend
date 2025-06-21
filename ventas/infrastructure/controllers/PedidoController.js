@@ -282,6 +282,25 @@ class PedidoController {
     }
   }
 
+  async revertirPedido(req, res) {
+    try {
+      const { id_pedido } = req.params;
+      const pedido = await PedidoService.revertPedido(id_pedido);
+
+      if (!pedido)
+        return res.status(404).json({ message: "Pedido no encontrado" });
+
+      res.status(200).json({
+        message: "Pedido revertido correctamente",
+        pedido,
+      });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: `Error al revertir pedido: ${error.message}` });
+    }
+  }
+
   async desasignarPedido(req, res) {
     try {
       const { id_pedido } = req.params;
