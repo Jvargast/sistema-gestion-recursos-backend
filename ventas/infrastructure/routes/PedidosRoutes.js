@@ -25,6 +25,11 @@ router.put(
   checkPermissions("ventas.pedido.editar"),
   PedidoController.rechazarPedido
 );
+router.put(
+  "/:id_pedido/revertir",
+  checkPermissions("ventas.pedido.editar"),
+  PedidoController.revertirPedido
+);
 router.delete(
   "/:id_pedido",
   checkPermissions("ventas.pedido.eliminar"),

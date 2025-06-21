@@ -672,6 +672,37 @@ class PedidoService {
     return await PedidoRepository.findById(id_pedido);
   }
 
+  async revertPedido(id_pedido) {
+    const pedido = await PedidoRepository.findById(id_pedido);
+
+    if (!pedido) {
+      throw new Error("Pedido no encontrado.");
+    }
+
+    const estadoActual = await EstadoVentaRepository.findById(
+      pedido.id_estado_pedido
+    );
+
+    if (!estadoActual) {
+      throw new Error("Estado de pedido inválido.");
+    }
+
+    if (estadoActual.nombre_estado !== "Rechazado") {
+      throw new Error("Solo puedes revertir pedidos en estado 'Rechazado'.");
+    }
+
+    const estadoPendiente = await EstadoVentaRepository.findByNombre("Pendiente");
+    if (!estadoPendiente) {
+      throw new Error("Estado 'Pendiente' no configurado.");
+    }
+
+    await PedidoRepository.update(id_pedido, {
+      id_estado_pedido: estadoPendiente.id_estado_venta,
+    });
+
+    return await PedidoRepository.findById(id_pedido);
+  }
+
   async getPedidoById(id_pedido) {
     return await PedidoRepository.findById(id_pedido);
   }
