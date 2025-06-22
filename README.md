@@ -22,8 +22,7 @@ GET /api/producto-retornable/pendientes
     "id_producto_retornable": 1,
     "estado": "pendiente_inspeccion",
     "id_producto": 5,
-    "id_insumo": null,
-    "id_cliente": 2
+    "id_insumo": null
   }
 ]
 ```
