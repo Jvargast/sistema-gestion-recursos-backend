@@ -54,7 +54,7 @@ class InventarioCamionService {
   ) {
     const inventarioCamion = await InventarioCamionRepository.findAllByCamionId(
       id_camion,
-      transaction
+      { transaction }
     );
 
     for (const item of inventarioCamion) {
