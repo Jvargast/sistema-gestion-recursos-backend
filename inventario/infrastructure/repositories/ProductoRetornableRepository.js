@@ -1,6 +1,7 @@
 import ProductoRetornable from "../../domain/models/ProductoRetornable.js";
 import Producto from "../../domain/models/Producto.js";
 import Cliente from "../../../ventas/domain/models/Cliente.js";
+import Entrega from "../../../Entregas/domain/models/Entrega.js";
 
 class ProductoRetornableRepository {
   async findById(id) {
@@ -33,6 +34,20 @@ class ProductoRetornableRepository {
   async update(id, data) {
     return await ProductoRetornable.update(data, {
       where: { id_producto_retornable: id },
+    });
+  }
+
+  async updateByCamionAndProducto(id_camion, id_producto, data, options = {}) {
+    return await ProductoRetornable.update(data, {
+      where: { id_producto },
+      include: [
+        {
+          model: Entrega,
+          as: "entrega",
+          where: { id_camion },
+        },
+      ],
+      ...options,
     });
   }
 

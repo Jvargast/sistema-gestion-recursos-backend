@@ -51,6 +51,17 @@ class ProductoRetornableController {
       res.status(400).json({ error: error.message });
     }
   }
+
+  async inspeccionarRetornables(req, res) {
+    try {
+      const { id_camion } = req.params;
+      const { items } = req.body;
+      await ProductoRetornableService.inspeccionarRetornables(id_camion, items);
+      res.status(200).json({ message: "Inspección completada" });
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
 }
 
 export default new ProductoRetornableController();
