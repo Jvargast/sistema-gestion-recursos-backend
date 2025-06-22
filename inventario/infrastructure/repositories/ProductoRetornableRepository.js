@@ -13,12 +13,14 @@ class ProductoRetornableRepository {
     });
   }
 
-  async findAll() {
+  async findAll(filters = {}, options = {}) {
     return await ProductoRetornable.findAll({
+      where: filters,
       include: [
         { model: Producto, as: "producto" },
         { model: Cliente, as: "cliente" },
       ],
+      ...options,
     });
   }
 
