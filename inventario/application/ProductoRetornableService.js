@@ -11,8 +11,8 @@ class ProductoRetornableService {
       return productoRetornable;
     }
   
-    async getAllProductosRetornables(filters = {}, options) {
-      return await ProductoRetornableRepository.findAll({ filters, options });
+    async getAllProductosRetornables(filters = {}, options = {}) {
+      return await ProductoRetornableRepository.findAll(filters, options);
     }
   
     async createProductoRetornable(data) {

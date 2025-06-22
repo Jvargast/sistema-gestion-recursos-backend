@@ -5,6 +5,8 @@ import ProductoRetornableRepository from '../inventario/infrastructure/repositor
 import InventarioService from '../inventario/application/InventarioService.js';
 import InventarioCamionRepository from '../Entregas/infrastructure/repositories/InventarioCamionRepository.js';
 
+const originalFindAll = ProductoRetornableRepository.findAll;
+
 const originalUpdate = ProductoRetornableRepository.updateByCamionAndProducto;
 const originalIncrement = InventarioService.incrementStock;
 const originalDelete = InventarioCamionRepository.deleteProductInCamion;
@@ -48,8 +50,28 @@ test('inspeccionarRetornables propaga errores', async () => {
   );
 });
 
+test('getAllProductosRetornables filtra por estado pendiente_inspeccion', async () => {
+  const sample = [
+    { id_producto_retornable: 1, estado: 'pendiente_inspeccion' },
+    { id_producto_retornable: 2, estado: 'reutilizable' }
+  ];
+
+  let receivedFilters = null;
+  ProductoRetornableRepository.findAll = async (filters) => {
+    receivedFilters = filters;
+    return sample.filter(p => !filters.estado || p.estado === filters.estado);
+  };
+
+  const result = await ProductoRetornableService.getAllProductosRetornables({ estado: 'pendiente_inspeccion' });
+
+  assert.deepEqual(receivedFilters, { estado: 'pendiente_inspeccion' });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].estado, 'pendiente_inspeccion');
+});
+
 test('cleanup', () => {
   ProductoRetornableRepository.updateByCamionAndProducto = originalUpdate;
   InventarioService.incrementStock = originalIncrement;
   InventarioCamionRepository.deleteProductInCamion = originalDelete;
+  ProductoRetornableRepository.findAll = originalFindAll;
 });
