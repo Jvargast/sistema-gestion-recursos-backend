@@ -4,6 +4,7 @@ import sequelize from "../../../database/database.js";
 import Entrega from "../../../Entregas/domain/models/Entrega.js";
 import Venta from "../../../ventas/domain/models/Venta.js";
 import Camion from "../../../Entregas/domain/models/Camion.js";
+import Insumo from "./Insumo.js";
 
 const ProductoRetornable = sequelize.define(
   "ProductoRetornable",
@@ -21,9 +22,17 @@ const ProductoRetornable = sequelize.define(
       },
       allowNull: false,
     },
+    id_insumo: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: Insumo,
+        key: "id_insumo",
+      },
+    },
     id_entrega: {
       type: DataTypes.INTEGER,
-      allowNull: true, 
+      allowNull: true,
       references: {
         model: Entrega,
         key: "id_entrega",

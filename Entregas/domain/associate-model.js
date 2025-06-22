@@ -199,6 +199,15 @@ function loadEntregasAssociations(models) {
     as: "productosRetornables",
   });
 
+  ProductoRetornable.belongsTo(Insumo, {
+    foreignKey: "id_insumo",
+    as: "insumo",
+  });
+  Insumo.hasMany(ProductoRetornable, {
+    foreignKey: "id_insumo",
+    as: "productosRetornablesInsumo",
+  });
+
   Entrega.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
   Cliente.hasMany(Entrega, { foreignKey: "id_cliente", as: "entregas" });
 
