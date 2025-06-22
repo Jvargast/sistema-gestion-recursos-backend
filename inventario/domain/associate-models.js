@@ -93,6 +93,9 @@ function loadInventarioAssociations() {
   Producto.hasMany(ProductoRetornable, { foreignKey: "id_producto" });
   ProductoRetornable.belongsTo(Producto, { foreignKey: "id_producto" });
 
+  Insumo.hasMany(ProductoRetornable, { foreignKey: "id_insumo" });
+  ProductoRetornable.belongsTo(Insumo, { foreignKey: "id_insumo" });
+
   Venta.hasMany(ProductoRetornable, { foreignKey: "id_venta" });
   ProductoRetornable.belongsTo(Venta, { foreignKey: "id_venta" });
 
