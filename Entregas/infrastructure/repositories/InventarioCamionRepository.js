@@ -135,7 +135,7 @@ class InventarioCamionRepository {
     });
   }
 
-  async findAllByCamionId(id_camion) {
+  async findAllByCamionId(id_camion, options = {}) {
     return await InventarioCamion.findAll({
       where: { id_camion },
       include: [
@@ -150,6 +150,7 @@ class InventarioCamionRepository {
           ],
         },
       ],
+      ...options,
     });
   }
 
