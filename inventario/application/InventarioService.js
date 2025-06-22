@@ -118,25 +118,6 @@ class InventarioService {
     return inventario;
   }
 
-  async decrementarStockInsumo(id_insumo, cantidad) {
-    // Validar cantidad positiva
-    if (cantidad <= 0) {
-      throw new Error("Cantidad debe ser un número positivo.");
-    }
-    const inventario = await this.getInventarioByInsumoId(id_insumo);
-    if (!inventario) throw new Error("Insumo no encontrado en inventario.");
-    
-    if (Math.floor(inventario.cantidad) < Math.floor(cantidad)) {
-      throw new Error("Stock insuficiente en  InventarioService");
-    }
-
-    inventario.cantidad -= cantidad;
-    await InventarioRepository.update(id_insumo, {
-      cantidad: inventario.cantidad,
-    });
-
-    return inventario;
-  }
 
   async decrementarStockInsumo(id_insumo, cantidad) {
     if (cantidad <= 0) {
