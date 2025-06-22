@@ -79,14 +79,10 @@ class AgendaViajesService {
         throw new Error("No se encontró la caja asignada para cerrar.");
       }
 
-      /* await InventarioCamionService.descargarItemsCamion(
-        camion.id_camion,
-        {
-          descargarRetorno: true,
-          descargarDisponibles,
-        },
-        transaction
-      ); */
+      await InventarioCamionService.vaciarCamion(camion.id_camion, {
+        descargarDisponibles,
+        descargarRetorno: true,
+      });
 
       const inventarioCamion =
         await InventarioCamionRepository.findAllByCamionId(camion.id_camion, {
