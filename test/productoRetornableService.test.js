@@ -16,8 +16,14 @@ test('inspeccionarRetornables procesa items correctamente', async () => {
   const incrementCalls = [];
   const deleteCalls = [];
 
-  ProductoRetornableRepository.updateByCamionAndProducto = async (id_camion, id_producto, data, options) => {
-    updateCalls.push({ id_camion, id_producto, data });
+  ProductoRetornableRepository.updateByCamionAndProducto = async (
+    id_camion,
+    id_producto,
+    id_insumo,
+    data,
+    options
+  ) => {
+    updateCalls.push({ id_camion, id_producto, id_insumo, data });
     return [1];
   };
   InventarioService.incrementStock = async (id_producto, cantidad) => {
@@ -50,6 +56,27 @@ test('inspeccionarRetornables propaga errores', async () => {
     () => ProductoRetornableService.inspeccionarRetornables(5, [{ id_producto: 1, cantidad: 1, estado: 'reutilizable' }]),
     { message: 'fail' }
   );
+});
+
+test('inspeccionarRetornables pasa id_insumo cuando id_producto es null', async () => {
+  const updateCalls = [];
+  ProductoRetornableRepository.updateByCamionAndProducto = async (
+    id_camion,
+    id_producto,
+    id_insumo
+  ) => {
+    updateCalls.push({ id_camion, id_producto, id_insumo });
+    return [1];
+  };
+
+  const items = [
+    { id_producto: null, id_insumo: 5, cantidad: 1, estado: 'defectuoso' }
+  ];
+
+  await ProductoRetornableService.inspeccionarRetornables(3, items);
+
+  assert.equal(updateCalls.length, 1);
+  assert.equal(updateCalls[0].id_insumo, 5);
 });
 
 test('getAllProductosRetornables filtra por estado pendiente_inspeccion', async () => {
