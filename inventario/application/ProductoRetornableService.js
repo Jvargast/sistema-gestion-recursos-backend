@@ -70,4 +70,4 @@ class ProductoRetornableService {
 
   }
   
-  export default new ProductoRetornableService();
+export default new ProductoRetornableService();
