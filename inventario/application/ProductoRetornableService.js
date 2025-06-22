@@ -49,6 +49,7 @@ class ProductoRetornableService {
       await ProductoRetornableRepository.updateByCamionAndProducto(
         id_camion,
         item.id_producto,
+        item.id_insumo,
         {
           estado: item.estado,
           tipo_defecto: item.estado === "defectuoso" ? item.tipo_defecto : null,
