@@ -66,6 +66,7 @@ class InventarioCamionService {
             cantidad: item.cantidad,
             estado: "pendiente_inspeccion",
             fecha_retorno: new Date(),
+            id_camion,
           },
           { transaction }
         );
@@ -497,6 +498,7 @@ class InventarioCamionService {
           estado: "defectuoso",
           tipo_defecto,
           fecha_retorno: new Date(),
+          id_camion,
         });
       }
 
