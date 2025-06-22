@@ -35,6 +35,8 @@ test('inspeccionarRetornables procesa items correctamente', async () => {
   await ProductoRetornableService.inspeccionarRetornables(5, items);
 
   assert.equal(updateCalls.length, 2);
+  assert.equal(updateCalls[0].id_camion, 5);
+  assert.equal(updateCalls[1].id_camion, 5);
   assert.equal(incrementCalls.length, 1);
   assert.equal(deleteCalls.length, 2);
 });
