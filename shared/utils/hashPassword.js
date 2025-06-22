@@ -11,12 +11,3 @@ export const hashPassword = async (password) => {
   return await bcrypt.hash(password, SALT_ROUNDS);
 };
 
-/**
- * Compara una contraseña con su hash.
- * @param {string} plain Contraseña plana
- * @param {string} hash Hash almacenado
- * @returns {Promise<boolean>} Si coinciden
- */
-export const comparePassword = async (plain, hash) => {
-  return await bcrypt.compare(plain, hash);
-};
