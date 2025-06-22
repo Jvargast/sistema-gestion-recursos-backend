@@ -1,5 +1,4 @@
 import InventarioCamionRepository from "../../Entregas/infrastructure/repositories/InventarioCamionRepository.js";
-import ClienteService from "../../ventas/application/ClienteService.js";
 import ProductoRetornableRepository from "../infrastructure/repositories/ProductoRetornableRepository.js";
 import InventarioService from "./InventarioService.js";
 import ProductosService from "./ProductosService.js";
@@ -15,15 +14,13 @@ class ProductoRetornableService {
       return await ProductoRetornableRepository.findAll(filters, options);
     }
   
-    async createProductoRetornable(data) {
-      const { id_producto, id_cliente, ...productoRetornableData } = data;
-  
+  async createProductoRetornable(data) {
+      const { id_producto, ...productoRetornableData } = data;
+
       await ProductosService.getProductoById(id_producto);
-      await ClienteService.getClienteById(id_cliente);
-  
+
       return await ProductoRetornableRepository.create({
         id_producto,
-        id_cliente,
         ...productoRetornableData,
       });
     }
