@@ -302,9 +302,7 @@ class VentaService {
         );
 
         if (tipo_entrega === "retiro_en_sucursal") {
-          await InventarioService.decrementarStockInsumo(id_insumo, cantidad, {
-            transaction,
-          });
+            await InventarioService.decrementarStockInsumo(id_insumo, cantidad);
         }
       }
 
