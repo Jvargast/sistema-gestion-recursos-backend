@@ -7,6 +7,7 @@ import Insumo from "./models/Insumo.js";
 import TipoInsumo from "./models/TipoInsumo.js";
 import ProductoRetornable from "./models/ProductoRetornable.js";
 import Venta from "../../ventas/domain/models/Venta.js";
+import Camion from "../../Entregas/domain/models/Camion.js";
 import FormulaProducto from "./models/FormulaProducto.js";
 import FormulaProductoDetalle from "./models/FormulaProductoDetalle.js";
 
@@ -98,6 +99,9 @@ function loadInventarioAssociations() {
 
   Venta.hasMany(ProductoRetornable, { foreignKey: "id_venta" });
   ProductoRetornable.belongsTo(Venta, { foreignKey: "id_venta" });
+
+  ProductoRetornable.belongsTo(Camion, { foreignKey: "id_camion", as: "camion" });
+  Camion.hasMany(ProductoRetornable, { foreignKey: "id_camion", as: "productosRetornables" });
 
   /*   ProductoRetornable.belongsTo(EstadoProductoRetornable, {
     foreignKey: "id_estado",
