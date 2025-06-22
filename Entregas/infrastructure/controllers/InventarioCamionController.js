@@ -117,6 +117,23 @@ class InventarioCamionController {
       res.status(500).json({ message: error.message });
     }
   }
+
+  async vaciarCamion(req, res) {
+    try {
+      const { id_camion } = req.params;
+      const { descargarDisponibles = true, descargarRetorno = true } = req.body || {};
+
+      const result = await InventarioCamionService.vaciarCamion(id_camion, {
+        descargarDisponibles,
+        descargarRetorno,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error("Error al vaciar camión:", error);
+      res.status(400).json({ error: error.message });
+    }
+  }
   
   
 }
