@@ -41,14 +41,7 @@ class ProductoRetornableRepository {
 
   async updateByCamionAndProducto(id_camion, id_producto, data, options = {}) {
     return await ProductoRetornable.update(data, {
-      where: { id_producto },
-      include: [
-        {
-          model: Entrega,
-          as: "entrega",
-          where: { id_camion },
-        },
-      ],
+      where: { id_camion, id_producto },
       ...options,
     });
   }
