@@ -11,5 +11,10 @@ router.post("/", checkPermissions("inventario.productoretornable.ver"), Producto
 router.post("/create", checkPermissions("inventario.productoretornable.crear"), ProductoRetornableController.createProductoRetornable);
 router.put("/:id", checkPermissions("inventario.productoretornable.editar"), ProductoRetornableController.updateProductoRetornable);
 router.delete("/:id", checkPermissions("inventario.productoretornable.eliminar"), ProductoRetornableController.deleteProductoRetornable);
+router.post(
+  "/inspeccionar/:id_camion",
+  checkPermissions("inventario.productoretornable.editar"),
+  ProductoRetornableController.inspeccionarRetornables
+);
 
 export default router;
