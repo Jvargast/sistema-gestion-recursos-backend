@@ -1,7 +1,6 @@
 import ProductoRetornable from "../../domain/models/ProductoRetornable.js";
 import Producto from "../../domain/models/Producto.js";
 import Insumo from "../../domain/models/Insumo.js";
-import Cliente from "../../../ventas/domain/models/Cliente.js";
 import Entrega from "../../../Entregas/domain/models/Entrega.js";
 
 class ProductoRetornableRepository {
@@ -10,7 +9,6 @@ class ProductoRetornableRepository {
       include: [
         { model: Producto, as: "Producto" },
         { model: Insumo, as: "insumo" },
-        { model: Cliente, as: "cliente" },
       ],
     });
   }
@@ -21,7 +19,6 @@ class ProductoRetornableRepository {
       include: [
         { model: Producto, as: "Producto" },
         { model: Insumo, as: "insumo" },
-        { model: Cliente, as: "cliente" },
       ],
       ...options,
     });
@@ -59,11 +56,6 @@ class ProductoRetornableRepository {
     return await ProductoRetornable.findAll({ where: { estado } });
   }
 
-  async findByCliente(clienteId) {
-    return await ProductoRetornable.findAll({
-      where: { id_cliente: clienteId },
-    });
-  }
 
   getModel() {
     return ProductoRetornable;
