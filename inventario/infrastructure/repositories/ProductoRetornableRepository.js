@@ -1,5 +1,6 @@
 import ProductoRetornable from "../../domain/models/ProductoRetornable.js";
 import Producto from "../../domain/models/Producto.js";
+import Insumo from "../../domain/models/Insumo.js";
 import Cliente from "../../../ventas/domain/models/Cliente.js";
 import Entrega from "../../../Entregas/domain/models/Entrega.js";
 
@@ -8,6 +9,7 @@ class ProductoRetornableRepository {
     return await ProductoRetornable.findByPk(id, {
       include: [
         { model: Producto, as: "producto" },
+        { model: Insumo, as: "insumo" },
         { model: Cliente, as: "cliente" },
       ],
     });
@@ -18,6 +20,7 @@ class ProductoRetornableRepository {
       where: filters,
       include: [
         { model: Producto, as: "producto" },
+        { model: Insumo, as: "insumo" },
         { model: Cliente, as: "cliente" },
       ],
       ...options,
