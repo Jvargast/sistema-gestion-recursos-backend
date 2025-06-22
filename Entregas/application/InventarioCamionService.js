@@ -1,4 +1,5 @@
 import { Op } from "sequelize";
+import sequelize from "../../database/database.js";
 import InventarioService from "../../inventario/application/InventarioService.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
 import InventarioCamionLogsRepository from "../infrastructure/repositories/InventarioCamionLogsRepository.js";
@@ -81,6 +82,124 @@ class InventarioCamionService {
         }
         await item.destroy({ transaction });
       }
+    }
+  }
+
+  async vaciarCamion(id_camion, options = {}) {
+    const { descargarDisponibles = true, descargarRetorno = true } = options;
+    const transaction = await sequelize.transaction();
+
+    try {
+      const inventarioCamion = await InventarioCamionRepository.findAllByCamionId(
+        id_camion,
+        { transaction }
+      );
+
+      const reservas = await InventarioCamionReservasRepository.findReservasByCamion(
+        id_camion
+      );
+
+      for (const item of inventarioCamion) {
+        if (item.estado === "En Camión - Disponible" && descargarDisponibles) {
+          if (item.id_producto) {
+            await InventarioService.incrementStock(
+              item.id_producto,
+              item.cantidad,
+              { transaction }
+            );
+          }
+
+          await InventarioCamionLogsRepository.create(
+            {
+              id_camion,
+              id_producto: item.id_producto,
+              id_insumo: item.id_insumo,
+              cantidad: item.cantidad,
+              tipo_movimiento: "Descarga camión",
+              estado: "Regresado",
+              fecha: new Date(),
+            },
+            { transaction }
+          );
+
+          await item.destroy({ transaction });
+          continue;
+        }
+
+        if (item.estado === "En Camión - Retorno" && descargarRetorno) {
+          await ProductoRetornableRepository.create(
+            {
+              id_producto: item.id_producto || null,
+              id_insumo: item.id_insumo || null,
+              cantidad: item.cantidad,
+              estado: "pendiente_inspeccion",
+              fecha_retorno: new Date(),
+            },
+            { transaction }
+          );
+
+          await InventarioCamionLogsRepository.create(
+            {
+              id_camion,
+              id_producto: item.id_producto,
+              id_insumo: item.id_insumo,
+              cantidad: item.cantidad,
+              tipo_movimiento: "Descarga camión",
+              estado: "Retorno",
+              fecha: new Date(),
+            },
+            { transaction }
+          );
+
+          await item.destroy({ transaction });
+          continue;
+        }
+
+        if (item.estado === "En Camión - Reservado") {
+          const relacionadas = reservas.filter(
+            (r) => r.id_inventario_camion === item.id_inventario_camion
+          );
+          for (const reserva of relacionadas) {
+            await InventarioCamionReservasRepository.update(
+              reserva.id_reserva,
+              { estado: "Cancelado" },
+              transaction
+            );
+          }
+
+          if (item.id_producto) {
+            await InventarioService.incrementStock(
+              item.id_producto,
+              item.cantidad,
+              { transaction }
+            );
+          }
+
+          await InventarioCamionLogsRepository.create(
+            {
+              id_camion,
+              id_producto: item.id_producto,
+              id_insumo: item.id_insumo,
+              cantidad: item.cantidad,
+              tipo_movimiento: "Descarga camión",
+              estado: "Reservado",
+              fecha: new Date(),
+            },
+            { transaction }
+          );
+
+          await item.destroy({ transaction });
+        }
+      }
+
+      await transaction.commit();
+
+      return { message: "Camión vaciado correctamente" };
+    } catch (error) {
+      if (transaction.finished !== "commit") {
+        await transaction.rollback();
+      }
+      throw error;
     }
   }
 
