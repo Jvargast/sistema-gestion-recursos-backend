@@ -21,6 +21,15 @@ class ProductoRetornableController {
     }
   }
 
+  async getPendientes(req, res) {
+    try {
+      const pendientes = await ProductoRetornableService.getAllProductosRetornables({ estado: "pendiente_inspeccion" });
+      res.status(200).json(pendientes);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+
   async createProductoRetornable(req, res) {
     try {
       const data = req.body;

@@ -7,6 +7,11 @@ const router = Router();
 router.use(authenticate)
 
 router.get("/:id", checkPermissions("inventario.productoretornable.ver"), ProductoRetornableController.getProductoRetornableById);
+router.get(
+  "/pendientes",
+  checkPermissions("inventario.productoretornable.ver"),
+  ProductoRetornableController.getPendientes
+);
 router.post("/", checkPermissions("inventario.productoretornable.ver"), ProductoRetornableController.getAllProductosRetornables);
 router.post("/create", checkPermissions("inventario.productoretornable.crear"), ProductoRetornableController.createProductoRetornable);
 router.put("/:id", checkPermissions("inventario.productoretornable.editar"), ProductoRetornableController.updateProductoRetornable);
