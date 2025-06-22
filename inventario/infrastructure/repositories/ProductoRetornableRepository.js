@@ -8,7 +8,7 @@ class ProductoRetornableRepository {
   async findById(id) {
     return await ProductoRetornable.findByPk(id, {
       include: [
-        { model: Producto, as: "producto" },
+        { model: Producto, as: "Producto" },
         { model: Insumo, as: "insumo" },
         { model: Cliente, as: "cliente" },
       ],
@@ -19,7 +19,7 @@ class ProductoRetornableRepository {
     return await ProductoRetornable.findAll({
       where: filters,
       include: [
-        { model: Producto, as: "producto" },
+        { model: Producto, as: "Producto" },
         { model: Insumo, as: "insumo" },
         { model: Cliente, as: "cliente" },
       ],
