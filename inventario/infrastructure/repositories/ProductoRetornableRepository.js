@@ -9,6 +9,7 @@ class ProductoRetornableRepository {
       include: [
         { model: Producto, as: "Producto" },
         { model: Insumo, as: "insumo" },
+        { model: Entrega, as: "entrega" },
       ],
     });
   }
@@ -19,6 +20,7 @@ class ProductoRetornableRepository {
       include: [
         { model: Producto, as: "Producto" },
         { model: Insumo, as: "insumo" },
+        { model: Entrega, as: "entrega" },
       ],
       ...options,
     });
