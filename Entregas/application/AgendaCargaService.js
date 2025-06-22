@@ -195,8 +195,7 @@ class AgendaCargaService {
             }
             await InventarioService.decrementarStockInsumo(
               item.id_insumo,
-              item.cantidad,
-              { transaction: t }
+              item.cantidad
             );
 
             await InventarioCamionService.addOrUpdateProductoCamion(
@@ -291,8 +290,7 @@ class AgendaCargaService {
           }
           await InventarioService.decrementarStockInsumo(
             adicional.id_insumo,
-            adicional.cantidad,
-            { transaction: t }
+            adicional.cantidad
           );
 
           await InventarioCamionService.addOrUpdateProductoCamion(
