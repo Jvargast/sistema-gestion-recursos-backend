@@ -2,6 +2,7 @@ import ProductoRetornable from "../../domain/models/ProductoRetornable.js";
 import Producto from "../../domain/models/Producto.js";
 import Insumo from "../../domain/models/Insumo.js";
 import Entrega from "../../../Entregas/domain/models/Entrega.js";
+import Camion from "../../../Entregas/domain/models/Camion.js";
 
 class ProductoRetornableRepository {
   async findById(id) {
@@ -10,6 +11,7 @@ class ProductoRetornableRepository {
         { model: Producto, as: "Producto" },
         { model: Insumo, as: "insumo" },
         { model: Entrega, as: "entrega" },
+        { model: Camion, as: "camion" },
       ],
     });
   }
@@ -21,6 +23,7 @@ class ProductoRetornableRepository {
         { model: Producto, as: "Producto" },
         { model: Insumo, as: "insumo" },
         { model: Entrega, as: "entrega" },
+        { model: Camion, as: "camion" },
       ],
       ...options,
     });
