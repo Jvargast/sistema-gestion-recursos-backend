@@ -44,9 +44,22 @@ class ProductoRetornableRepository {
     });
   }
 
-  async updateByCamionAndProducto(id_camion, id_producto, data, options = {}) {
+  async updateByCamionAndProducto(
+    id_camion,
+    id_producto,
+    id_insumo,
+    data,
+    options = {}
+  ) {
+    const where = { id_camion };
+    if (id_producto !== null && id_producto !== undefined) {
+      where.id_producto = id_producto;
+    } else {
+      where.id_insumo = id_insumo;
+    }
+
     return await ProductoRetornable.update(data, {
-      where: { id_camion, id_producto },
+      where,
       ...options,
     });
   }
