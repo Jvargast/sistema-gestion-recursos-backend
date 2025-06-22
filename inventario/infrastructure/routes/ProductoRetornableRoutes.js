@@ -22,7 +22,7 @@ router.post(
   // checkPermissions("inventario.productoretornable.editar"),
   ProductoRetornableController.inspeccionarRetornables
 );
-router.post(
+router.get(
   "/",
   // checkPermissions("inventario.productoretornable.ver"),
   ProductoRetornableController.getAllProductosRetornables

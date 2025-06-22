@@ -27,6 +27,26 @@ GET /api/producto-retornable/pendientes
 ]
 ```
 
+### GET /api/producto-retornable
+Lista los productos retornables. Se pueden enviar parámetros de consulta como `estado` para filtrar los resultados.
+
+**Solicitud**
+```
+GET /api/producto-retornable?estado=pendiente_inspeccion
+```
+
+**Respuesta exitosa**
+```json
+[
+  {
+    "id_producto_retornable": 1,
+    "estado": "pendiente_inspeccion",
+    "id_producto": 5,
+    "id_insumo": null
+  }
+]
+```
+
 ### POST /api/inventario-camion/vaciar/:id_camion
 Descarga el inventario de un camión. Requiere el permiso `entregas.inventariocamion.vaciar`.
 

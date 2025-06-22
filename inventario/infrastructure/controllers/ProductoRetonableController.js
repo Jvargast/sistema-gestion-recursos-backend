@@ -13,8 +13,8 @@ class ProductoRetornableController {
 
   async getAllProductosRetornables(req, res) {
     try {
-      const { filters, options } = req.body;
-      const productosRetornables = await ProductoRetornableService.getAllProductosRetornables(filters, options);
+      const filters = { ...req.query };
+      const productosRetornables = await ProductoRetornableService.getAllProductosRetornables(filters);
       res.status(200).json(productosRetornables);
     } catch (error) {
       res.status(400).json({ error: error.message });
