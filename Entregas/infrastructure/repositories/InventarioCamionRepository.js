@@ -1,4 +1,3 @@
-// InventarioCamionRepository.js
 
 import { Op } from "sequelize";
 import Producto from "../../../inventario/domain/models/Producto.js";

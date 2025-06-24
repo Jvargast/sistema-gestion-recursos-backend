@@ -1,17 +1,13 @@
 import ProductoRetornable from "../../domain/models/ProductoRetornable.js";
 import Producto from "../../domain/models/Producto.js";
 import Insumo from "../../domain/models/Insumo.js";
-import Entrega from "../../../Entregas/domain/models/Entrega.js";
-import Camion from "../../../Entregas/domain/models/Camion.js";
 
 class ProductoRetornableRepository {
   async findById(id) {
     return await ProductoRetornable.findByPk(id, {
       include: [
         { model: Producto, as: "Producto" },
-        { model: Insumo, as: "insumo" },
-        { model: Entrega, as: "entrega" },
-        { model: Camion, as: "camion" },
+        { model: Insumo, as: "Insumo" },
       ],
     });
   }
@@ -21,9 +17,7 @@ class ProductoRetornableRepository {
       where: filters,
       include: [
         { model: Producto, as: "Producto" },
-        { model: Insumo, as: "insumo" },
-        { model: Entrega, as: "entrega" },
-        { model: Camion, as: "camion" },
+        { model: Insumo, as: "Insumo" },
       ],
       ...options,
     });
@@ -33,7 +27,7 @@ class ProductoRetornableRepository {
     try {
       return await ProductoRetornable.create(data);
     } catch (error) {
-      console.log("Error en el repositorio: ",error.message);
+      console.log("Error en el repositorio: ", error.message);
       throw error;
     }
   }
@@ -44,14 +38,8 @@ class ProductoRetornableRepository {
     });
   }
 
-  async updateByCamionAndProducto(
-    id_camion,
-    id_producto,
-    id_insumo,
-    data,
-    options = {}
-  ) {
-    const where = { id_camion };
+  async updateByProductoOInsumo(id_producto, id_insumo, data, options = {}) {
+    const where = {};
     if (id_producto !== null && id_producto !== undefined) {
       where.id_producto = id_producto;
     } else {
@@ -71,9 +59,14 @@ class ProductoRetornableRepository {
   }
 
   async findByEstado(estado) {
-    return await ProductoRetornable.findAll({ where: { estado } });
+    return await ProductoRetornable.findAll({
+      where: { estado },
+      include: [
+        { model: Producto, as: "Producto" },
+        { model: Insumo, as: "Insumo" },
+      ],
+    });
   }
-
 
   getModel() {
     return ProductoRetornable;

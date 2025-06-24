@@ -16,6 +16,7 @@ import HistorialVentasChofer from "./models/HistorialVentasChofer.js";
 import InventarioCamion from "./models/InventarioCamion.js";
 import InventarioCamionLogs from "./models/InventarioCamionLogs.js";
 import InventarioCamionReservas from "./models/InventarioCamionReservas.js";
+import ProductoRetornableCamion from "./models/ProductoRetornableCamion.js";
 import VentasChofer from "./models/VentasChofer.js";
 
 function loadEntregasAssociations(models) {
@@ -189,40 +190,11 @@ function loadEntregasAssociations(models) {
     as: "entregas",
   });
 
-  // Relación: ProductoRetornable -> Entrega
-  ProductoRetornable.belongsTo(Entrega, {
-    foreignKey: "id_entrega",
-    as: "entrega",
-  });
-  Entrega.hasMany(ProductoRetornable, {
-    foreignKey: "id_entrega",
-    as: "productosRetornables",
-  });
-
-  ProductoRetornable.belongsTo(Insumo, {
-    foreignKey: "id_insumo",
-    as: "insumo",
-  });
-  Insumo.hasMany(ProductoRetornable, {
-    foreignKey: "id_insumo",
-    as: "productosRetornablesInsumo",
-  });
-
   Entrega.belongsTo(Cliente, { foreignKey: "id_cliente", as: "cliente" });
   Cliente.hasMany(Entrega, { foreignKey: "id_cliente", as: "entregas" });
 
   Entrega.belongsTo(Documento, { foreignKey: "id_documento", as: "documento" });
   Documento.hasOne(Entrega, { foreignKey: "id_documento", as: "entrega" });
-
-  // Relación: ProductoRetornable -> InventarioCamionLogs
-  ProductoRetornable.belongsTo(InventarioCamionLogs, {
-    foreignKey: "id_log",
-    as: "logInventario",
-  });
-  InventarioCamionLogs.hasMany(ProductoRetornable, {
-    foreignKey: "id_log",
-    as: "productosRetornables",
-  });
 
   // Relación: InventarioCamion -> Camion
   InventarioCamion.belongsTo(Camion, { foreignKey: "id_camion" });
@@ -390,6 +362,38 @@ function loadEntregasAssociations(models) {
   VentasChofer.hasMany(Documento, {
     foreignKey: "id_venta_chofer",
     as: "documentos",
+  });
+
+  /**
+   * Relaciones con Producto RetornableCamion
+   */
+
+  ProductoRetornableCamion.belongsTo(Producto, {
+    foreignKey: "id_producto",
+    as: "producto",
+  });
+  Producto.hasMany(ProductoRetornableCamion, {
+    foreignKey: "id_producto",
+    as: "retornablesCamion",
+  });
+
+  ProductoRetornableCamion.belongsTo(Camion, {
+    foreignKey: "id_camion",
+    as: "camion",
+  });
+  Camion.hasMany(ProductoRetornableCamion, {
+    foreignKey: "id_camion",
+    as: "retornables",
+  });
+
+  ProductoRetornableCamion.belongsTo(Entrega, {
+    foreignKey: "id_entrega",
+    as: "entrega",
+  });
+
+  Entrega.hasMany(ProductoRetornableCamion, {
+    foreignKey: "id_entrega",
+    as: "retornablesCamion",
   });
 
   console.log("Asociaciones del módulo de entregas cargadas correctamente.");

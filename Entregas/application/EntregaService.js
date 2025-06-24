@@ -1,5 +1,8 @@
 import sequelize from "../../database/database.js";
-import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
+import {
+  obtenerFechaActualChile,
+  obtenerFechaActualChileUTC,
+} from "../../shared/utils/fechaUtils.js";
 import paginate from "../../shared/utils/pagination.js";
 import VentaService from "../../ventas/application/VentaService.js";
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
@@ -13,8 +16,7 @@ import VentaRepository from "../../ventas/infrastructure/repositories/VentaRepos
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import EntregaRepository from "../infrastructure/repositories/EntregaRepository.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
-
-const fecha = obtenerFechaActualChile();
+import ProductoRetornableCamionRepository from "../infrastructure/repositories/ProductoRetornableCamionRepository.js";
 
 class EntregaService {
   // Pedido de En Entrega -> Completada
@@ -38,6 +40,7 @@ class EntregaService {
     const transaction = await sequelize.transaction();
 
     try {
+      const fecha = obtenerFechaActualChileUTC();
       if (!tipo_documento) {
         throw new Error("El tipo_documento no fue especificado para la venta.");
       }
@@ -111,7 +114,7 @@ class EntregaService {
           tipo_entrega: "despacho_a_domicilio",
           direccion_entrega: pedido.direccion_entrega,
           productos: detalles,
-          productos_retornables: botellones_retorno,
+          productos_retornables: [],
           id_metodo_pago,
           notas,
           impuesto: impuesto || 0,
@@ -199,40 +202,6 @@ class EntregaService {
         }
       }
 
-      if (
-        botellones_retorno &&
-        botellones_retorno.pasados === true &&
-        botellones_retorno.items &&
-        Array.isArray(botellones_retorno.items)
-      ) {
-        for (const item of botellones_retorno?.items) {
-          const registro =
-            await InventarioCamionRepository.findByCamionProductoAndEstado(
-              agendaViaje.id_camion,
-              item.id_producto,
-              "En Camión - Retorno",
-              { transaction }
-            );
-          if (!registro) {
-            // Si no existe, se crea uno (esto asume que InventarioCamionRepository tiene un método create)
-            await InventarioCamionRepository.create(
-              {
-                id_camion: agendaViaje.id_camion,
-                id_producto: item.id_producto,
-                cantidad: item.cantidad,
-                estado: "En Camión - Retorno",
-                tipo: "Retorno",
-                es_retornable: true,
-              },
-              { transaction }
-            );
-          } else {
-            registro.cantidad += item.cantidad;
-            await registro.save({ transaction });
-          }
-        }
-      }
-
       const nuevaEntrega = await EntregaRepository.create(
         {
           id_agenda_viaje,
@@ -251,6 +220,53 @@ class EntregaService {
         },
         { transaction }
       );
+
+      if (
+        botellones_retorno &&
+        botellones_retorno.pasados === true &&
+        botellones_retorno.items &&
+        Array.isArray(botellones_retorno.items)
+      ) {
+        for (const item of botellones_retorno?.items) {
+          await ProductoRetornableCamionRepository.create({
+            id_camion: agendaViaje.id_camion,
+            id_producto: item.id_producto,
+            id_entrega: nuevaEntrega.id_entrega,
+            cantidad: item.cantidad,
+            estado:
+              item.estado === "defectuoso"
+                ? "defectuoso"
+                : "pendiente_inspeccion",
+            tipo_defecto:
+              item.estado === "defectuoso" ? item.tipo_defecto : null,
+            fecha_registro: fecha,
+          });
+
+          const registro =
+            await InventarioCamionRepository.findByCamionProductoAndEstado(
+              agendaViaje.id_camion,
+              item.id_producto,
+              "En Camión - Retorno",
+              { transaction }
+            );
+          if (!registro) {
+            await InventarioCamionRepository.create(
+              {
+                id_camion: agendaViaje.id_camion,
+                id_producto: item.id_producto,
+                cantidad: item.cantidad,
+                estado: "En Camión - Retorno",
+                tipo: "Retorno",
+                es_retornable: true,
+              },
+              { transaction }
+            );
+          } else {
+            registro.cantidad += item.cantidad;
+            await registro.save({ transaction });
+          }
+        }
+      }
 
       await transaction.commit();
       return {

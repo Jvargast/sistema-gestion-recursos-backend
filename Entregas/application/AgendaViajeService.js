@@ -46,7 +46,12 @@ class AgendaViajesService {
   }
 
   async finalizarViaje(id_agenda_viaje, choferRut, options = {}) {
-    const { descargarAuto = false, descargarDisponibles = true } = options;
+    const {
+      descargarAuto,
+      descargarDisponibles,
+      dejaRetornablesEnPlanta,
+    } = options;
+
     const transaction = await sequelize.transaction();
     try {
       const agenda = await AgendaViajesRepository.findByAgendaViajeId(
@@ -84,7 +89,7 @@ class AgendaViajesService {
       if (descargarAuto) {
         await InventarioCamionService.vaciarCamion(camion.id_camion, {
           descargarDisponibles,
-          descargarRetorno: true,
+          descargarRetorno: dejaRetornablesEnPlanta,
         });
       }
 
