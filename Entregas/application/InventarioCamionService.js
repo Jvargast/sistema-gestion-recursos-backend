@@ -91,14 +91,10 @@ class InventarioCamionService {
     const transaction = await sequelize.transaction();
 
     try {
-      const inventarioCamion = await InventarioCamionRepository.findAllByCamionId(
-        id_camion,
-        { transaction }
-      );
-
-      const reservas = await InventarioCamionReservasRepository.findReservasByCamion(
-        id_camion
-      );
+      const inventarioCamion =
+        await InventarioCamionRepository.findAllByCamionId(id_camion, {
+          transaction,
+        });
 
       for (const item of inventarioCamion) {
         if (item.estado === "En Camión - Disponible" && descargarDisponibles) {
@@ -135,7 +131,6 @@ class InventarioCamionService {
               cantidad: item.cantidad,
               estado: "pendiente_inspeccion",
               fecha_retorno: new Date(),
-              id_camion,
             },
             { transaction }
           );
@@ -158,17 +153,6 @@ class InventarioCamionService {
         }
 
         if (item.estado === "En Camión - Reservado") {
-          const relacionadas = reservas.filter(
-            (r) => r.id_inventario_camion === item.id_inventario_camion
-          );
-          for (const reserva of relacionadas) {
-            await InventarioCamionReservasRepository.update(
-              reserva.id_reserva,
-              { estado: "Cancelado" },
-              transaction
-            );
-          }
-
           if (item.id_producto) {
             await InventarioService.incrementStock(
               item.id_producto,

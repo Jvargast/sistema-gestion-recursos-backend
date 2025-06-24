@@ -4,7 +4,8 @@ class ProductoRetornableController {
   async getProductoRetornableById(req, res) {
     try {
       const { id } = req.params;
-      const productoRetornable = await ProductoRetornableService.getProductoRetornableById(id);
+      const productoRetornable =
+        await ProductoRetornableService.getProductoRetornableById(id);
       res.status(200).json(productoRetornable);
     } catch (error) {
       res.status(404).json({ error: error.message });
@@ -14,7 +15,8 @@ class ProductoRetornableController {
   async getAllProductosRetornables(req, res) {
     try {
       const filters = { ...req.query };
-      const productosRetornables = await ProductoRetornableService.getAllProductosRetornables(filters);
+      const productosRetornables =
+        await ProductoRetornableService.getAllProductosRetornables(filters);
       res.status(200).json(productosRetornables);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -23,7 +25,10 @@ class ProductoRetornableController {
 
   async getPendientes(req, res) {
     try {
-      const pendientes = await ProductoRetornableService.getAllProductosRetornables({ estado: "pendiente_inspeccion" });
+      const pendientes =
+        await ProductoRetornableService.getAllProductosRetornables({
+          estado: "pendiente_inspeccion",
+        });
       res.status(200).json(pendientes);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -33,7 +38,8 @@ class ProductoRetornableController {
   async createProductoRetornable(req, res) {
     try {
       const data = req.body;
-      const productoRetornable = await ProductoRetornableService.createProductoRetornable(data);
+      const productoRetornable =
+        await ProductoRetornableService.createProductoRetornable(data);
       res.status(201).json(productoRetornable);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -44,7 +50,8 @@ class ProductoRetornableController {
     try {
       const { id } = req.params;
       const data = req.body;
-      const updatedProductoRetornable = await ProductoRetornableService.updateProductoRetornable(id, data);
+      const updatedProductoRetornable =
+        await ProductoRetornableService.updateProductoRetornable(id, data);
       res.status(200).json(updatedProductoRetornable);
     } catch (error) {
       res.status(400).json({ error: error.message });
@@ -63,12 +70,20 @@ class ProductoRetornableController {
 
   async inspeccionarRetornables(req, res) {
     try {
-      const { id_camion } = req.params;
       const { items } = req.body;
-      await ProductoRetornableService.inspeccionarRetornables(id_camion, items);
-      res.status(200).json({ message: "Inspección completada" });
+
+      if (!Array.isArray(items) || items.length === 0) {
+        return res
+          .status(400)
+          .json({ error: "No hay items para inspeccionar." });
+      }
+
+      await ProductoRetornableService.inspeccionarRetornables(items);
+
+      res.status(200).json({ message: "Inspección registrada correctamente." });
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      console.error("Error al inspeccionar:", error);
+      res.status(500).json({ error: error.message });
     }
   }
 }

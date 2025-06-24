@@ -23,7 +23,12 @@ class AgendaViajesController {
   async finalizarViaje(req, res) {
     try {
       const { id_agenda_viaje } = req.params;
-      const { descargarAuto = false, descargarDisponibles = true } = req.body;
+      const {
+        descargarAuto,
+        descargarDisponibles,
+        dejaRetornablesEnPlanta,
+      } = req.body;
+
       const choferRut = req.user ? req.user.id : null;
 
       const result = await AgendaViajeService.finalizarViaje(
@@ -32,8 +37,10 @@ class AgendaViajesController {
         {
           descargarAuto,
           descargarDisponibles,
+          dejaRetornablesEnPlanta,
         }
       );
+
       res.status(200).json(result);
     } catch (error) {
       res.status(500).json({ error: error.message });

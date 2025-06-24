@@ -18,7 +18,7 @@ router.post(
   ProductoRetornableController.createProductoRetornable
 );
 router.post(
-  "/inspeccionar/:id_camion",
+  "/inspeccionar",
   // checkPermissions("inventario.productoretornable.editar"),
   ProductoRetornableController.inspeccionarRetornables
 );
