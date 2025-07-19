@@ -14,14 +14,14 @@ class ProductoController {
     try {
       const filters = req.query;
       let options = {
-        page: parseInt(req.query.page, 10) || 1,
-        limit: parseInt(req.query.limit, 20) || 20,
+        page: req.query.page ? parseInt(req.query.page, 10) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit, 10) : 20,
         search: req.query.search,
         estado: req.query.estado,
         categoria: req.query.categoria,
       };
-      delete filters.limit;
       delete filters.offset;
+
 
       const productos = await ProductoService.getAllProductos(filters, options);
 

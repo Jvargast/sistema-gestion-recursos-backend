@@ -1,4 +1,4 @@
-import InventarioCamionRepository from "../../Entregas/infrastructure/repositories/InventarioCamionRepository.js";
+import sequelize from "../../database/database.js";
 import ProductoRetornableRepository from "../infrastructure/repositories/ProductoRetornableRepository.js";
 import InventarioService from "./InventarioService.js";
 import ProductosService from "./ProductosService.js";
@@ -65,7 +65,6 @@ class ProductoRetornableService {
           );
         }
 
-        // === 1. Aumentar al inventario como insumo si corresponde ===
         if (item.reutilizable > 0) {
           if (!item.id_insumo_destino) {
             throw new Error(
@@ -73,10 +72,10 @@ class ProductoRetornableService {
             );
           }
 
-          // Validar que el insumo destino existe
-          const insumoDestinoExiste = await InventarioService.getInventarioByInsumoId(
-            item.id_insumo_destino
-          );
+          const insumoDestinoExiste =
+            await InventarioService.getInventarioByInsumoId(
+              item.id_insumo_destino
+            );
           if (!insumoDestinoExiste) {
             throw new Error(
               `El insumo destino con ID ${item.id_insumo_destino} no existe.`
@@ -90,7 +89,6 @@ class ProductoRetornableService {
           );
         }
 
-        // === 2. Registrar defectuosos (producto o insumo) ===
         if (item.defectuosos && item.defectuosos.length > 0) {
           for (const d of item.defectuosos) {
             if (!d.tipo_defecto || !d.cantidad || d.cantidad <= 0) {
@@ -102,7 +100,7 @@ class ProductoRetornableService {
             await ProductoRetornableRepository.create(
               {
                 id_producto: original.id_producto || null,
-                id_insumo: original.id_insumo || null,
+                id_insumo: item.id_insumo_destino || original.id_insumo || null,
                 cantidad: d.cantidad,
                 tipo_defecto: d.tipo_defecto,
                 estado: "defectuoso",
@@ -113,9 +111,25 @@ class ProductoRetornableService {
           }
         }
 
-        await ProductoRetornableRepository.delete(item.id_producto_retornable, {
-          transaction,
-        });
+        const cantidadRestante = original.cantidad - totalAsignado;
+
+        if (cantidadRestante === 0) {
+          await ProductoRetornableRepository.delete(
+            item.id_producto_retornable,
+            {
+              transaction,
+            }
+          );
+        } else {
+          await ProductoRetornableRepository.update(
+            item.id_producto_retornable,
+            {
+              cantidad: cantidadRestante,
+              estado: "pendiente_inspeccion",
+            },
+            { transaction }
+          );
+        }
       }
 
       await transaction.commit();

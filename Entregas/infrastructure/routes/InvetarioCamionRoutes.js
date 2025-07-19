@@ -15,7 +15,7 @@ router.post("/return/:id", checkPermissions(""), InventarioCamionController.retu
 router.get("/:id", checkPermissions("entregas.inventariocamion.ver"),InventarioCamionController.getProductsByCamion);
 router.post(
   "/vaciar/:id_camion",
-  checkPermissions("entregas.inventariocamion.vaciar"),
+  checkPermissions("entregas.inventariocamion.estado"),
   InventarioCamionController.vaciarCamion
 );
 

@@ -36,6 +36,8 @@ class PedidoService {
         tipo_documento,
         pago_recibido,
         referencia,
+        lat,
+        lng,
         id_venta = null,
       } = data;
 
@@ -56,8 +58,7 @@ class PedidoService {
       );
       if (!estadoInicial) throw new Error("Estado inicial no configurado.");
 
-      //const fecha_pedido = dayjs().tz(ZONA_HORARIA).format()
-      const fecha_pedido = obtenerFechaActualChile(); /* .toDate(); */
+      const fecha_pedido = obtenerFechaActualChile(); 
 
       console.log("Fecha Chile:", fecha_pedido);
       const nuevoPedido = await PedidoRepository.create(
@@ -65,6 +66,8 @@ class PedidoService {
           id_cliente: cliente.id_cliente,
           id_creador,
           direccion_entrega,
+          lat,
+          lng,
           id_metodo_pago: metodoPago ? metodoPago.id_metodo_pago : null,
           id_estado_pedido: estadoInicial.id_estado_venta,
           notas: notas ? notas : null,
@@ -462,6 +465,7 @@ class PedidoService {
         );
         const tipo_documento = documento[0]?.tipo_documento || "boleta";
 
+
         const nuevoDestino = {
           id_pedido: pedido.id_pedido,
           id_cliente: cliente.id_cliente,
@@ -469,6 +473,8 @@ class PedidoService {
           direccion: pedido.direccion_entrega,
           notas: pedido.notas || "",
           tipo_documento,
+          lat: pedido?.lat || null,
+          lng: pedido?.lng || null,
         };
 
         const destinosActuales = viajeActivo.destinos || [];
@@ -633,9 +639,7 @@ class PedidoService {
     }
 
     if (pedido.estado_pago === "Pagado" || pedido.pagado) {
-      throw new Error(
-        "No se puede rechazar un pedido que ya fue pagado."
-      );
+      throw new Error("No se puede rechazar un pedido que ya fue pagado.");
     }
 
     const estadoActual = await EstadoVentaRepository.findById(
@@ -646,10 +650,7 @@ class PedidoService {
       throw new Error("Estado de pedido inválido.");
     }
 
-    const estadosPermitidos = [
-      "Pendiente",
-      "Pendiente de Confirmación",
-    ];
+    const estadosPermitidos = ["Pendiente", "Pendiente de Confirmación"];
 
     if (!estadosPermitidos.includes(estadoActual.nombre_estado)) {
       throw new Error(
@@ -691,7 +692,9 @@ class PedidoService {
       throw new Error("Solo puedes revertir pedidos en estado 'Rechazado'.");
     }
 
-    const estadoPendiente = await EstadoVentaRepository.findByNombre("Pendiente");
+    const estadoPendiente = await EstadoVentaRepository.findByNombre(
+      "Pendiente"
+    );
     if (!estadoPendiente) {
       throw new Error("Estado 'Pendiente' no configurado.");
     }

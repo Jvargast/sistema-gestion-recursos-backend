@@ -87,7 +87,7 @@ class InventarioService {
     if (!inventario) throw new Error("Insumo no encontrado en inventario.");
 
     inventario.cantidad += cantidad;
-    await InventarioRepository.update(id_insumo, {
+    await InventarioRepository.updateInsumo(id_insumo, {
       cantidad: inventario.cantidad,
     });
 

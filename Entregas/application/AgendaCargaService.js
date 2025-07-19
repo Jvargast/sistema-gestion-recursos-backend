@@ -498,6 +498,7 @@ class AgendaCargaService {
       if (pedidosEnPreparacion.length) {
         for (const pedido of pedidosEnPreparacion) {
           const cliente = await ClienteRepository.findById(pedido.id_cliente);
+
           let tipo_documento = null;
           if (pedido.id_venta) {
             const documento = await DocumentoRepository.findByVentaId(
@@ -516,6 +517,8 @@ class AgendaCargaService {
             direccion: pedido.direccion_entrega,
             notas: pedido.notas || "",
             tipo_documento: tipo_documento || "boleta",
+            lat: pedido?.lat || null,
+            lng: pedido?.lng || null,
           });
           await PedidoRepository.update(
             pedido.id_pedido,
