@@ -82,7 +82,6 @@ class ProductoService {
   async createProducto(data) {
     const { cantidad_inicial, ...productoData } = data;
 
-    // Validar datos obligatorios
     if (!productoData.nombre_producto) {
       throw new Error("El campo 'nombre_producto' es obligatorio");
     }
@@ -99,7 +98,6 @@ class ProductoService {
       throw new Error("El campo 'id_categoria' es obligatorio");
     }
 
-    // Validar relaciones
     await CategoriaProductoService.getCategoriaById(productoData.id_categoria);
 
     const productoExistente = await ProductosRepository.findByNombre(
@@ -110,10 +108,8 @@ class ProductoService {
       throw new Error("El producto ya se encuentra registrado");
     }
 
-    // Convertir precio a número
     productoData.precio = Number(productoData.precio);
 
-    // Crear el producto
     const producto = await ProductosRepository.create({
       ...productoData,
       id_estado_producto: 1,

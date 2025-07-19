@@ -5,7 +5,6 @@ import Usuarios from "../../../auth/domain/models/Usuarios.js";
 import EstadoVenta from "./EstadoVenta.js";
 import MetodoPago from "./MetodoPago.js";
 
-
 const Pedido = sequelize.define(
   "Pedido",
   {
@@ -38,7 +37,7 @@ const Pedido = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: EstadoVenta, 
+        model: EstadoVenta,
         key: "id_estado_venta",
       },
     },
@@ -55,8 +54,8 @@ const Pedido = sequelize.define(
       allowNull: false,
     },
     estado_pago: {
-      type: DataTypes.ENUM('Pagado', 'Pendiente'),
-      defaultValue: 'Pendiente',
+      type: DataTypes.ENUM("Pagado", "Pendiente"),
+      defaultValue: "Pendiente",
     },
     pagado: {
       type: DataTypes.BOOLEAN,
@@ -69,6 +68,14 @@ const Pedido = sequelize.define(
     total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
+    },
+    lat: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    lng: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
     },
   },
   {

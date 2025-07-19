@@ -25,12 +25,12 @@ class PagoController {
       const filters = req.query;
       const rolId = req.user?.rol;
       let options = {
-        page: parseInt(req.query.page, 10) || 1,
-        limit: parseInt(req.query.limit, 20) || 20,
+        page: req.query.page ? parseInt(req.query.page, 10) : 1,
+        limit: req.query.limit ? parseInt(req.query.limit, 10) : 20,
         search: req.query.search,
         rolId,
       };
-      delete filters.limit;
+
       delete filters.offset;
       const pagos = await PagoService.obtenerTodosLosPagos(filters, options);
       res.status(200).json({ data: pagos.data, total: pagos.pagination });

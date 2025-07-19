@@ -18,14 +18,12 @@ class AuthController {
         password
       );
 
-      //Audiar inicio de sesión
       await AuditLogsService.logAction(
         rut,
         "Inicio de sesión",
         "Autenticación",
         ip
       );
-      // Configurar cookie con el token JWT
       res.cookie("authToken", token, {
         ...getCookieSettings(),
         maxAge: 1 * 60 * 60 * 1000, // Expira en 1 hora
@@ -73,7 +71,6 @@ class AuthController {
 
   async getAuthenticatedUser(req, res) {
     try {
-      // El middleware ya agregó el usuario autenticado a `req.user`
       const user = req.user;
 
       if (!user) {
@@ -102,10 +99,8 @@ class AuthController {
     }
 
     try {
-      // Verificar el Refresh Token
       const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
 
-      // Opcional: verifica si el Refresh Token aún es válido en la base de datos
       const isTokenValid = await AuthService.isValidRefreshToken(
         refreshToken,
         decoded.rut
@@ -113,14 +108,12 @@ class AuthController {
       if (!isTokenValid) {
         return res.status(401).json({ error: "Refresh token inválido" });
       }
-      // Generar un nuevo Access Token
       const newAccessToken = jwt.sign(
         { rut: decoded.rut, rolId: decoded.rolId },
         process.env.JWT_SECRET,
         { expiresIn: "1h" }
       );
 
-      // Enviar el nuevo Access Token en una cookie
       res.cookie("authToken", newAccessToken, {
         ...getCookieSettings(),
         maxAge: 1 * 60 * 60 * 1000,
