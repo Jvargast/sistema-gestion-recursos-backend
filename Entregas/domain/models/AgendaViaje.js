@@ -39,7 +39,11 @@ const AgendaViajes = sequelize.define(
     },
     inventario_final: {
       type: DataTypes.JSON,
-      allowNull: true, // Contendrá productos/insumos restantes.
+      allowNull: true,
+    },
+    origen_inicial: {
+      type: DataTypes.JSON, 
+      allowNull: true,
     },
     estado: {
       type: DataTypes.ENUM("Pendiente", "En Tránsito", "Finalizado"),
@@ -57,7 +61,7 @@ const AgendaViajes = sequelize.define(
     },
     notas: {
       type: DataTypes.TEXT,
-      allowNull: true, // Información adicional.
+      allowNull: true,
     },
     validado_por_chofer: {
       type: DataTypes.BOOLEAN,

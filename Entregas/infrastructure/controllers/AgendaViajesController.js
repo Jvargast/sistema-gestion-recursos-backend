@@ -23,11 +23,8 @@ class AgendaViajesController {
   async finalizarViaje(req, res) {
     try {
       const { id_agenda_viaje } = req.params;
-      const {
-        descargarAuto,
-        descargarDisponibles,
-        dejaRetornablesEnPlanta,
-      } = req.body;
+      const { descargarAuto, descargarDisponibles, dejaRetornablesEnPlanta } =
+        req.body;
 
       const choferRut = req.user ? req.user.id : null;
 
@@ -71,6 +68,16 @@ class AgendaViajesController {
       res.status(200).json(viajes);
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  }
+
+  async getAgendaViajeById(req, res) {
+    try {
+      const { id } = req.params;
+      const agenda = await AgendaViajeService.getAgendaViajeById(id);
+      res.status(200).json(agenda);
+    } catch (error) {
+      res.status(404).json({ error: error.message });
     }
   }
 }

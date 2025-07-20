@@ -335,7 +335,8 @@ class AgendaCargaService {
     id_agenda_carga,
     id_chofer,
     productosCargados,
-    notasChofer = ""
+    notasChofer = "",
+    origen_inicial
   ) {
     const transaction = await sequelize.transaction();
 
@@ -541,6 +542,7 @@ class AgendaCargaService {
           fecha_inicio: fecha,
           notas: `Viaje iniciado. Agenda carga: ${id_agenda_carga}`,
           validado_por_chofer: true,
+          origen_inicial,
         },
         { transaction }
       );
