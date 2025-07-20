@@ -46,11 +46,8 @@ class AgendaViajesService {
   }
 
   async finalizarViaje(id_agenda_viaje, choferRut, options = {}) {
-    const {
-      descargarAuto,
-      descargarDisponibles,
-      dejaRetornablesEnPlanta,
-    } = options;
+    const { descargarAuto, descargarDisponibles, dejaRetornablesEnPlanta } =
+      options;
 
     const transaction = await sequelize.transaction();
     try {
@@ -179,6 +176,16 @@ class AgendaViajesService {
       console.error("Error al obtener historial de viajes:", error);
       throw new Error("No se pudo obtener el historial de viajes.");
     }
+  }
+
+  async getAgendaViajeById(id) {
+    const agenda = await AgendaViajesRepository.findByAgendaViajeId(id);
+
+    if (!agenda) {
+      throw new Error("Agenda not found");
+    }
+
+    return agenda;
   }
 }
 

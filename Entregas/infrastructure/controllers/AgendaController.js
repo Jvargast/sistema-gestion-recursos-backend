@@ -51,13 +51,19 @@ class AgendaCargaController {
 
   async confirmarCargaCamion(req, res) {
     try {
-      const { id_agenda_carga, productosCargados, notasChofer } = req.body;
+      const {
+        id_agenda_carga,
+        productosCargados,
+        notasChofer,
+        origen_inicial,
+      } = req.body;
       const id_chofer = req.user.id;
       const carga = await AgendaCargaService.confirmarCargaCamion(
         id_agenda_carga,
         id_chofer,
         productosCargados,
-        notasChofer
+        notasChofer,
+        origen_inicial
       );
       res.status(201).json(carga);
     } catch (error) {
