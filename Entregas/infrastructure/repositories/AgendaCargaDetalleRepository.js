@@ -9,6 +9,16 @@ class AgendaCargaDetalleRepository {
     return await AgendaCargaDetalle.create(detalleData);
   }
 
+  async findByAgendaAndPedido(id_agenda_carga, id_pedido, options = {}) {
+    return await AgendaCargaDetalle.findAll({
+      where: {
+        id_agenda_carga,
+        id_pedido,
+      },
+       ...options,
+    });
+  }
+
   async bulkCreate(detalles) {
     return await AgendaCargaDetalle.bulkCreate(detalles);
   }

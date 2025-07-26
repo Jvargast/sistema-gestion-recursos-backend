@@ -58,6 +58,14 @@ class VentaRepository {
     return updated > 0 ? await this.findById(id) : null;
   }
 
+  async updateDesdeAnulacion(id, updates, options = {}) {
+    const [updated] = await Venta.update(updates, {
+      where: { id_venta: id },
+      ...options, 
+    });
+    return updated > 0 ? await this.findById(id, options) : null;
+  }
+
   async delete(id) {
     return await Venta.destroy({ where: { id_venta: id } });
   }

@@ -103,10 +103,9 @@ class EntregaService {
           pago_recibido = monto_total;
         }
       }
+      let esFactura = tipo_documento === "factura";
 
       if (!pedido.id_venta) {
-        const esFactura = tipo_documento === "factura";
-
         const data = {
           id_cliente: pedido.id_cliente,
           id_vendedor: id_chofer,
@@ -129,7 +128,7 @@ class EntregaService {
           transaction,
         });
 
-        pedido.id_venta = ventaRegistrada.id_venta;
+        pedido.id_venta = ventaRegistrada.venta.id_venta;
 
         if (esFactura) {
           pedido.pagado = false;
@@ -160,7 +159,16 @@ class EntregaService {
 
       pedido.id_estado_pedido = estadoCompletada.id_estado_venta;
 
-      await pedido.save({ transaction });
+      await PedidoRepository.updateFromVenta(
+        pedido.id_pedido,
+        {
+          id_venta: ventaRegistrada.venta.id_venta,
+          pagado: !esFactura,
+          estado_pago: esFactura ? "Pendiente" : "Pagado",
+          id_estado_pedido: estadoCompletada.id_estado_venta,
+        },
+        { transaction }
+      );
 
       if (productos_entregados && Array.isArray(productos_entregados)) {
         for (const item of productos_entregados) {

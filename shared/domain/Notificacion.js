@@ -24,7 +24,7 @@ const Notificacion = sequelize.define(
       allowNull: false,
     },
     tipo: {
-      type: DataTypes.ENUM("pedido_asignado", "entrega_realizada", "alerta", "pedido_confirmado"),
+      type: DataTypes.ENUM("pedido_asignado", "entrega_realizada", "alerta", "pedido_confirmado", "pedido_revertido"),
       allowNull: false,
     },
     leida: {

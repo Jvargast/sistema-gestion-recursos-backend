@@ -20,6 +20,12 @@ class PagoRepository {
       throw error;
     }
   }
+  async findByDocumentoId(id_documento, options = {}) {
+    return await Pago.findAll({
+      where: { id_documento },
+      ...options,
+    });
+  }
 
   async findAllByVentaId(id_venta) {
     return await Pago.findAll({

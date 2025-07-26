@@ -68,6 +68,7 @@ class MovimientoCajaService {
     descripcion,
     id_venta,
     id_metodo_pago,
+    options = {}
   }) {
     // Validar tipo de movimiento
     if (!["ingreso", "egreso"].includes(tipo_movimiento)) {
@@ -116,6 +117,8 @@ class MovimientoCajaService {
 
     return movimiento;
   }
+
+
 }
 
 export default new MovimientoCajaService();

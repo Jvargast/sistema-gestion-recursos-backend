@@ -24,6 +24,7 @@ import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js
 import CuentaPorCobrarRepository from "../infrastructure/repositories/CuentaPorCobrarRepository.js";
 import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
 import { estadosInvalidosVenta } from "../../shared/utils/estadoUtils.js";
+import MovimientoCajaRepository from "../infrastructure/repositories/MovimientoCajaRepository.js";
 
 function clasificarProductos(productos) {
   const productosSolo = [];
@@ -302,7 +303,7 @@ class VentaService {
         );
 
         if (tipo_entrega === "retiro_en_sucursal") {
-            await InventarioService.decrementarStockInsumo(id_insumo, cantidad);
+          await InventarioService.decrementarStockInsumo(id_insumo, cantidad);
         }
       }
 
@@ -567,6 +568,108 @@ class VentaService {
       id_estado_venta: 10,
       usuario_modificacion: usuario?.rut || null,
     });
+  }
+
+  async anularVenta(
+    idVenta,
+    usuario,
+    { transaction, motivo = "Anulación administrativa" } = {}
+  ) {
+    const venta = await VentaRepository.findById(idVenta, { transaction });
+    if (!venta) throw new Error("Venta no encontrada.");
+
+    const estadoAnulada = await EstadoVentaRepository.findByNombre(
+      "Cancelada",
+      {
+        transaction,
+      }
+    );
+    if (!estadoAnulada)
+      throw new Error("Estado 'Cancelada' no encontrado en la base de datos.");
+
+    await VentaRepository.updateDesdeAnulacion(
+      idVenta,
+      {
+        id_estado_venta: estadoAnulada.id_estado_venta,
+        notas: motivo,
+        fecha_anulacion: obtenerFechaActualChile(),
+      },
+      { transaction }
+    );
+    console.log(
+      "Venta anulada:",
+      idVenta,
+      "Nuevo estado:",
+      estadoAnulada.id_estado_venta
+    );
+
+    const documentos = await DocumentoRepository.findByVentaId(idVenta, {
+      transaction,
+    });
+    for (const doc of documentos) {
+      await DocumentoRepository.update(
+        doc.id_documento,
+        {
+          estado: "anulado",
+          observaciones: motivo,
+        },
+        { transaction }
+      );
+    }
+
+    for (const doc of documentos) {
+      const pagos = await PagoRepository.findByDocumentoId(doc.id_documento, {
+        transaction,
+      });
+      for (const pago of pagos) {
+        await PagoRepository.update(
+          pago.id_pago,
+          { id_estado_pago: 4 },
+          { transaction }
+        );
+      }
+    }
+
+    const movimientosCaja =
+      await MovimientoCajaRepository.buscarMovimientosPorVenta(idVenta, {
+        transaction,
+      });
+
+    for (const movimiento of movimientosCaja) {
+      const metodo = await MetodoPagoRepository.findById(
+        movimiento.id_metodo_pago,
+        { transaction }
+      );
+      if (
+        metodo &&
+        metodo.nombre.toLowerCase() === "efectivo" &&
+        movimiento.tipo_movimiento === "ingreso"
+      ) {
+        await MovimientoCajaService.registrarMovimiento(
+          {
+            id_caja: movimiento.id_caja,
+            tipo_movimiento: "egreso",
+            monto: movimiento.monto,
+            descripcion: `Anulación de venta ID ${idVenta} (devolución efectivo)`,
+            id_venta: idVenta,
+            id_metodo_pago: movimiento.id_metodo_pago,
+            referencia: `Anula movimiento #${movimiento.id_movimiento_caja}`,
+          },
+          { transaction }
+        );
+      }
+    }
+
+    await LogVentaRepository.create(
+      {
+        id_venta: idVenta,
+        accion: "anulación",
+        fecha: obtenerFechaActualChile(),
+        usuario: usuario || null,
+        detalle: motivo,
+      },
+      { transaction }
+    );
   }
 }
 

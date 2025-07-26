@@ -21,7 +21,7 @@ class DocumentoRepository {
     }
   }
 
-  async findByVentaId(id_venta) {
+  async findByVentaId(id_venta, options={}) {
     try {
       const documentos = await Documento.findAll({
         where: { id_venta },
@@ -30,6 +30,7 @@ class DocumentoRepository {
           { model: EstadoPago, as:"estadoPago", attributes: ["id_estado_pago", "nombre"] },
         ],
         order: [["id_documento", "ASC"]], 
+        ...options
       });
   
       return documentos.length > 0 ? documentos : [];

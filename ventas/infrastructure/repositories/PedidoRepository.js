@@ -98,6 +98,14 @@ class PedidoRepository {
     return updated > 0 ? await Pedido.findByPk(id) : null;
   }
 
+  async updateFromVenta(id, updates, options = {}) {
+    const [updated] = await Pedido.update(updates, {
+      where: { id_pedido: id },
+      ...options,
+    });
+    return updated > 0 ? await Pedido.findByPk(id) : null;
+  }
+
   async delete(id) {
     return await Pedido.destroy({ where: { id_pedido: id } });
   }

@@ -57,7 +57,7 @@ const Entrega = sequelize.define(
       allowNull: false,
     },
     estado_entrega: {
-      type: DataTypes.ENUM("pendiente", "en_proceso", "completada", "fallida"),
+      type: DataTypes.ENUM("pendiente", "en_proceso", "completada", "fallida", "anulada"),
     },
     fecha_hora: {
       type: DataTypes.DATE,

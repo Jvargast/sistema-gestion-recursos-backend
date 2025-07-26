@@ -77,6 +77,10 @@ const Pedido = sequelize.define(
       type: DataTypes.FLOAT,
       allowNull: true,
     },
+    prioridad: {
+      type: DataTypes.ENUM("alta", "normal", "baja"),
+      defaultValue: "normal",
+    },
   },
   {
     tableName: "Pedido",

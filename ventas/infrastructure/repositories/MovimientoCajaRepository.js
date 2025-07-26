@@ -53,6 +53,13 @@ class MovimientoCajaRepository {
   getModel() {
     return MovimientoCaja;
   }
+
+  async buscarMovimientosPorVenta(id_venta, options = {}) {
+    return await MovimientoCaja.findAll({
+      where: { id_venta },
+      ...options,
+    });
+  }
 }
 
 export default new MovimientoCajaRepository();
