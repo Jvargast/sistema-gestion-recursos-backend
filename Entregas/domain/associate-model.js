@@ -396,6 +396,16 @@ function loadEntregasAssociations(models) {
     as: "retornablesCamion",
   });
 
+  AgendaCargaDetalle.belongsTo(Pedido, {
+    foreignKey: "id_pedido",
+    as: "pedido",
+  });
+
+  Pedido.hasMany(AgendaCargaDetalle, {
+    foreignKey: "id_pedido",
+    as: "detallesCarga",
+  });
+
   console.log("Asociaciones del módulo de entregas cargadas correctamente.");
 }
 

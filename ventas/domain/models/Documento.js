@@ -49,14 +49,14 @@ const Documento = sequelize.define(
       allowNull: false,
     },
     monto_neto: {
-      type: DataTypes.DECIMAL(10, 2), // Valor antes de aplicar impuestos
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       validate: {
         min: 0,
       },
     },
     iva: {
-      type: DataTypes.DECIMAL(10, 2), // Impuesto calculado sobre el neto
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
       validate: {
         min: 0,

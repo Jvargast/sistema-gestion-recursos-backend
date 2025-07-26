@@ -3,6 +3,7 @@ import sequelize from "../../../database/database.js";
 import AgendaCarga from "./AgendaCarga.js";
 import Producto from "../../../inventario/domain/models/Producto.js";
 import Insumo from "../../../inventario/domain/models/Insumo.js";
+import Pedido from "../../../ventas/domain/models/Pedido.js";
 
 const AgendaCargaDetalle = sequelize.define(
   "AgendaCargaDetalle",
@@ -36,16 +37,30 @@ const AgendaCargaDetalle = sequelize.define(
       },
       allowNull: true,
     },
+    id_pedido: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: Pedido,
+        key: "id_pedido",
+      },
+      allowNull: true,
+    },
     unidad_medida: {
       type: DataTypes.STRING,
       allowNull: true,
     },
     peso_estimado: {
       type: DataTypes.FLOAT,
-      allowNull: true, 
+      allowNull: true,
     },
     estado: {
-      type: DataTypes.ENUM("Pendiente", "Cargado", "Rechazado", "Descargado"),
+      type: DataTypes.ENUM(
+        "Pendiente",
+        "Cargado",
+        "Rechazado",
+        "Descargado",
+        "Cancelada"
+      ),
       allowNull: false,
       defaultValue: "Pendiente",
     },

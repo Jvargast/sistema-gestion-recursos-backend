@@ -60,10 +60,10 @@ class PedidoController {
         pago_recibido,
         referencia,
         notas,
-        id_metodo_pago
+        id_metodo_pago,
       } = req.body;
-      
-      const id_usuario_creador = req?.user?.id
+
+      const id_usuario_creador = req?.user?.id;
 
       const resultado = await PedidoService.registrarDesdePedido({
         id_pedido,
@@ -73,7 +73,7 @@ class PedidoController {
         referencia,
         notas,
         id_usuario_creador,
-        id_metodo_pago
+        id_metodo_pago,
       });
 
       res.status(200).json(resultado);
@@ -109,7 +109,7 @@ class PedidoController {
   async obtenerMisPedidos(req, res) {
     try {
       const id_chofer = req.user.id;
-      let fecha = req.query.fecha; 
+      let fecha = req.query.fecha;
 
       if (!fecha || isNaN(Date.parse(fecha))) {
         return res
@@ -335,6 +335,32 @@ class PedidoController {
       res
         .status(500)
         .json({ message: `Error al eliminar pedido: ${error.message}` });
+    }
+  }
+
+  async revertirPedidoAEstado(req, res) {
+    try {
+      const id_pedido = req.params.id;
+      const { id_estado_destino } = req.body;
+      const id_usuario = req.user?.id || req.user?.rut;
+
+      if (!id_estado_destino) {
+        return res
+          .status(400)
+          .json({ message: "Debes indicar el id_estado_destino" });
+      }
+
+      const result = await PedidoService.revertirPedidoAEstado({
+        id_pedido,
+        id_estado_destino,
+        id_usuario,
+      });
+
+      res.status(200).json(result);
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: `Error al revertir pedido: ${error.message}` });
     }
   }
 }

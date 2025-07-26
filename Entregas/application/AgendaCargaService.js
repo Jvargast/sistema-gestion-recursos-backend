@@ -26,7 +26,6 @@ import {
 
 class AgendaCargaService {
   // Pedido de Confirmado -> En Preparación
-
   async createAgenda(
     id_usuario_chofer,
     rut,
@@ -220,6 +219,7 @@ class AgendaCargaService {
             unidad_medida,
             estado: "Pendiente",
             notas: `Pedido ID ${pedido?.id_pedido}`,
+            id_pedido: pedido.id_pedido || null,
           });
         }
         // Actualizar pedido a estado 'En Preparación'

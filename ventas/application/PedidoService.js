@@ -19,6 +19,10 @@ import WebSocketServer from "../../shared/websockets/WebSocketServer.js";
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
 import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
 import { estadosInvalidosPedido } from "../../shared/utils/estadoUtils.js";
+import AgendaCargaRepository from "../../Entregas/infrastructure/repositories/AgendaCargaRepository.js";
+import AgendaCargaDetalleRepository from "../../Entregas/infrastructure/repositories/AgendaCargaDetalleRepository.js";
+import InventarioService from "../../inventario/application/InventarioService.js";
+import EntregaRepository from "../../Entregas/infrastructure/repositories/EntregaRepository.js";
 
 class PedidoService {
   // Se crea en Pendiente
@@ -39,6 +43,7 @@ class PedidoService {
         lat,
         lng,
         id_venta = null,
+        prioridad,
       } = data;
 
       let cliente = await ClienteRepository.findById(id_cliente);
@@ -51,14 +56,14 @@ class PedidoService {
       if (metodo_pago) {
         metodoPago = await MetodoPagoRepository.findById(metodo_pago);
         if (!metodoPago) throw new Error("Método de pago inválido.");
-      } // Ensure this closing brace matches the corresponding opening brace
+      }
 
       const estadoInicial = await EstadoVentaRepository.findByNombre(
         "Pendiente"
       );
       if (!estadoInicial) throw new Error("Estado inicial no configurado.");
 
-      const fecha_pedido = obtenerFechaActualChile(); 
+      const fecha_pedido = obtenerFechaActualChile();
 
       console.log("Fecha Chile:", fecha_pedido);
       const nuevoPedido = await PedidoRepository.create(
@@ -74,6 +79,7 @@ class PedidoService {
           total: 0,
           estado_pago: pagado ? "Pagado" : "Pendiente",
           fecha_pedido: fecha_pedido,
+          prioridad,
         },
         { transaction }
       );
@@ -465,7 +471,6 @@ class PedidoService {
         );
         const tipo_documento = documento[0]?.tipo_documento || "boleta";
 
-
         const nuevoDestino = {
           id_pedido: pedido.id_pedido,
           id_cliente: cliente.id_cliente,
@@ -526,6 +531,294 @@ class PedidoService {
     }
 
     return PedidoRepository.findById(id_pedido);
+  }
+
+  //Revertir estado
+  async revertirPedidoAEstado({ id_pedido, id_estado_destino, id_usuario }) {
+    const transaction = await sequelize.transaction();
+    try {
+      const pedido = await PedidoRepository.findById(id_pedido, {
+        transaction,
+      });
+      if (!pedido) throw new Error("Pedido no encontrado");
+
+      const estados = [
+        "Pendiente",
+        "Pendiente de Confirmación",
+        "Confirmado",
+        "En Preparación",
+        "En Entrega",
+        "Completada",
+      ];
+
+      //Obtengo estados actual - destino
+      const estadoActual = await EstadoVentaRepository.findById(
+        pedido.id_estado_pedido,
+        { transaction }
+      );
+      const estadoDestino = await EstadoVentaRepository.findById(
+        id_estado_destino,
+        { transaction }
+      );
+      const nombreActual = estadoActual.nombre_estado;
+      const nombreDestino = estadoDestino.nombre_estado;
+
+      //Validación si esta dentro de lo permitido
+      const idxActual = estados.indexOf(nombreActual);
+      const idxDestino = estados.indexOf(nombreDestino);
+
+      if (idxDestino === -1 || idxActual === -1)
+        throw new Error("Estado no reconocido");
+      if (idxDestino >= idxActual)
+        throw new Error("Solo se permite volver a estados anteriores");
+
+      // Revertir en reversa desde el estado actual al destino
+      for (let i = idxActual; i > idxDestino; i--) {
+        const rollbackState = estados[i];
+        console.log("RollbackState:", rollbackState);
+
+        switch (rollbackState) {
+          case "Completada":
+            const entrega = await EntregaRepository.findEntregaParaReversa(
+              { id_pedido: pedido.id_pedido },
+              { transaction }
+            );
+            if (entrega) {
+              const ahora = new Date();
+              const fechaEntrega = new Date(entrega.fecha_hora);
+              const horasDesdeEntrega = Math.abs((ahora - fechaEntrega) / 36e5);
+
+              if (horasDesdeEntrega > 24) {
+                throw new Error(
+                  "No se puede revertir entregas completadas de hace más de 24 horas."
+                );
+              }
+              // 2. Devolver productos al camión o bodega
+              if (entrega.productos_entregados) {
+                for (const item of entrega.productos_entregados) {
+                  // Si el inventario entregado salió del camión, devolver al camión
+                  await InventarioCamionService.devolverProductoAlCamion({
+                    id_camion: entrega.id_camion,
+                    id_producto: item.id_producto,
+                    cantidad: item.cantidad,
+                    transaction,
+                  });
+                }
+              }
+              if (
+                entrega.insumo_entregados &&
+                Array.isArray(entrega.insumo_entregados)
+              ) {
+                for (const item of entrega.insumo_entregados) {
+                  await InventarioCamionService.devolverInsumoAlCamion({
+                    id_camion: entrega.id_camion,
+                    id_insumo: item.id_insumo,
+                    cantidad: item.cantidad,
+                    transaction,
+                  });
+                }
+              }
+              await EntregaRepository.updateDesdeAnulacion(
+                entrega.id_entrega,
+                { estado_entrega: "anulada" },
+                { transaction }
+              );
+            }
+
+            // 4. Anular o eliminar la venta asociada
+            if (pedido.id_venta) {
+              console.log("Dentro");
+              await VentaService.anularVenta(pedido.id_venta, id_usuario, {
+                transaction,
+              });
+              await PedidoRepository.update(
+                pedido.id_pedido,
+                {
+                  pagado: false,
+                  estado_pago: "Pendiente",
+                  id_venta: null,
+                },
+                { transaction }
+              );
+            }
+
+            break;
+          case "En Entrega":
+            const viajeActivo =
+              await AgendaViajesRepository.findByChoferAndEstado(
+                pedido.id_chofer,
+                "En Tránsito",
+                { transaction }
+              );
+            if (viajeActivo) {
+              let destinos = viajeActivo.destinos || [];
+              destinos = destinos.filter(
+                (dest) => dest.id_pedido !== pedido.id_pedido
+              );
+
+              await AgendaViajesRepository.update(
+                viajeActivo.id_agenda_viaje,
+                { destinos },
+                { transaction }
+              );
+
+              const detallesPedido =
+                await DetallePedidoRepository.findByPedidoId(pedido.id_pedido, {
+                  transaction,
+                });
+              for (const item of detallesPedido) {
+                if (item.id_producto) {
+                  await InventarioCamionService.liberarReservadosACamionDisponibleProductos(
+                    {
+                      id_camion: viajeActivo.id_camion,
+                      id_producto: item.id_producto,
+                      cantidad: item.cantidad,
+                      transaction,
+                    }
+                  );
+                } else if (item.id_insumo) {
+                  await InventarioCamionService.liberarReservadosACamionDisponibleInsumos(
+                    {
+                      id_camion: viajeActivo.id_camion,
+                      id_insumo: item.id_insumo,
+                      cantidad: item.cantidad,
+                      transaction,
+                    }
+                  );
+                }
+              }
+            }
+            console.log(
+              `[${rollbackState}] Paso completado para pedido:`,
+              pedido.id_pedido
+            );
+
+            break;
+          case "En Preparación":
+            const agenda = await AgendaCargaRepository.findByChoferAndEstado(
+              pedido.id_chofer,
+              "Pendiente",
+              { transaction }
+            );
+
+            if (!agenda) break;
+            const detalles =
+              await AgendaCargaDetalleRepository.findByAgendaAndPedido(
+                agenda.id_agenda_carga,
+                pedido.id_pedido,
+                { transaction }
+              );
+            for (const detalle of detalles) {
+              // 3. Descargar productos/insumos del camión (reservado)
+              if (detalle.id_producto) {
+                // Quitar del camión en estado Reservado
+                console.log("→ Llamando a retirarProductoDelCamion con:", {
+                  id_camion: agenda.id_camion,
+                  id_producto: detalle.id_producto,
+                  cantidad: detalle.cantidad,
+                  estado: "En Camión - Reservado",
+                  detalle: detalle.toJSON ? detalle.toJSON() : detalle,
+                });
+
+                await InventarioCamionService.retirarProductoDelCamion(
+                  agenda.id_camion,
+                  detalle.id_producto,
+                  detalle.cantidad,
+                  "En Camión - Reservado",
+                  { transaction }
+                );
+                // Devolver a bodega principal
+                await InventarioService.incrementStock(
+                  detalle.id_producto,
+                  detalle.cantidad,
+                  { transaction }
+                );
+              }
+              if (detalle.id_insumo) {
+                await InventarioCamionService.retirarInsumoDelCamion(
+                  agenda.id_camion,
+                  detalle.id_insumo,
+                  detalle.cantidad,
+                  "En Camión - Reservado",
+                  { transaction }
+                );
+                await InventarioService.incrementStockInsumo(
+                  detalle.id_insumo,
+                  detalle.cantidad,
+                  { transaction }
+                );
+              }
+              await AgendaCargaDetalleRepository.delete(
+                detalle.id_agenda_carga_detalle,
+                { transaction }
+              );
+            }
+            const detallesRestantes =
+              await AgendaCargaDetalleRepository.findByAgendaId(
+                agenda.id_agenda_carga,
+                { transaction }
+              );
+            if (detallesRestantes.length === 0) {
+              await AgendaCargaRepository.update(
+                agenda.id_agenda_carga,
+                { estado: "Cancelada" },
+                { transaction }
+              );
+            }
+
+            console.log(
+              `[${rollbackState}] Paso completado para pedido:`,
+              pedido.id_pedido
+            );
+
+            break;
+          case "Confirmado":
+            console.log(
+              `[${rollbackState}] Paso completado para pedido:`,
+              pedido.id_pedido
+            );
+            break;
+          case "Pendiente de Confirmación":
+            await PedidoRepository.update(
+              pedido.id_pedido,
+              { id_chofer: null },
+              { transaction }
+            );
+            console.log(
+              `[${rollbackState}] Paso completado para pedido:`,
+              pedido.id_pedido
+            );
+
+            break;
+        }
+      }
+
+      await PedidoRepository.update(
+        id_pedido,
+        {
+          id_estado_pedido: id_estado_destino,
+        },
+        { transaction }
+      );
+
+      if (pedido.id_chofer) {
+        await NotificacionService.enviarNotificacion({
+          id_usuario: pedido.id_chofer,
+          mensaje: `Atención: El pedido #${pedido.id_pedido} fue revertido a '${nombreDestino}' por un administrador.`,
+          tipo: "pedido_revertido",
+        });
+
+        WebSocketServer.emitToUser(pedido.id_chofer, {
+          type: "actualizar_agenda_chofer",
+        });
+      }
+
+      await transaction.commit();
+      return { message: `Pedido regresado exitosamente a '${nombreDestino}'` };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   }
 
   async getPedidosConfirmadosPorChofer(id_chofer) {
@@ -631,8 +924,11 @@ class PedidoService {
     return await PedidoRepository.findById(id_pedido);
   }
 
+  // Rechazar pedido
   async rejectPedido(id_pedido) {
     const pedido = await PedidoRepository.findById(id_pedido);
+
+    const admin = await UsuariosRepository.findByRol("administrador");
 
     if (!pedido) {
       throw new Error("Pedido no encontrado.");
@@ -650,24 +946,28 @@ class PedidoService {
       throw new Error("Estado de pedido inválido.");
     }
 
-    const estadosPermitidos = ["Pendiente", "Pendiente de Confirmación"];
-
-    if (!estadosPermitidos.includes(estadoActual.nombre_estado)) {
+    if (estadoActual.nombre_estado !== "Pendiente de Confirmación") {
       throw new Error(
-        "Solo puedes rechazar pedidos en estado 'Pendiente' o 'Pendiente de Confirmación'."
+        "Solo se pueden rechazar pedidos en estado 'Pendiente de Confirmación'."
       );
     }
 
-    const estadoRechazado = await EstadoVentaRepository.findByNombre(
-      "Rechazado"
+    const estadoPendiente = await EstadoVentaRepository.findByNombre(
+      "Pendiente"
     );
-
-    if (!estadoRechazado) {
-      throw new Error("Estado 'Rechazado' no configurado.");
+    if (!estadoPendiente) {
+      throw new Error("Estado 'Pendiente' no configurado.");
     }
 
     await PedidoRepository.update(id_pedido, {
-      id_estado_pedido: estadoRechazado.id_estado_venta,
+      id_estado_pedido: estadoPendiente.id_estado_venta,
+      id_chofer: null,
+    });
+
+    await NotificacionService.enviarNotificacion({
+      id_usuario: admin.rut,
+      mensaje: `El chofer rechazó el pedido #${pedido.id_pedido}. Estado revertido a 'Pendiente'.`,
+      tipo: "pedido_revertido",
     });
 
     return await PedidoRepository.findById(id_pedido);
@@ -710,9 +1010,6 @@ class PedidoService {
     return await PedidoRepository.findById(id_pedido);
   }
 
-  /**
-   * Obtiene todos los pedidos
-   */
   async getPedidos(filters = {}, options = {}) {
     const allowedFields = [
       "id_cliente",

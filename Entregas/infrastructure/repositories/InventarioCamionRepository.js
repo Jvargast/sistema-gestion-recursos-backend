@@ -25,12 +25,13 @@ class InventarioCamionRepository {
     });
   }
 
-  async findAll() {
+  async findAll(options={}) {
     return await InventarioCamion.findAll({
       include: [
         { model: Camion, as: "camion" },
         { model: Producto, as: "producto" },
       ],
+       ...options,
     });
   }
 
@@ -153,9 +154,10 @@ class InventarioCamionRepository {
     });
   }
 
-  async findByCamionAndProduct(id_camion, id_producto, estado) {
+  async findByCamionAndProduct(id_camion, id_producto, estado, options={}) {
     return await InventarioCamion.findOne({
       where: { id_camion, id_producto, estado },
+       ...options,
     });
   }
 
