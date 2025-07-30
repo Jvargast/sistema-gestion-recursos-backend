@@ -20,8 +20,8 @@ class ChoferUbicacionController {
 
       await UbicacionChoferService.registrarUbicacion({
         rut,
-        latitud: lat,
-        longitud: lng,
+        lat,
+        lng,
         fecha_hora: new Date(),
       });
 
