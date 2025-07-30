@@ -6,6 +6,7 @@ import Empresa from "./models/Empresa.js";
 import Sucursal from "./models/Sucursal.js";
 import AuditLogs from "./models/AuditLogs.js";
 import PermisosDependencias from "./models/PermisosDependencias.js";
+import UbicacionChofer from "./models/UbicacionChofer.js";
 
 function loadAuthAssociations() {
   // Relación: Un Usuario pertenece a un Rol
@@ -77,12 +78,23 @@ function loadAuthAssociations() {
     otherKey: "dependeDeId",
   });
   Permisos.belongsToMany(Permisos, {
-    as: 'RequierenEste',
+    as: "RequierenEste",
     through: PermisosDependencias,
-    foreignKey: 'dependeDeId',
-    otherKey: 'permisoId',
+    foreignKey: "dependeDeId",
+    otherKey: "permisoId",
   });
-  
+
+  Usuarios.hasMany(UbicacionChofer, {
+    foreignKey: "rut",
+    sourceKey: "rut",
+    as: "ubicaciones",
+  });
+
+  UbicacionChofer.belongsTo(Usuarios, {
+    foreignKey: "rut",
+    targetKey: "rut",
+    as: "chofer",
+  });
 
   console.log("Asociaciones del módulo de autenticación cargadas");
 }

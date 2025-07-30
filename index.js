@@ -12,7 +12,6 @@ import fs from "fs";
 
 import setupAnalysisCronJobs from "./analisis/infrastructure/cron/analysisCronJobs.js";
 
-// Rutas para arquitectura hexagonal
 /* MÓDULO AUTH */
 import AuthRoutes from "./auth/infraestructure/routes/AuthRoutes.js";
 import UsuariosRoutes from "./auth/infraestructure/routes/UsuariosRoutes.js";
@@ -22,6 +21,7 @@ import PermisosRoutes from "./auth/infraestructure/routes/PermisosRoutes.js";
 import AuditLogsRoutes from "./auth/infraestructure/routes/AuditLogsRoutes.js";
 import SecuritySettingsRoutes from "./auth/infraestructure/routes/SecuritySettingsRoutes.js";
 import SucursalesRoutes from "./auth/infraestructure/routes/SucursalesRoutes.js";
+import UbicacionChoferRoutes from "./auth/infraestructure/routes/UbicacionChofersRoutes.js";
 /* MÓDULO INVENTARIO */
 import EstadoProductoRoutes from "./inventario/infrastructure/routes/EstadoProductoRoutes.js";
 import CategoriaProductoRoutes from "./inventario/infrastructure/routes/CategoriaProductoRoutes.js";
@@ -45,7 +45,6 @@ import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
 import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js";
 import cuentasPorCobrarRoutes from "./ventas/infrastructure/routes/CuentaPorCobrarRoutes.js";
 /* 
-import geografiaRoutes from "./geografia/infrastructure/routes/geographyRoutes.js";
 import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
 import proveedoresRoutes from "./proveedores/infrastructure/routes/proveedoesrRoutes.js";
  */
@@ -83,7 +82,9 @@ const allowedOrigins = [
   "http://sistema-frontend-erp.s3-website-sa-east-1.amazonaws.com",
   "http://localhost:3000",
   "http://192.168.1.121:3000",
+  "http://127.0.0.1:3000",
   "http://192.168.1.188:3000",
+  "http://10.97.137.228:3000",
   "http://192.168.62.228:3000",
   "http://192.168.223.228:3000",
   "http://192.168.100.139:3000",
@@ -137,6 +138,8 @@ app.use("/api/permisos", PermisosRoutes);
 app.use("/api/audit-logs", AuditLogsRoutes);
 app.use("/api/security-settings", SecuritySettingsRoutes);
 app.use("/api/sucursales", SucursalesRoutes);
+app.use("/api/ubicacion-chofer", UbicacionChoferRoutes);
+
 
 /* MÓDULO INVENTARIO */
 app.use("/api/estados-productos", EstadoProductoRoutes);

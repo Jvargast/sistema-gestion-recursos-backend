@@ -9,7 +9,7 @@ class NotificacionService {
   /**
    * 📌 Enviar una notificación genérica a un usuario
    */
-  static async enviarNotificacion({ id_usuario, mensaje, tipo }) {
+  static async enviarNotificacion({ id_usuario, mensaje, tipo, datos_adicionales }) {
     try {
       // Verificar que el usuario existe
       const usuario = await UsuariosRepository.findByRut(id_usuario);
@@ -22,6 +22,7 @@ class NotificacionService {
         tipo,
         leida: false,
         fecha: new Date(),
+        datos_adicionales
       });
 
       console.log(
@@ -33,6 +34,7 @@ class NotificacionService {
           mensaje,
           tipo,
           fecha: nuevaNotificacion.fecha,
+          datos_adicionales
         }
       );
 
@@ -41,6 +43,7 @@ class NotificacionService {
         mensaje,
         tipo,
         fecha: nuevaNotificacion.fecha,
+        datos_adicionales
       });
       return nuevaNotificacion;
     } catch (error) {

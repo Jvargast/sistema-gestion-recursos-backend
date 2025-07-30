@@ -21,6 +21,7 @@ import ProductoRetornableCamionRepository from "../infrastructure/repositories/P
 class EntregaService {
   // Pedido de En Entrega -> Completada
   async processDelivery(payload) {
+    console.log(payload)
     const {
       id_agenda_viaje,
       id_pedido,
@@ -128,6 +129,8 @@ class EntregaService {
           transaction,
         });
 
+        console.log("Venta éxitosa")
+
         pedido.id_venta = ventaRegistrada.venta.id_venta;
 
         if (esFactura) {
@@ -139,6 +142,7 @@ class EntregaService {
         }
       } else {
         // Ya tiene venta asociada
+        console.log("Es factura y ya tiene venta")
         ventaRegistrada = await VentaRepository.findById(pedido.id_venta, {
           transaction,
         });
@@ -162,7 +166,7 @@ class EntregaService {
       await PedidoRepository.updateFromVenta(
         pedido.id_pedido,
         {
-          id_venta: ventaRegistrada.venta.id_venta,
+          id_venta: ventaRegistrada.id_venta,
           pagado: !esFactura,
           estado_pago: esFactura ? "Pendiente" : "Pagado",
           id_estado_pedido: estadoCompletada.id_estado_venta,

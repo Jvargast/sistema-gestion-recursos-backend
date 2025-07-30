@@ -2,7 +2,6 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../database/database.js";
 import Usuarios from "../../auth/domain/models/Usuarios.js";
 
-
 const Notificacion = sequelize.define(
   "Notificacion",
   {
@@ -24,8 +23,19 @@ const Notificacion = sequelize.define(
       allowNull: false,
     },
     tipo: {
-      type: DataTypes.ENUM("pedido_asignado", "entrega_realizada", "alerta", "pedido_confirmado", "pedido_revertido"),
+      type: DataTypes.ENUM(
+        "pedido_asignado",
+        "entrega_realizada",
+        "alerta",
+        "pedido_confirmado",
+        "pedido_revertido",
+        "viaje_finalizado"
+      ),
       allowNull: false,
+    },
+    datos_adicionales: {
+      type: DataTypes.JSON,
+      allowNull: true,
     },
     leida: {
       type: DataTypes.BOOLEAN,

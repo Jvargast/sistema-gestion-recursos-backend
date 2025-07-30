@@ -23,8 +23,7 @@ class AgendaViajesController {
   async finalizarViaje(req, res) {
     try {
       const { id_agenda_viaje } = req.params;
-      const { descargarAuto, descargarDisponibles, dejaRetornablesEnPlanta } =
-        req.body;
+      const { descargarAuto, descargarDisponibles, dejaRetornables } = req.body;
 
       const choferRut = req.user ? req.user.id : null;
 
@@ -34,7 +33,7 @@ class AgendaViajesController {
         {
           descargarAuto,
           descargarDisponibles,
-          dejaRetornablesEnPlanta,
+          dejaRetornables,
         }
       );
 

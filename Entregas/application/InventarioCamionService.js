@@ -189,6 +189,117 @@ class InventarioCamionService {
     }
   }
 
+  async vaciarCamionDesdeFinalizar(id_camion, options = {}) {
+    const {
+      descargarDisponibles = true,
+      descargarRetorno = true,
+      transaction: extTransaction,
+    } = options;
+    const transaction = extTransaction || (await sequelize.transaction());
+
+    const isOwnTransaction = !extTransaction;
+
+    try {
+      const inventarioCamion =
+        await InventarioCamionRepository.findAllByCamionId(id_camion, {
+          transaction,
+        });
+
+      for (const item of inventarioCamion) {
+        if (item.estado === "En Camión - Disponible" && descargarDisponibles) {
+          if (item.id_producto) {
+            await InventarioService.incrementStock(
+              item.id_producto,
+              item.cantidad,
+              { transaction }
+            );
+          }
+
+          await InventarioCamionLogsRepository.create(
+            {
+              id_camion,
+              id_producto: item.id_producto,
+              id_insumo: item.id_insumo,
+              cantidad: item.cantidad,
+              tipo_movimiento: "Descarga camión",
+              estado: "Regresado",
+              fecha: new Date(),
+            },
+            { transaction }
+          );
+
+          await item.destroy({ transaction });
+          continue;
+        }
+
+        if (item.estado === "En Camión - Retorno" && descargarRetorno) {
+          await ProductoRetornableRepository.create(
+            {
+              id_producto: item.id_producto || null,
+              id_insumo: item.id_insumo || null,
+              cantidad: item.cantidad,
+              estado: "pendiente_inspeccion",
+              fecha_retorno: new Date(),
+            },
+            { transaction }
+          );
+
+          await InventarioCamionLogsRepository.create(
+            {
+              id_camion,
+              id_producto: item.id_producto,
+              id_insumo: item.id_insumo,
+              cantidad: item.cantidad,
+              tipo_movimiento: "Descarga camión",
+              estado: "Retorno",
+              fecha: new Date(),
+            },
+            { transaction }
+          );
+
+          await item.destroy({ transaction });
+          continue;
+        }
+
+        if (item.estado === "En Camión - Reservado") {
+          if (item.id_producto) {
+            await InventarioService.incrementStock(
+              item.id_producto,
+              item.cantidad,
+              { transaction }
+            );
+          }
+
+          await InventarioCamionLogsRepository.create(
+            {
+              id_camion,
+              id_producto: item.id_producto,
+              id_insumo: item.id_insumo,
+              cantidad: item.cantidad,
+              tipo_movimiento: "Descarga camión",
+              estado: "Reservado",
+              fecha: new Date(),
+            },
+            { transaction }
+          );
+
+          await item.destroy({ transaction });
+        }
+      }
+
+      if (isOwnTransaction) {
+        await transaction.commit();
+      }
+
+      return { message: "Camión vaciado correctamente" };
+    } catch (error) {
+      if (isOwnTransaction && transaction.finished !== "commit") {
+        await transaction.rollback();
+      }
+      throw error;
+    }
+  }
+
   async addProductToCamion(data) {
     const { id_camion, id_producto, cantidad, tipo } = data;
 
@@ -309,18 +420,15 @@ class InventarioCamionService {
 
     id_camion = parseInt(id_camion);
 
-    // Obtener la capacidad total del camión
     const camion = await CamionRepository.findById(id_camion);
     if (!camion) {
       throw new Error(`Camión con id ${id_camion} no encontrado.`);
     }
 
-    // Obtener el inventario del camión desde el repositorio
     const inventario = await InventarioCamionRepository.findByCamionId(
       id_camion
     );
 
-    // Si el camión no tiene productos registrados, toda la capacidad está vacía y disponible es 0.
     if (!inventario || inventario.length === 0) {
       return {
         id_camion,
@@ -330,6 +438,7 @@ class InventarioCamionService {
         reservados_no_retornables: 0,
         retorno: 0,
         vacios: camion.capacidad,
+        lista: [],
       };
     }
 
@@ -338,29 +447,55 @@ class InventarioCamionService {
     let disponibles = 0;
     let retorno = 0;
 
+    const lista = [];
+
     for (const item of inventario) {
+      const es_retornable = item?.producto?.es_retornable || false;
+      const cantidad = item.cantidad || 0;
+      let tipoVisual = "Otro";
+
       switch (item.estado) {
         case "En Camión - Reservado":
-          if (item.es_retornable) reservados_retornables += item.cantidad;
-          else reservados_no_retornables += item.cantidad;
+          tipoVisual = es_retornable
+            ? "ReservadoRetornable"
+            : "ReservadoNoRetornable";
+          es_retornable
+            ? (reservados_retornables += cantidad)
+            : (reservados_no_retornables += cantidad);
           break;
         case "En Camión - Reservado - Entrega":
-          reservados_no_retornables += item.cantidad;
+          tipoVisual = "ReservadoNoRetornable";
+          reservados_no_retornables += cantidad;
           break;
         case "En Camión - Disponible":
-          disponibles += item.cantidad;
+          tipoVisual = "Disponible";
+          disponibles += cantidad;
           break;
         case "En Camión - Retorno":
-          retorno += item.cantidad;
+          tipoVisual = "Retorno";
+          retorno += cantidad;
           break;
+        default:
+          tipoVisual = "Otro";
       }
+
+      lista.push({
+        id_producto: item.id_producto,
+        nombre_producto:
+          item?.producto?.nombre_producto || "Producto desconocido",
+        cantidad,
+        estado: item.estado,
+        tipo: tipoVisual,
+        es_retornable,
+      });
     }
 
-    // La cantidad de espacios vacíos ahora se calcula correctamente:
-    const vacios = Math.max(
-      camion.capacidad - (reservados_retornables + disponibles + retorno),
-      0
-    );
+    const usados =
+      reservados_retornables +
+      reservados_no_retornables +
+      disponibles +
+      retorno;
+    const vacios = Math.max(camion.capacidad - usados, 0);
 
     return {
       id_camion,
@@ -370,6 +505,7 @@ class InventarioCamionService {
       reservados_no_retornables,
       retorno,
       vacios,
+      lista,
     };
   }
 

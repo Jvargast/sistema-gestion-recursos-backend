@@ -7,6 +7,8 @@ import InventarioCamionRepository from "../infrastructure/repositories/Inventari
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 import HistorialCajaRepository from "../../ventas/infrastructure/repositories/HistorialCajaRepository.js";
 import InventarioCamionService from "./InventarioCamionService.js";
+import NotificacionService from "../../shared/services/NotificacionService.js";
+import RolRepository from "../../auth/infraestructure/repositories/RolRepository.js";
 
 class AgendaViajesService {
   async getAllViajes() {
@@ -46,8 +48,7 @@ class AgendaViajesService {
   }
 
   async finalizarViaje(id_agenda_viaje, choferRut, options = {}) {
-    const { descargarAuto, descargarDisponibles, dejaRetornablesEnPlanta } =
-      options;
+    const { descargarAuto, descargarDisponibles, dejaRetornables } = options;
 
     const transaction = await sequelize.transaction();
     try {
@@ -83,11 +84,15 @@ class AgendaViajesService {
         throw new Error("No se encontró la caja asignada para cerrar.");
       }
 
-      if (descargarAuto) {
-        await InventarioCamionService.vaciarCamion(camion.id_camion, {
-          descargarDisponibles,
-          descargarRetorno: dejaRetornablesEnPlanta,
-        });
+      if (descargarAuto || dejaRetornables) {
+        await InventarioCamionService.vaciarCamionDesdeFinalizar(
+          camion.id_camion,
+          {
+            descargarDisponibles: descargarAuto ? descargarDisponibles : false,
+            descargarRetorno: dejaRetornables,
+            transaction,
+          }
+        );
       }
 
       const inventarioCamion =
@@ -134,6 +139,18 @@ class AgendaViajesService {
       );
 
       await transaction.commit();
+      const rolAdminitrador = await RolRepository.findByName("administrador");
+      const admins = await UsuariosRepository.findAllByRol(rolAdminitrador.id);
+      for (const admin of admins) {
+        await NotificacionService.enviarNotificacion({
+          id_usuario: admin.rut,
+          mensaje: `El chofer ${choferRut} finalizó el viaje #${id_agenda_viaje}. El camión ya está disponible.`,
+          tipo: "viaje_finalizado",
+          datos_adicionales: {
+            id_agenda_viaje: id_agenda_viaje,
+          },
+        });
+      }
       return {
         message: "Viaje finalizado con éxito.",
         agendaViaje: agenda,
