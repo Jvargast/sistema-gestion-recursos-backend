@@ -163,6 +163,21 @@ class UsuarioRepository extends IUsuariosRepository {
     });
   }
 
+  async findAllByRol(rolId) {
+    return await Usuario.findAll({
+      where: { rolId },
+      attributes: [
+        "rut",
+        "nombre",
+        "apellido",
+        "email",
+        "rolId",
+        "fecha_registro",
+      ],
+      order: [["fecha_registro", "ASC"]],
+    });
+  }
+
   async findByEmail(email) {
     return await Usuario.findOne({ where: { email } });
   }

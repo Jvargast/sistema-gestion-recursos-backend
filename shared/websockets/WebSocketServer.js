@@ -46,6 +46,10 @@ const emitToUser = (userId, payload) => {
       ioInstance.to(room).emit("actualizar_agenda_chofer", payload.data);
       break;
 
+    case "nueva_ubicacion_chofer":
+      ioInstance.to(room).emit("nueva_ubicacion_chofer", payload.data);
+      break;
+
     default:
       console.log(`📡 Enviando 'nueva_notificacion' a sala: ${room}`, payload);
       ioInstance.to(room).emit("nueva_notificacion", payload);

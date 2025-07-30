@@ -20,9 +20,13 @@ import CajaRepository from "../../ventas/infrastructure/repositories/CajaReposit
 import { getEstadoCamion } from "../../shared/utils/estadoCamion.js";
 import DocumentoRepository from "../../ventas/infrastructure/repositories/DocumentoRepository.js";
 import {
+  obtenerFechaActualChile,
   obtenerFechaActualChileUTC,
   obtenerLimitesUTCParaDiaChile,
 } from "../../shared/utils/fechaUtils.js";
+import UbicacionChoferService from "../../auth/application/UbicacionChoferService.js";
+import WebSocketServer from "../../shared/websockets/WebSocketServer.js";
+import RolRepository from "../../auth/infraestructure/repositories/RolRepository.js";
 
 class AgendaCargaService {
   // Pedido de Confirmado -> En Preparación
@@ -330,7 +334,7 @@ class AgendaCargaService {
       throw new Error(`Error al crear la agenda: ${error.message}`);
     }
   }
-  //Peido de En Preparación -> En Entrega
+  //Pedido de En Preparación -> En Entrega
   async confirmarCargaCamion(
     id_agenda_carga,
     id_chofer,
@@ -520,6 +524,8 @@ class AgendaCargaService {
             tipo_documento: tipo_documento || "boleta",
             lat: pedido?.lat || null,
             lng: pedido?.lng || null,
+            prioridad: pedido.prioridad || "normal",
+            fecha_creacion: pedido.fecha_pedido || new Date().toISOString(),
           });
           await PedidoRepository.update(
             pedido.id_pedido,
@@ -548,6 +554,29 @@ class AgendaCargaService {
       );
 
       await transaction.commit();
+
+      await UbicacionChoferService.registrarUbicacion({
+        rut: id_chofer,
+        lat: origen_inicial.lat,
+        lng: origen_inicial.lng,
+        timestamp: obtenerFechaActualChile(),
+      });
+
+      const rolAdministrador = await RolRepository.findByName("administrador");
+      const admins = await UsuariosRepository.findAllByRol(rolAdministrador.id);
+
+      for (const admin of admins) {
+        WebSocketServer.emitToUser(admin.rut, {
+          type: "nueva_ubicacion_chofer",
+          data: {
+            rut: id_chofer,
+            lat: origen_inicial.lat,
+            lng: origen_inicial.lng,
+            timestamp: obtenerFechaActualChile(),
+            origen: true,
+          },
+        });
+      }
 
       return {
         message: "Carga confirmada y viaje iniciado con éxito.",

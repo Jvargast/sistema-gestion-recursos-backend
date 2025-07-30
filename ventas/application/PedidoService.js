@@ -141,6 +141,7 @@ class PedidoService {
       const vieneDesdeVenta = Boolean(data.id_venta);
 
       if (!vieneDesdeVenta && (ventaPagada || requiereFactura)) {
+        console.log("Entro a crear venta");
         ventaRegistrada = await VentaService.createVenta(
           {
             id_cliente,
@@ -332,7 +333,7 @@ class PedidoService {
 
       await NotificacionService.enviarNotificacion({
         id_usuario: id_chofer,
-        mensaje: `Nuevo pedido asignado: ID ${id_pedido}`,
+        mensaje: `📦 Pedido #${id_pedido}\nDirección: ${pedido.direccion_entrega}\nPrioridad: ${pedido.prioridad}`,
         tipo: "pedido_asignado",
       });
       WebSocketServer.emitToUser(id_chofer, {
@@ -480,6 +481,8 @@ class PedidoService {
           tipo_documento,
           lat: pedido?.lat || null,
           lng: pedido?.lng || null,
+          prioridad: pedido.prioridad || "normal",
+          fecha_creacion: pedido.fecha_pedido || new Date().toISOString(),
         };
 
         const destinosActuales = viajeActivo.destinos || [];
