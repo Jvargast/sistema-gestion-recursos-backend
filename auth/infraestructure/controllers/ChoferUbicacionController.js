@@ -6,7 +6,7 @@ class ChoferUbicacionController {
     const { rut } = req.params;
     const { lat, lng } = req.body;
 
-    console.log(req,body)
+    console.log(req.body)
 
     try {
       if (!lat || !lng) {
