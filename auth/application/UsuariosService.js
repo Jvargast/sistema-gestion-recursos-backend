@@ -158,9 +158,21 @@ class UsuarioService {
   async getAllVendedores(filters = {}, options) {
     try {
       const rolVendedor = await RolesService.getRolIdByName("vendedor");
-      const vendedores = await UsuariosRepository.findAllVendedoresConCaja(rolVendedor);
+      const vendedores = await UsuariosRepository.findAllVendedoresConCaja(
+        rolVendedor
+      );
 
       return vendedores;
+    } catch (error) {
+      throw new Error(`Error al obtener choferes: ${error.message}`);
+    }
+  }
+
+  async getAllUsuariosConCaja(filters = {}, options) {
+    try {
+      const usuarios = await UsuariosRepository.findAllUsuariosConCaja();
+
+      return usuarios;
     } catch (error) {
       throw new Error(`Error al obtener choferes: ${error.message}`);
     }
@@ -210,12 +222,12 @@ class UsuarioService {
   }
 
   /**
- * Cambia la contraseña de un usuario después de validar la contraseña actual.
- * @param {string} rut - RUT del usuario.
- * @param {string} currentPassword - Contraseña actual del usuario.
- * @param {string} newPassword - Nueva contraseña.
- * @param {string} confirmPassword - Confirmación de la nueva contraseña.
- * @returns {Promise<object>} - Mensaje de éxito o error.
+   * Cambia la contraseña de un usuario después de validar la contraseña actual.
+   * @param {string} rut - RUT del usuario.
+   * @param {string} currentPassword - Contraseña actual del usuario.
+   * @param {string} newPassword - Nueva contraseña.
+   * @param {string} confirmPassword - Confirmación de la nueva contraseña.
+   * @returns {Promise<object>} - Mensaje de éxito o error.
    */
   async changePassword(rut, currentPassword, newPassword, confirmPassword) {
     try {
@@ -321,16 +333,15 @@ class UsuarioService {
 
   async updatePassword(rut, newPassword) {
     const usuario = await UsuariosRepository.findByRut(rut);
-  
+
     if (!usuario) {
       return false;
     }
-  
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await UsuariosRepository.update(rut, { password: hashedPassword });
     return true;
   }
-  
 }
 
 export default new UsuarioService();

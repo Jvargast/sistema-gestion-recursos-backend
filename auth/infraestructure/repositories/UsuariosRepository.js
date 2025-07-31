@@ -124,6 +124,40 @@ class UsuarioRepository extends IUsuariosRepository {
             "estado",
           ],
         },
+        {
+          model: Sucursal,
+          as: "Sucursal",
+        },
+      ],
+      order: [["fecha_registro", "ASC"]],
+    });
+  }
+
+  async findAllUsuariosConCaja() {
+    return await Usuario.findAll({
+      attributes: ["rut", "nombre", "apellido", "email", "fecha_registro"],
+      include: [
+        {
+          model: Roles,
+          as: "rol",
+          attributes: ["nombre"],
+        },
+        {
+          model: Caja,
+          as: "cajasAsignadas",
+          attributes: [
+            "id_caja",
+            "saldo_inicial",
+            "saldo_final",
+            "fecha_apertura",
+            "fecha_cierre",
+            "estado",
+          ],
+        },
+        {
+          model: Sucursal,
+          as: "Sucursal",
+        },
       ],
       order: [["fecha_registro", "ASC"]],
     });

@@ -3,6 +3,29 @@ import Sucursal from "../../domain/models/Sucursal.js";
 import Usuarios from "../../domain/models/Usuarios.js";
 
 class SucursalRepository {
+  async createSucursal(data) {
+    try {
+      const nuevaSucursal = await Sucursal.create(data);
+      return nuevaSucursal;
+    } catch (error) {
+      console.error("Error al crear sucursal:", error);
+      throw new Error("Error al crear sucursal.");
+    }
+  }
+
+  async deleteSucursal(id_sucursal) {
+    try {
+      const sucursal = await Sucursal.findByPk(id_sucursal);
+      if (!sucursal) {
+        return false; 
+      }
+      await sucursal.destroy();
+      return true; 
+    } catch (error) {
+      console.error("Error al eliminar sucursal:", error);
+      throw new Error("Error al eliminar sucursal.");
+    }
+  }
   async getAllSucursales() {
     try {
       const sucursales = await Sucursal.findAll();
