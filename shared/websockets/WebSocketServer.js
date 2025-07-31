@@ -15,6 +15,10 @@ const setupWebSocket = (io) => {
       console.log(`✅ Usuario ${usuarioId} suscrito a sala: ${room}`);
     });
 
+    socket.on("ubicacion_chofer", (data) => {
+      io.emit("ubicacion_chofer", data); 
+    });
+
     socket.on("disconnect", () => {
       for (let [userId, sockId] of usuariosConectados.entries()) {
         if (sockId === socket.id) {
