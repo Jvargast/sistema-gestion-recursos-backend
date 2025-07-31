@@ -12,6 +12,7 @@ router.post('/crear', checkPermissions("auth.usuarios.crear"), UsuariosControlle
 router.get('/', checkPermissions('auth.usuarios.ver'), UsuariosController.getAllUsers);
 router.get('/choferes', checkRoles(["administrador", "chofer"]), checkPermissions("auth.usuario.choferes"), UsuariosController.getAllChoferes);
 router.get('/vendedores', checkPermissions("auth.usuario.vendedores"), UsuariosController.getAllVendedores);
+router.get('/usuarios-con-caja', checkPermissions("auth.usuario.vendedores"), UsuariosController.getAllUsuariosConCaja);
 router.get('/mi-perfil', checkPermissions("auth.perfil.ver"),UsuariosController.getOwnProfile);
 router.get('/:rut', checkPermissions('auth.usuarios.ver'), UsuariosController.findByRut);
 router.put('/mi-perfil', checkPermissions("auth.perfil.actualizar"), UsuariosController.updateOwnProfile);

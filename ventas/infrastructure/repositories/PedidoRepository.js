@@ -11,7 +11,7 @@ class PedidoRepository {
   async findById(id_pedido) {
     return await Pedido.findByPk(id_pedido, {
       include: [
-        { model: Cliente, as: "Cliente", attributes: ["nombre", "apellido"] },
+        { model: Cliente, as: "Cliente", attributes: ["nombre", "apellido", "rut", "razon_social", "direccion", "tipo_cliente", "email"] },
         {
           model: Usuarios,
           as: "Chofer",

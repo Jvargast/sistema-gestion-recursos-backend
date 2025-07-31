@@ -1,4 +1,7 @@
+import RolRepository from "../../auth/infraestructure/repositories/RolRepository.js";
+import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import sequelize from "../../database/database.js";
+import NotificacionService from "../../shared/services/NotificacionService.js";
 import {
   obtenerFechaActualChile,
   obtenerFechaActualChileUTC,
@@ -21,7 +24,7 @@ import ProductoRetornableCamionRepository from "../infrastructure/repositories/P
 class EntregaService {
   // Pedido de En Entrega -> Completada
   async processDelivery(payload) {
-    console.log(payload)
+    console.log(payload);
     const {
       id_agenda_viaje,
       id_pedido,
@@ -129,7 +132,7 @@ class EntregaService {
           transaction,
         });
 
-        console.log("Venta éxitosa")
+        console.log("Venta éxitosa");
 
         pedido.id_venta = ventaRegistrada.venta.id_venta;
 
@@ -142,7 +145,7 @@ class EntregaService {
         }
       } else {
         // Ya tiene venta asociada
-        console.log("Es factura y ya tiene venta")
+        console.log("Es factura y ya tiene venta");
         ventaRegistrada = await VentaRepository.findById(pedido.id_venta, {
           transaction,
         });
@@ -281,6 +284,22 @@ class EntregaService {
       }
 
       await transaction.commit();
+
+      const rolAdministrador = await RolRepository.findByName("administrador");
+      const admins = await UsuariosRepository.findAllByRol(rolAdministrador.id);
+
+      for (const admin of admins) {
+        await NotificacionService.enviarNotificacion({
+          id_usuario: admin.rut,
+          mensaje: `Chofer ${id_chofer} entregó pedido #${id_pedido} del viaje #${id_agenda_viaje}.`,
+          tipo: "pedido_entregado",
+          datos_adicionales: {
+            id_agenda_viaje: id_agenda_viaje,
+            id_pedido: id_pedido,
+          },
+        });
+      }
+
       return {
         mensaje: "Entrega registrada con éxito",
         entrega: nuevaEntrega,

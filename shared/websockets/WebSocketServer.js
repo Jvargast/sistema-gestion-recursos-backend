@@ -16,7 +16,7 @@ const setupWebSocket = (io) => {
     });
 
     socket.on("ubicacion_chofer", (data) => {
-      io.emit("ubicacion_chofer", data); 
+      io.emit("ubicacion_chofer", data);
     });
 
     socket.on("disconnect", () => {

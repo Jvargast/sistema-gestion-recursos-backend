@@ -1,8 +1,28 @@
 import SucursalService from "../../application/SucursalService.js";
 
-
 class SucursalController {
-  // Obtener todas las Sucursals
+  async createSucursal(req, res) {
+    try {
+      const data = req.body;
+      const nuevaSucursal = await SucursalService.crearSucursal(data);
+      res.status(201).json({
+        message: "Sucursal creada exitosamente.",
+        data: nuevaSucursal,
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  async deleteSucursal(req, res) {
+    try {
+      const { id } = req.params;
+      await SucursalService.eliminarSucursal(id);
+      res.json({ message: "Sucursal eliminada exitosamente." });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  }
   async getAllSucursals(req, res) {
     try {
       const sucursales = await SucursalService.obtenerSucursals();
@@ -12,7 +32,6 @@ class SucursalController {
     }
   }
 
-  // Obtener una sucursal por ID
   async getSucursalById(req, res) {
     try {
       const { id } = req.params;
@@ -23,7 +42,6 @@ class SucursalController {
     }
   }
 
-  // Obtener una sucursal por nombre
   async getSucursalByNombre(req, res) {
     try {
       const { nombre } = req.query;
@@ -34,7 +52,6 @@ class SucursalController {
     }
   }
 
-  // Obtener sucursal de un usuario
   async getSucursalByUsuario(req, res) {
     try {
       const { rutUsuario } = req.params;
@@ -47,7 +64,6 @@ class SucursalController {
     }
   }
 
-  // Editar una sucursal
   async updateSucursal(req, res) {
     try {
       const { id } = req.params;

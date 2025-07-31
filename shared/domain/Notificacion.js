@@ -29,7 +29,8 @@ const Notificacion = sequelize.define(
         "alerta",
         "pedido_confirmado",
         "pedido_revertido",
-        "viaje_finalizado"
+        "viaje_finalizado",
+        "entrega_registrada",
       ),
       allowNull: false,
     },
