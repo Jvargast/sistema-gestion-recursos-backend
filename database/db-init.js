@@ -26,7 +26,7 @@ async function initializeDatabase() {
     loadAnalysisAssociations();
     loadProduccionAssociations();
 
-    await sequelize.sync({ alter: !!isProduction ? true : false }); 
+    await sequelize.sync({ alter: !isProduction ? true : false }); 
     console.log("Modelos sincronizados con la base de datos.");
   } catch (error) {
     console.error("Error al conectar con la base de datos:", error);
