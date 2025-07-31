@@ -30,6 +30,7 @@ const Notificacion = sequelize.define(
         "pedido_confirmado",
         "pedido_revertido",
         "viaje_finalizado",
+        "pedido_entregado",
         "entrega_registrada",
       ),
       allowNull: false,
