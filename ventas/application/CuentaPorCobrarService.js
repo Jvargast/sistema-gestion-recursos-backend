@@ -84,7 +84,8 @@ class CuentaPorCobrarService {
       .text(`Nombre: ${empresa.nombre}`, 50, 130)
       .text(`Dirección: ${empresa.direccion}`)
       .text(`Teléfono: ${empresa.telefono}`)
-      .text(`Email: ${empresa.email}`);
+      .text(`Email: ${empresa.email}`)
+      .text(`RUT: ${empresa.rut_empresa}`);
 
     const y = 205;
     doc
