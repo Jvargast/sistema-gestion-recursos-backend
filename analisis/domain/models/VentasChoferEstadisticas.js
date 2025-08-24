@@ -5,6 +5,7 @@ const VentasChoferEstadisticas = sequelize.define(
   "VentasChoferEstadisticas",
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    id_sucursal: { type: DataTypes.INTEGER, allowNull: true },
     fecha: { type: DataTypes.DATEONLY, allowNull: false },
     mes: { type: DataTypes.INTEGER, allowNull: false },
     anio: { type: DataTypes.INTEGER, allowNull: false },

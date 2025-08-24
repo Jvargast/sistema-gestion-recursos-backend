@@ -1,16 +1,34 @@
+import SucursalRepository from "../../auth/infraestructure/repositories/SucursalRepository.js";
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import CamionRepository from "../infrastructure/repositories/CamionRepository.js";
 import InventarioCamionRepository from "../infrastructure/repositories/InventarioCamionRepository.js";
 
 class CamionService {
   async createCamion(data) {
-    const { placa, capacidad, estado } = data;
+    const { placa, capacidad, estado, id_sucursal } = data;
 
     if (!placa || !capacidad) {
       throw new Error("Missing required fields: placa, capacidad");
     }
 
-    return await CamionRepository.create({ placa, capacidad, estado });
+    const sucursalId = Number(id_sucursal);
+    if (!sucursalId || !Number.isInteger(sucursalId)) {
+      throw new Error("id_sucursal is required and must be an integer");
+    }
+
+    const existe = await SucursalRepository.getSucursalById(sucursalId);
+    if (!existe) {
+      throw new Error(`La sucursal ${sucursalId} no existe`);
+    }
+
+    const payload = {
+      placa: String(placa).trim().toUpperCase(),
+      capacidad: Number(capacidad),
+      estado: estado || "Disponible",
+      id_sucursal: sucursalId,
+    };
+
+    return await CamionRepository.create(payload);
   }
 
   async getCamionById(id) {

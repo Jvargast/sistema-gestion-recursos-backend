@@ -9,6 +9,7 @@ import ProductoRetornable from "./models/ProductoRetornable.js";
 import Venta from "../../ventas/domain/models/Venta.js";
 import FormulaProducto from "./models/FormulaProducto.js";
 import FormulaProductoDetalle from "./models/FormulaProductoDetalle.js";
+import Sucursal from "../../auth/domain/models/Sucursal.js";
 
 function loadInventarioAssociations() {
   // Relación Producto - EstadoProducto
@@ -52,6 +53,19 @@ function loadInventarioAssociations() {
     targetKey: "id_insumo",
   });
 
+  Producto.belongsTo(Insumo, {
+    as: "insumo_retorno",
+    foreignKey: "id_insumo_retorno",
+    targetKey: "id_insumo",
+    onUpdate: "CASCADE",
+  });
+
+  Insumo.hasMany(Producto, {
+    as: "productos_con_retorno",
+    foreignKey: "id_insumo_retorno",
+    sourceKey: "id_insumo",
+  });
+
   // Relación Producto - CategoriaProducto
   Producto.belongsTo(CategoriaProducto, {
     foreignKey: "id_categoria",
@@ -63,7 +77,7 @@ function loadInventarioAssociations() {
   });
 
   // Relación Producto - Inventario (Uno a Uno)
-  Producto.hasOne(Inventario, {
+  Producto.hasMany(Inventario, {
     foreignKey: "id_producto",
     as: "inventario",
     onDelete: "CASCADE",
@@ -71,7 +85,7 @@ function loadInventarioAssociations() {
   Inventario.belongsTo(Producto, { foreignKey: "id_producto", as: "producto" });
 
   // Relación Insumo - Inventario (Uno a Uno)
-  Insumo.hasOne(Inventario, {
+  Insumo.hasMany(Inventario, {
     foreignKey: "id_insumo",
     as: "inventario",
     onDelete: "CASCADE",
@@ -99,6 +113,15 @@ function loadInventarioAssociations() {
   Venta.hasMany(ProductoRetornable, { foreignKey: "id_venta" });
   ProductoRetornable.belongsTo(Venta, { foreignKey: "id_venta" });
 
+  ProductoRetornable.belongsTo(Sucursal, {
+    as: "sucursalRecepcion",
+    foreignKey: "id_sucursal_recepcion",
+  });
+  ProductoRetornable.belongsTo(Sucursal, {
+    as: "sucursalInspeccion",
+    foreignKey: "id_sucursal_inspeccion",
+  });
+
   // Relación: Producto -> InventarioLog (1:N)
   Producto.hasMany(InventarioLog, {
     foreignKey: "id_producto",
@@ -111,6 +134,17 @@ function loadInventarioAssociations() {
     as: "producto",
     onDelete: "CASCADE",
     onUpdate: "CASCADE",
+  });
+
+  // Inventario → Sucursal
+  Inventario.belongsTo(Sucursal, {
+    foreignKey: "id_sucursal",
+    as: "sucursal",
+  });
+
+  Sucursal.hasMany(Inventario, {
+    foreignKey: "id_sucursal",
+    as: "inventario",
   });
 
   console.log("Asociaciones del módulo de inventario cargadas correctamente.");

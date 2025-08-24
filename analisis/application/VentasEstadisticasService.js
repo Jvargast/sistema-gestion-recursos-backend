@@ -24,11 +24,12 @@ class VentasEstadisticasService {
         ...getWhereEstadoVentaValido(),
       },
       attributes: [
+        "id_sucursal",
         "tipo_entrega",
         [fn("COUNT", col("id_venta")), "cantidad"],
         [fn("SUM", col("total")), "monto_total"],
       ],
-      group: ["tipo_entrega"],
+      group: ["id_sucursal", "tipo_entrega"],
       raw: true,
     });
 
@@ -45,30 +46,27 @@ class VentasEstadisticasService {
     const anio = fechaChile.year();
     const fechaStr = fechaChile.format("YYYY-MM-DD");
 
-    // Upsert por cada tipo_entrega
     const registros = await Promise.all(
       ventas.map(async (v) => {
-        const existente = await VentasEstadisticasRepository.findByFechaYTipo(
-          fechaStr,
-          v.tipo_entrega
+        const whereKey = {
+          fecha: fechaStr,
+          id_sucursal: v.id_sucursal ?? null,
+          tipo_entrega: v.tipo_entrega ?? null,
+        };
+
+        const payload = {
+          mes,
+          anio,
+          total_ventas: parseInt(v.cantidad, 10) || 0,
+          monto_total: parseFloat(v.monto_total) || 0,
+        };
+
+        const existente = await VentasEstadisticasRepository.findByKey(
+          whereKey
         );
-        if (existente) {
-          return await VentasEstadisticasRepository.updateById(existente.id, {
-            mes,
-            anio,
-            total_ventas: parseInt(v.cantidad),
-            monto_total: parseFloat(v.monto_total),
-          });
-        } else {
-          return await VentasEstadisticasRepository.create({
-            fecha: fechaStr,
-            mes,
-            anio,
-            tipo_entrega: v.tipo_entrega,
-            total_ventas: parseInt(v.cantidad),
-            monto_total: parseFloat(v.monto_total),
-          });
-        }
+        return existente
+          ? VentasEstadisticasRepository.updateById(existente.id, payload)
+          : VentasEstadisticasRepository.create({ ...whereKey, ...payload });
       })
     );
 
@@ -78,55 +76,59 @@ class VentasEstadisticasService {
       registros,
     };
   }
-
-  async obtenerEstadisticasPorMes(mes, anio) {
-    return await VentasEstadisticasRepository.findAllByMesYAnio(mes, anio);
+  async obtenerEstadisticasPorMes(mes, anio, { id_sucursal } = {}) {
+    return await VentasEstadisticasRepository.findAllByMesYAnio(mes, anio, {
+      id_sucursal,
+    });
   }
-
   async eliminarEstadisticasPorFecha(fecha) {
     return await VentasEstadisticasRepository.deleteByFecha(fecha);
   }
+  async obtenerKpiPorFecha(fecha, { id_sucursal } = {}) {
+    try {
+      const fechaFormato = convertirFechaLocal(fecha, "YYYY-MM-DD");
 
-  async obtenerKpiPorFecha(fecha) {
-    const fechaFormato = convertirFechaLocal(fecha, "YYYY-MM-DD");
+      const registros = await VentasEstadisticasRepository.findByFecha(
+        fechaFormato,
+        { id_sucursal }
+      );
 
-    const registros = await VentasEstadisticasRepository.findByFecha(
-      fechaFormato
-    );
+      if (!registros || registros.length === 0) {
+        return {
+          fecha: fechaFormato,
+          total_ventas: 0,
+          detalles: {},
+        };
+      }
 
-    if (!registros || registros.length === 0) {
+      let totalIngresos = 0;
+      const detalles = {};
+
+      registros.forEach((r) => {
+        const tipo = r.tipo_entrega;
+        const monto = parseFloat(r.monto_total);
+
+        totalIngresos += monto;
+        detalles[tipo] = {
+          total: monto,
+          cantidad: r.total_ventas,
+        };
+      });
+
       return {
         fecha: fechaFormato,
-        total_ventas: 0,
-        detalles: {},
+        total_ventas: totalIngresos,
+        detalles,
       };
+    } catch (error) {
+      console.log(error);
+      return error;
     }
-
-    let totalIngresos = 0;
-    const detalles = {};
-
-    registros.forEach((r) => {
-      const tipo = r.tipo_entrega;
-      const monto = parseFloat(r.monto_total);
-
-      totalIngresos += monto;
-      detalles[tipo] = {
-        total: monto,
-        cantidad: r.total_ventas,
-      };
-    });
-
-    return {
-      fecha: fechaFormato,
-      total_ventas: totalIngresos,
-      detalles,
-    };
   }
-
-  async obtenerResumenSemanal() {
+  async obtenerResumenSemanal({ id_sucursal } = {}) {
     const hoy = new Date();
     const inicioSemana = new Date(hoy);
-    inicioSemana.setDate(hoy.getDate() - hoy.getDay()); // domingo
+    inicioSemana.setDate(hoy.getDate() - hoy.getDay());
     inicioSemana.setHours(0, 0, 0, 0);
 
     const finSemana = new Date(inicioSemana);
@@ -137,6 +139,7 @@ class VentasEstadisticasService {
       where: {
         fecha: {
           [Op.between]: [inicioSemana, finSemana],
+          ...(id_sucursal ? { id_sucursal } : {}),
         },
         ...getWhereEstadoVentaValido(),
       },
@@ -151,8 +154,7 @@ class VentasEstadisticasService {
 
     return registros;
   }
-  //Calcular por mes
-  async calcularDatosMensuales(anio, mes) {
+  async calcularDatosMensuales(anio, mes, { id_sucursal } = {}) {
     const ventas = await Venta.findAll({
       where: {
         fecha: {
@@ -161,6 +163,7 @@ class VentasEstadisticasService {
             new Date(`${anio}-${mes}-31`),
           ],
           ...getWhereEstadoVentaValido(),
+          ...(id_sucursal ? { id_sucursal } : {}),
         },
       },
       attributes: [
@@ -174,7 +177,6 @@ class VentasEstadisticasService {
 
     return ventas;
   }
-  //Calcular por año
   async calcularEstadisticasPorAno(anio, filtros = {}) {
     const estadoPagada = await EstadoVentaRepository.findByNombre("Pagada");
 
@@ -198,7 +200,7 @@ class VentasEstadisticasService {
     }
 
     if (filtros.tipo_entrega) {
-      where.tipo_entrega = filtros.tipo_entrega; // Ej: 'retiro_en_sucursal'
+      where.tipo_entrega = filtros.tipo_entrega;
     }
     const resultados = await Venta.findAll({
       where,
@@ -214,7 +216,6 @@ class VentasEstadisticasService {
     console.log(resultados);
     return resultados;
   }
-  //Monitorear ventas recientes
   async monitorearVentasRecientes() {
     const haceUnaHora = new Date(Date.now() - 60 * 60 * 1000);
 
@@ -233,7 +234,7 @@ class VentasEstadisticasService {
     };
   }
 
-  async resumenVentasPorTipoEntrega(fecha) {
+  async resumenVentasPorTipoEntrega(fecha, { id_sucursal } = {}) {
     const registros = await Venta.findAll({
       where: {
         fecha: {
@@ -243,6 +244,7 @@ class VentasEstadisticasService {
           [Op.ne]: null,
         },
         ...getWhereEstadoVentaValido(),
+        ...(id_sucursal ? { id_sucursal } : {}),
       },
       attributes: ["tipo_entrega", [fn("COUNT", col("id_venta")), "total"]],
       group: ["tipo_entrega"],

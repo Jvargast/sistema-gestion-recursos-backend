@@ -37,11 +37,11 @@ const Insumo = sequelize.define(
     },
     es_para_venta: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false, // Por defecto, no se venden.
+      defaultValue: false, 
     },
     precio: {
       type: DataTypes.DECIMAL(10, 2),
-      allowNull: true, // Solo aplica si el insumo se vende.
+      allowNull: true, 
     },
     unidad_de_medida: {
       type: DataTypes.STRING,

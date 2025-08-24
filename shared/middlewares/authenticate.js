@@ -45,12 +45,12 @@ const authenticate = async (req, res, next) => {
         maxAge: 60 * 60 * 1000,
       });
     }
-
     req.user = {
       id: user.rut,
       nombre: user.nombre,
       apellido: user.apellido,
       id_sucursal: user.id_sucursal,
+      nombre_sucursal: user.nombre_sucursal,
       email: user.email,
       rol: user.rol,
       permisos: user.permisos,

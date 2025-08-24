@@ -4,7 +4,10 @@ class ClienteController {
   async getClienteById(req, res) {
     try {
       const { id } = req.params;
-      const cliente = await ClienteService.getClienteById(id);
+      const { id_sucursal } = req.query;
+      const cliente = await ClienteService.getClienteById(id, {
+        id_sucursal: id_sucursal ? Number(id_sucursal) : undefined,
+      });
       res.status(200).json(cliente);
     } catch (error) {
       res.status(404).json({ error: error.message });
@@ -13,20 +16,17 @@ class ClienteController {
 
   async getAllClientes(req, res) {
     try {
-      const filters = req.query; // Filtros enviados en los query params
+      const filters = req.query;
       const options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
-        search: req.query.search
+        search: req.query.search,
       };
       delete filters.limit;
       delete filters.offset;
 
-    /* if (req.user.rol === "chofer" && req.user.id) {
-      filters.creado_por = req.user.id; 
-    } */
       const clientes = await ClienteService.getAllClientes(filters, options);
-      res.status(200).json({data: clientes.data, total: clientes.pagination});
+      res.status(200).json({ data: clientes.data, total: clientes.pagination });
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -47,8 +47,11 @@ class ClienteController {
       const { id } = req.params;
       console.log("REQ", req.body);
       const updated = await ClienteService.updateCliente(id, req.body.formData);
-      res.status(200).json({message: "Cliente actualizado correctamente",updated});
+      res
+        .status(200)
+        .json({ message: "Cliente actualizado correctamente", updated });
     } catch (error) {
+      console.log(error);
       res.status(400).json({ error: error.message });
     }
   }
@@ -83,7 +86,7 @@ class ClienteController {
     }
   }
 
-  async deleteClientes(req,res) {
+  async deleteClientes(req, res) {
     try {
       const { ids } = req.body;
       const { rut } = req.user;
@@ -97,7 +100,8 @@ class ClienteController {
 
   async getPorcentajeClientesNuevos(req, res) {
     try {
-      const { porcentaje, cantidad } = await ClienteService.calcularPorcentajeClientesNuevos();
+      const { porcentaje, cantidad } =
+        await ClienteService.calcularPorcentajeClientesNuevos();
 
       res.status(200).json({
         success: true,
@@ -109,7 +113,8 @@ class ClienteController {
       console.error("Error al calcular porcentaje de clientes nuevos:", error);
       res.status(500).json({
         success: false,
-        message: "Ocurrió un error al calcular el porcentaje de clientes nuevos.",
+        message:
+          "Ocurrió un error al calcular el porcentaje de clientes nuevos.",
         error: error.message,
       });
     }

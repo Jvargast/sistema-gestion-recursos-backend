@@ -25,6 +25,7 @@ import CuentaPorCobrarRepository from "../infrastructure/repositories/CuentaPorC
 import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
 import { estadosInvalidosVenta } from "../../shared/utils/estadoUtils.js";
 import MovimientoCajaRepository from "../infrastructure/repositories/MovimientoCajaRepository.js";
+import ProductosService from "../../inventario/application/ProductosService.js";
 
 function clasificarProductos(productos) {
   const productosSolo = [];
@@ -65,13 +66,30 @@ class VentaService {
         pagos = (await Promise.all(pagosPromises)).flat();
       }
 
+      const existeFactura = await CuentaPorCobrarRepository.findByIdVenta(
+        venta.id_venta
+      );
+      const factura = existeFactura ? existeFactura : null;
+
       const cliente = venta.id_cliente
         ? await ClienteRepository.findById(venta.id_cliente)
         : null;
 
       const vendedor = await UsuariosRepository.findByRut(venta.id_vendedor);
 
-      return { venta, detalles, documentos, pagos, cliente, vendedor };
+      const pedido =
+        (await PedidoRepository.findByIdVenta?.(venta.id_venta)) ?? null;
+
+      return {
+        venta,
+        detalles,
+        documentos,
+        pagos,
+        cliente,
+        vendedor,
+        factura,
+        pedido,
+      };
     } catch (error) {
       throw new Error(`Error al obtener la venta: ${error.message}`);
     }
@@ -134,6 +152,7 @@ class VentaService {
       id_cliente,
       id_vendedor,
       id_caja,
+      id_sucursal,
       tipo_entrega,
       direccion_entrega,
       productos,
@@ -147,6 +166,8 @@ class VentaService {
       referencia,
       id_pedido_asociado = null,
     } = data;
+
+    console.log(data);
 
     const transaction = await sequelize.transaction();
     try {
@@ -194,11 +215,37 @@ class VentaService {
         throw new Error("Cliente no tiene datos válidos para emitir factura.");
       }
 
-      const sucursal = vendedor.id_sucursal;
-      if (!sucursal) {
-        throw new Error(
-          `El vendedor con RUT ${id_usuario_creador} no está asociado a ninguna sucursal.`
+      const idSucursalVenta = caja
+        ? caja.id_sucursal
+        : id_sucursal ?? vendedor?.id_sucursal;
+
+      if (!idSucursalVenta) {
+        throw new Error("No se pudo determinar la sucursal de la venta.");
+      }
+
+      if (tipo_entrega === "pedido_pagado_anticipado" && id_pedido_asociado) {
+        const pedidoAsociado = await PedidoRepository.findById(
+          id_pedido_asociado,
+          {
+            transaction,
+            lock: transaction.LOCK.UPDATE,
+          }
         );
+        if (!pedidoAsociado) throw new Error("Pedido asociado no existe.");
+        if (pedidoAsociado.id_venta) {
+          throw new Error("Pedido ya asociado a una venta.");
+        }
+      }
+
+      if (caja && id_sucursal && caja.id_sucursal !== id_sucursal) {
+        throw new Error(
+          "La sucursal enviada no coincide con la sucursal de la caja seleccionada."
+        );
+      }
+
+      const sucursal = vendedor.id_sucursal || idSucursalVenta;
+      if (!sucursal) {
+        throw new Error("No se pudo determinar la sucursal de la venta.");
       }
 
       const { productosSolo, insumosSolo } = clasificarProductos(productos);
@@ -240,14 +287,19 @@ class VentaService {
       const totalConImpuesto = totalAntesImpuestos + impuestos_totales;
 
       // 2. Estado Venta
-      const estadoVentaNombre =
+      /*       const estadoVentaNombre =
         tipo_documento === "boleta" &&
         (tipo_entrega === "retiro_en_sucursal" ||
           tipo_entrega === "pedido_pagado_anticipado" ||
           (tipo_entrega === "despacho_a_domicilio" &&
             (pago_recibido || referencia)))
           ? "Pagada"
-          : "Pendiente de Pago";
+          : "Pendiente de Pago"; */
+
+      const esBoleta = tipo_documento === "boleta";
+      const ventaPagada = esBoleta && id_metodo_pago != null;
+
+      const estadoVentaNombre = ventaPagada ? "Pagada" : "Pendiente de Pago";
 
       const estadoVenta = await EstadoVentaRepository.findByNombre(
         estadoVentaNombre,
@@ -260,7 +312,7 @@ class VentaService {
           id_cliente,
           id_vendedor,
           id_caja: caja ? caja.id_caja : null,
-          id_sucursal: sucursal,
+          id_sucursal: idSucursalVenta,
           tipo_entrega,
           direccion_entrega:
             tipo_entrega === "despacho_a_domicilio" ||
@@ -303,7 +355,12 @@ class VentaService {
         );
 
         if (tipo_entrega === "retiro_en_sucursal") {
-          await InventarioService.decrementarStockInsumo(id_insumo, cantidad);
+          await InventarioService.decrementarStockInsumo(
+            id_insumo,
+            idSucursalVenta,
+            cantidad,
+            { transaction }
+          );
         }
       }
 
@@ -321,6 +378,7 @@ class VentaService {
         if (tipo_entrega === "retiro_en_sucursal") {
           const disponible = await InventarioService.validarDisponibilidad(
             detalle.id_producto,
+            idSucursalVenta,
             detalle.cantidad,
             { transaction }
           );
@@ -332,6 +390,7 @@ class VentaService {
 
           await InventarioService.decrementarStock(
             detalle.id_producto,
+            idSucursalVenta,
             detalle.cantidad,
             { transaction }
           );
@@ -339,19 +398,54 @@ class VentaService {
       }
 
       if (productos_retornables && productos_retornables.length > 0) {
-        for (const retornable of productos_retornables) {
+        for (const r of productos_retornables) {
+          const cantidad = Math.max(0, Number(r.cantidad) || 0);
+          if (!cantidad) continue;
+
+          const estado =
+            r.estado === "defectuoso"
+              ? "defectuoso"
+              : r.estado === "reutilizable"
+              ? "reutilizable"
+              : "pendiente_inspeccion";
+
+          let idInsumoDestino =
+            r.id_insumo_destino != null ? Number(r.id_insumo_destino) : null;
+
+          if (!idInsumoDestino && estado === "reutilizable") {
+            const prod = await ProductosService.getProductoById(
+              Number(r.id_producto),
+              {
+                transaction,
+              }
+            );
+            idInsumoDestino = prod?.id_insumo_retorno ?? null;
+          }
+
+          if (estado === "reutilizable" && idInsumoDestino) {
+            await InventarioService.incrementarStockInsumoSucursal(
+              idInsumoDestino,
+              cantidad,
+              idSucursalVenta,
+              { transaction }
+            );
+          }
+
           await ProductoRetornableRepository.create(
             {
-              id_producto: retornable.id_producto,
+              id_producto: Number(r.id_producto) || null,
+              id_insumo: idInsumoDestino,
               id_venta: venta.id_venta,
-              id_entrega: null,
-              cantidad: retornable.cantidad,
-              estado: retornable.estado || "reutilizable",
+              cantidad,
+              estado,
               tipo_defecto:
-                retornable.estado === "defectuoso"
-                  ? retornable.tipo_defecto
-                  : null,
+                estado === "defectuoso" ? r.tipo_defecto ?? null : null,
               fecha_retorno: fechaActual,
+              fecha_inspeccion:
+                estado !== "pendiente_inspeccion" ? fechaActual : null,
+              id_sucursal_recepcion: idSucursalVenta,
+              id_sucursal_inspeccion:
+                estado !== "pendiente_inspeccion" ? idSucursalVenta : null,
             },
             { transaction }
           );
@@ -402,6 +496,7 @@ class VentaService {
             fecha_emision: fechaActual,
             fecha_vencimiento: fechaVencimiento,
             estado: "pendiente",
+            id_sucursal: idSucursalVenta
           },
           { transaction }
         );
@@ -422,6 +517,7 @@ class VentaService {
             monto: totalConImpuesto,
             fecha_pago: fechaActual,
             referencia: referencia || null,
+            id_sucursal: idSucursalVenta,
           },
           { transaction }
         );
@@ -468,17 +564,43 @@ class VentaService {
         }
       }
 
+      const requiereFactura = tipo_documento === "factura";
+      const pedidoPagado = !requiereFactura;
+
+      const productosParaPedido = [
+        ...detalles.map((d) => ({
+          tipo: "producto",
+          id_producto: d.id_producto,
+          cantidad: d.cantidad,
+          precio_unitario: d.precio_unitario ?? undefined,
+        })),
+
+        ...insumosSolo.map((i) => ({
+          tipo: "insumo",
+          id_insumo: i.id_insumo,
+          cantidad: i.cantidad,
+          precio_unitario: i.precio_unitario ?? undefined,
+        })),
+      ];
+
       // Crear pedido automáticamente solo si es despacho
       if (tipo_entrega === "despacho_a_domicilio" && !id_pedido_asociado) {
+        console.log("Creando Pedido Desde Venta");
         await PedidoService.createPedido(
           {
             id_cliente,
             id_creador: id_usuario_creador,
+            id_sucursal: idSucursalVenta,
             direccion_entrega,
-            productos,
+            productos: productosParaPedido,
             metodo_pago: id_metodo_pago,
-            pagado: Boolean(pago_recibido || referencia),
+            notas,
+            tipo_documento,
+            pagado: pedidoPagado,
             id_venta: venta.id_venta,
+            id_caja,
+            lat: data.lat ?? null,
+            lng: data.lng ?? null,
           },
           { transaction }
         );
@@ -486,6 +608,7 @@ class VentaService {
 
       // Asociar pedido anticipado ya pagado a una venta
       if (tipo_entrega === "pedido_pagado_anticipado" && id_pedido_asociado) {
+        console.log("Pago anticipado");
         const pedido = await PedidoRepository.findById(id_pedido_asociado, {
           transaction,
         });

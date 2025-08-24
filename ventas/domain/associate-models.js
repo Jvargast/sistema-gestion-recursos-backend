@@ -27,6 +27,18 @@ function loadPOSAssociations() {
   Pedido.belongsTo(Cliente, { foreignKey: "id_cliente", as: "Cliente" });
   Cliente.hasMany(Pedido, { foreignKey: "id_cliente", as: "Pedidos" });
 
+  // Pedido → Sucursal
+  Pedido.belongsTo(Sucursal, {
+    foreignKey: "id_sucursal",
+    as: "sucursal",
+  });
+
+  // Sucursal → Pedidos
+  Sucursal.hasMany(Pedido, {
+    foreignKey: "id_sucursal",
+    as: "pedidos",
+  });
+
   // Relación: Un Pedido es creado por un Administrador o Vendedor
   Pedido.belongsTo(Usuarios, { foreignKey: "id_creador", as: "Creador" });
   Usuarios.hasMany(Pedido, { foreignKey: "id_creador", as: "PedidosCreados" });
@@ -257,6 +269,25 @@ function loadPOSAssociations() {
     foreignKey: "id_usuario_creador",
     as: "documentosCreados",
   });
+
+  // Relación: Cliente -> Sucursal
+  // Modelo (Sequelize)
+  Cliente.belongsToMany(Sucursal, {
+    through: "ClienteSucursal",
+    as: "Sucursales",
+    foreignKey: "id_cliente",
+  });
+  Sucursal.belongsToMany(Cliente, {
+    through: "ClienteSucursal",
+    as: "Clientes",
+    foreignKey: "id_sucursal",
+  });
+  Pago.belongsTo(Sucursal, { foreignKey: "id_sucursal", as: "Sucursal" });
+  CuentaPorCobrar.belongsTo(Sucursal, {
+    foreignKey: "id_sucursal",
+    as: "Sucursal",
+  });
+
   // Relación: Venta -> LogVenta
   LogVenta.belongsTo(Venta, { foreignKey: "id_venta", as: "venta" });
   Venta.hasMany(LogVenta, { foreignKey: "id_venta", as: "logs" });

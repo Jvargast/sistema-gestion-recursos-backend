@@ -35,8 +35,16 @@ class InventarioController {
     try {
       const { idProducto, cantidad } = req.body;
       const { idUsuario } = req.user; // Middleware de autenticación
-      const inventarioActualizado = await InventarioService.ajustarCantidadInventario(idProducto, cantidad, idUsuario);
-      res.status(200).json({ mensaje: "Cantidad ajustada con éxito.", inventarioActualizado });
+      const inventarioActualizado =
+        await InventarioService.ajustarCantidadInventario(
+          idProducto,
+          cantidad,
+          idUsuario
+        );
+      res.status(200).json({
+        mensaje: "Cantidad ajustada con éxito.",
+        inventarioActualizado,
+      });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -72,6 +80,15 @@ class InventarioController {
     } catch (error) {
       console.error("Error al obtener los logs del producto:", error);
       res.status(500).json({ error: "Error interno del servidor" });
+    }
+  }
+
+  async crearInventarioSucursal(req, res) {
+    try {
+      const inventario = await InventarioService.agregarInventario(req.body);
+      res.status(201).json(inventario);
+    } catch (error) {
+      res.status(400).json({ error: error.message });
     }
   }
 }

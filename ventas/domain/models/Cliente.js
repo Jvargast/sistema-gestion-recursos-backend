@@ -13,6 +13,10 @@ const Cliente = sequelize.define("Cliente", {
     type: DataTypes.STRING,
     allowNull: true,
     unique: true,
+    set(value) {
+      const v = typeof value === "string" ? value.trim() : value;
+      this.setDataValue("rut", v ? v : null); 
+    },
   },
   tipo_cliente: {
     type: DataTypes.ENUM("persona", "empresa"),

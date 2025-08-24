@@ -1,3 +1,4 @@
+import Sucursal from "../../auth/domain/models/Sucursal.js";
 import Usuarios from "../../auth/domain/models/Usuarios.js";
 import FormulaProducto from "../../inventario/domain/models/FormulaProducto.js";
 import Insumo from "../../inventario/domain/models/Insumo.js";
@@ -11,11 +12,11 @@ function loadProduccionAssociations() {
   });
   FormulaProducto.hasMany(Produccion, {
     foreignKey: "id_formula",
-    as: "lotes", 
+    as: "lotes",
   });
 
   Produccion.belongsTo(Usuarios, {
-    foreignKey: "rut_usuario", 
+    foreignKey: "rut_usuario",
     as: "operario",
   });
   Usuarios.hasMany(Produccion, {
@@ -40,6 +41,12 @@ function loadProduccionAssociations() {
   Insumo.hasMany(ConsumoInsumo, {
     foreignKey: "id_insumo",
     as: "consumos",
+  });
+
+  Produccion.belongsTo(Sucursal, { foreignKey: "id_sucursal", as: "Sucursal" });
+  Sucursal.hasMany(Produccion, {
+    foreignKey: "id_sucursal",
+    as: "Producciones",
   });
 
   console.log("Asociaciones del módulo de producción cargadas correctamente.");

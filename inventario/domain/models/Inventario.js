@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Producto from "./Producto.js";
 import Insumo from "./Insumo.js";
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const Inventario = sequelize.define(
   "Inventario",
@@ -14,11 +15,10 @@ const Inventario = sequelize.define(
     cantidad: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 0, 
+      defaultValue: 0,
     },
     fecha_actualizacion: {
       type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
     },
     id_producto: {
       type: DataTypes.INTEGER,
@@ -36,6 +36,16 @@ const Inventario = sequelize.define(
       references: {
         model: Insumo,
         key: "id_insumo",
+      },
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: Sucursal,
+        key: "id_sucursal",
       },
       onDelete: "CASCADE",
       onUpdate: "CASCADE",

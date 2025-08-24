@@ -18,7 +18,7 @@ class SequelizeFormulaRepository {
     });
   }
 
-  async findById(id) {
+  async findById(id, { idSucursal } = {}) {
     return await FormulaProducto.findByPk(id, {
       include: [
         {
@@ -36,7 +36,9 @@ class SequelizeFormulaRepository {
                 {
                   model: Inventario,
                   as: "inventario",
-                  attributes: ["cantidad"],
+                  attributes: ["id_sucursal", "cantidad"],
+                  where: idSucursal ? { id_sucursal: idSucursal } : undefined,
+                  required: false,
                 },
               ],
             },

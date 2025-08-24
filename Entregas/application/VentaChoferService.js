@@ -9,7 +9,6 @@ import paginate from "../../shared/utils/pagination.js";
 import AgendaViajesRepository from "../infrastructure/repositories/AgendaViajesRepository.js";
 import DetallesVentaChoferRepository from "../infrastructure/repositories/DetallesVentaChoferRepository.js";
 import InventarioCamionService from "./InventarioCamionService.js";
-import ProductoRetornableRepository from "../../inventario/infrastructure/repositories/ProductoRetornableRepository.js";
 import HistorialVentasChoferRepository from "../infrastructure/repositories/HistorialVentasChoferRepository.js";
 import PagoRepository from "../../ventas/infrastructure/repositories/PagoRepository.js";
 import MovimientoCajaService from "../../ventas/application/MovimientoCajaService.js";
@@ -17,6 +16,10 @@ import DocumentoRepository from "../../ventas/infrastructure/repositories/Docume
 import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 import sequelize from "../../database/database.js";
 import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
+import ProductoRetornableCamionRepository from "../infrastructure/repositories/ProductoRetornableCamionRepository.js";
+import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
+import SucursalRepository from "../../auth/infraestructure/repositories/SucursalRepository.js";
+import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 
 class VentaChoferService {
   async getVentasChofer(filters = {}, options) {
@@ -27,20 +30,23 @@ class VentaChoferService {
       "total_venta",
       "estadoPago",
       "id_chofer",
+      "id_sucursal",
     ];
 
     const where = createFilter(filters, allowedFields);
 
-    // Incluir búsqueda global si `search` está presente
     if (options.search) {
       where[Op.or] = [
-        { "$cliente.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en cliente.nombre
-        { "$camion.placa$": { [Op.like]: `%${options.search}%` } }, // Buscar en camion.nombre
-        { "$metodoPago.nombre$": { [Op.like]: `%${options.search}%` } }, // Buscar en metodoPago.nombre
+        { "$cliente.nombre$": { [Op.like]: `%${options.search}%` } },
+        { "$camion.placa$": { [Op.like]: `%${options.search}%` } },
+        { "$metodoPago.nombre$": { [Op.like]: `%${options.search}%` } },
       ];
     }
 
-    // Configurar asociaciones
+    if (filters.id_sucursal) {
+      where.id_sucursal = Number(filters.id_sucursal);
+    }
+
     const include = [
       {
         model: ClienteRepository.getModel(),
@@ -57,9 +63,13 @@ class VentaChoferService {
         as: "metodoPago",
         attributes: ["nombre"],
       },
+      {
+        model: SucursalRepository.getModel(),
+        as: "Sucursal",
+        attributes: ["id_sucursal", "nombre"],
+      },
     ];
 
-    // Ejecutar la consulta con paginación
     const result = await paginate(VentasChoferRepository.getModel(), options, {
       where,
       include,
@@ -80,14 +90,15 @@ class VentaChoferService {
   ) {
     const transaction = await sequelize.transaction();
     try {
+      const fecha = obtenerFechaActualChile();
       const viajeActivo = await AgendaViajesRepository.findByChoferAndEstado(
         id_chofer,
         "En Tránsito"
       );
-
       if (!viajeActivo) throw new Error("El chofer no tiene viaje activo.");
 
       const id_camion = viajeActivo.id_camion;
+      const id_sucursal = viajeActivo.id_sucursal;
 
       for (const item of productos) {
         const productoCamion =
@@ -122,7 +133,8 @@ class VentaChoferService {
           total_venta: totalVenta,
           tipo_venta: "productos",
           estadoPago: estadoPago,
-          fechaHoraVenta: new Date(),
+          fechaHoraVenta: fecha,
+          id_sucursal,
         },
         { transaction }
       );
@@ -160,14 +172,15 @@ class VentaChoferService {
           },
           transaction
         );
-
-        await ProductoRetornableRepository.create(
+        await ProductoRetornableCamionRepository.create(
           {
+            id_camion,
+            id_entrega: null,
             id_producto: retornable.id_producto,
-            id_venta: nuevaVenta.id_venta_chofer,
             cantidad: retornable.cantidad,
-            estado: null,
-            fecha_retorno: new Date(),
+            estado: "pendiente_inspeccion",
+            tipo_defecto: null,
+            fecha_registro: fecha,
           },
           { transaction }
         );
@@ -192,7 +205,6 @@ class VentaChoferService {
         },
         { transaction }
       );
-      // Luego registrar el Pago asociado al documento
       const cajaChofer = await CajaRepository.findCajaEstadoByUsuario(
         id_chofer,
         "abierta"
@@ -209,8 +221,9 @@ class VentaChoferService {
           id_metodo_pago,
           id_estado_pago: estadoPago === "pagado" ? 2 : 1,
           monto: totalVenta,
-          fecha_pago: new Date(),
+          fecha_pago: fecha,
           referencia: `Chofer-${id_chofer}-Venta-${nuevaVenta.id_venta_chofer}`,
+          id_sucursal,
         },
         { transaction }
       );
@@ -268,17 +281,22 @@ class VentaChoferService {
     }
   }
 
-  async obtenerMisVentas({ id_chofer, page, limit, search }) {
+  async obtenerMisVentas({ id_chofer, page, limit, search, id_sucursal }) {
     const options = {
       page,
       limit,
       search,
       id_chofer,
+      id_sucursal,
     };
 
     const where = {
       id_chofer,
     };
+
+    if (Number.isFinite(id_sucursal)) {
+      where.id_sucursal = id_sucursal;
+    }
 
     if (search) {
       where[Op.or] = [
@@ -302,6 +320,11 @@ class VentaChoferService {
         model: MetodoPagoRepository.getModel(),
         as: "metodoPago",
         attributes: ["nombre"],
+      },
+      {
+        model: SucursalRepository.getModel(),
+        as: "Sucursal",
+        attributes: ["id_sucursal", "nombre"],
       },
     ];
 
@@ -347,10 +370,17 @@ class VentaChoferService {
               "precioUnitario",
               "subtotal",
             ],
-            include: [{
-              model: ProductosRepository.getModel(),
-              as: "producto",
-            }]
+            include: [
+              {
+                model: ProductosRepository.getModel(),
+                as: "producto",
+              },
+            ],
+          },
+          {
+            model: UsuariosRepository.getModel(),
+            as: "usuario",
+            attributes: ["rut", "nombre", "apellido"],
           },
         ],
       });

@@ -2,7 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Venta from "./Venta.js";
 import Documento from "./Documento.js";
-
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const CuentaPorCobrar = sequelize.define(
   "CuentaPorCobrar",
@@ -28,6 +28,11 @@ const CuentaPorCobrar = sequelize.define(
         key: "id_documento",
       },
     },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: Sucursal, key: "id_sucursal" },
+    },
     monto_total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
@@ -47,7 +52,7 @@ const CuentaPorCobrar = sequelize.define(
     },
     fecha_vencimiento: {
       type: DataTypes.DATE,
-      allowNull: true, 
+      allowNull: true,
     },
     estado: {
       type: DataTypes.STRING,

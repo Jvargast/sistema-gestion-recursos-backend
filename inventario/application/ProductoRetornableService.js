@@ -11,8 +11,27 @@ class ProductoRetornableService {
     return productoRetornable;
   }
 
+  async getAllProductosRetornablesPaginated(filters = {}, options = {}) {
+    const page = Math.max(1, Number(options.page) || 1);
+    const limit = Math.max(1, Number(options.limit) || 20);
+    const offset = (page - 1) * limit;
+
+    return await ProductoRetornableRepository.getModel().findAndCountAll(
+      filters,
+      {
+        search: options.search,
+        limit,
+        offset,
+        order: options.order || [["fecha_retorno", "DESC"]],
+      }
+    );
+  }
+
   async getAllProductosRetornables(filters = {}, options = {}) {
-    return await ProductoRetornableRepository.findAll(filters, options);
+    return await ProductoRetornableRepository.findAll(filters, {
+      search: options.search,
+      order: options.order || [["fecha_retorno", "DESC"]],
+    });
   }
 
   async createProductoRetornable(data) {
@@ -37,7 +56,10 @@ class ProductoRetornableService {
     return true;
   }
 
-  async inspeccionarRetornables(items) {
+  async inspeccionarRetornables(id_sucursal_inspeccion, items) {
+    if (!id_sucursal_inspeccion) {
+      throw new Error("id_sucursal_inspeccion es requerido.");
+    }
     const transaction = await sequelize.transaction();
 
     try {
@@ -57,11 +79,12 @@ class ProductoRetornableService {
           0
         );
 
-        const totalAsignado = (item.reutilizable || 0) + totalDefectuosos;
+        const reutilizable = Number(item.reutilizable) || 0;
+        const totalAsignado = reutilizable + totalDefectuosos;
 
         if (totalAsignado > original.cantidad) {
           throw new Error(
-            `La suma total para el producto retornable #${item.id_producto_retornable} excede la cantidad disponible.`
+            `La suma total para el retornable #${item.id_producto_retornable} excede la cantidad disponible (${original.cantidad}).`
           );
         }
 
@@ -74,7 +97,8 @@ class ProductoRetornableService {
 
           const insumoDestinoExiste =
             await InventarioService.getInventarioByInsumoId(
-              item.id_insumo_destino
+              item.id_insumo_destino,
+              id_sucursal_inspeccion
             );
           if (!insumoDestinoExiste) {
             throw new Error(
@@ -84,6 +108,7 @@ class ProductoRetornableService {
 
           await InventarioService.incrementStockInsumo(
             item.id_insumo_destino,
+            id_sucursal_inspeccion,
             item.reutilizable,
             { transaction }
           );
@@ -101,6 +126,9 @@ class ProductoRetornableService {
               {
                 id_producto: original.id_producto || null,
                 id_insumo: item.id_insumo_destino || original.id_insumo || null,
+                id_venta: original.id_venta || null,
+                id_sucursal_recepcion: original.id_sucursal_recepcion,
+                id_sucursal_inspeccion,
                 cantidad: d.cantidad,
                 tipo_defecto: d.tipo_defecto,
                 estado: "defectuoso",

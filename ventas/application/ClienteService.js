@@ -4,20 +4,18 @@ import paginate from "../../shared/utils/pagination.js";
 import ClienteRepository from "../infrastructure/repositories/ClienteRepository.js";
 import moment from "moment/moment.js";
 import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
+import SucursalRepository from "../../auth/infraestructure/repositories/SucursalRepository.js";
+import sequelize from "../../database/database.js";
+import ClienteSucursalRepository from "../infrastructure/repositories/ClienteSucursalRepository.js";
 
 class ClienteService {
-  async getClienteById(id) {
-    const cliente = await ClienteRepository.findById(id);
-    if (!cliente) {
-      throw new Error("Cliente no encontrado.");
-    }
+  async getClienteById(id, filters = {}) {
+    const cliente = await ClienteRepository.findById(id, filters);
+    if (!cliente) throw new Error("Cliente no encontrado.");
     return cliente;
   }
 
-  async getAllClientes(
-    filters = {},
-    options /* = { page: 1, limit: 20, rolId: null } */
-  ) {
+  async getAllClientes(filters = {}, options) {
     const allowedFields = [
       "id_cliente",
       "rut",
@@ -42,46 +40,99 @@ class ClienteService {
         { email: { [Op.like]: `%${options.search}%` } },
       ];
     }
+
+    if (typeof filters.activo !== "undefined") {
+      where.activo =
+        String(filters.activo) === "true" || filters.activo === true;
+    }
+
+    if (typeof filters.creado_por !== "undefined") {
+      where.creado_por = String(filters.creado_por);
+    }
+
+    const include = [
+      {
+        model: SucursalRepository.getModel(),
+        as: "Sucursales",
+        attributes: ["id_sucursal", "nombre"],
+        through: { attributes: [] },
+        ...(filters.id_sucursal
+          ? {
+              where: { id_sucursal: Number(filters.id_sucursal) },
+              required: true,
+            }
+          : { required: false }),
+      },
+    ];
+
     const result = await paginate(ClienteRepository.getModel(), options, {
       where,
+      include,
       order: [["fecha_registro", "ASC"]],
+      distinct: true,
+      subQuery: false,
     });
-    return await result;
+    return result;
   }
 
   async createCliente(data, rut) {
-    const { nombre, direccion, telefono } = data;
+    const { nombre, direccion, telefono, id_sucursal } = data;
 
     if (!nombre || !direccion || !telefono) {
-        throw new Error("Faltan campos básicos: nombre, dirección y teléfono son obligatorios.");
+      throw new Error(
+        "Faltan campos básicos: nombre, dirección y teléfono son obligatorios."
+      );
     }
 
     const existingCliente = await ClienteRepository.findByDireccion(direccion);
     if (existingCliente) {
-        throw new Error("Ya existe un cliente registrado con esta dirección.");
+      throw new Error("Ya existe un cliente registrado con esta dirección.");
     }
-    const fecha_registro = obtenerFechaActualChile();
 
-    const newData = {
+    const t = await sequelize.transaction();
+    try {
+      const fecha_registro = obtenerFechaActualChile();
+
+      const payload = {
         ...data,
-        creado_por: rut,
-        fecha_registro: fecha_registro
-    };
+        creado_por: rut ? String(rut).trim() : null,
+        fecha_registro,
+      };
+      delete payload.id_sucursal; 
 
-    return await ClienteRepository.create(newData);
+      const cliente = await ClienteRepository.create(payload, {
+        transaction: t,
+      });
+
+      if (id_sucursal != null) {
+        const idSuc = Number(id_sucursal);
+        if (!Number.isFinite(idSuc)) {
+          throw new Error("id_sucursal inválido.");
+        }
+
+        await ClienteSucursalRepository.getModel().findOrCreate({
+          where: { id_cliente: cliente.id_cliente, id_sucursal: idSuc },
+          defaults: { id_cliente: cliente.id_cliente, id_sucursal: idSuc },
+          transaction: t,
+        });
+      }
+
+      await t.commit();
+      return cliente;
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
   }
 
   async updateCliente(id, data) {
-    if (!id) {
-      throw new Error("Se requiere de un Rut de cliente para actualizar.");
-    }
+    if (!id) throw new Error("Se requiere un ID de cliente para actualizar.");
 
-    // Llama al repositorio con id y datos separados
-    const clienteActualizado = await ClienteRepository.updateWithconditions(
-      id,
-      data
-    );
-    return clienteActualizado;
+    return await sequelize.transaction(async (t) => {
+      return await ClienteRepository.updateWithconditions(id, data, {
+        transaction: t,
+      });
+    });
   }
 
   async deactivateCliente(id) {
@@ -127,7 +178,8 @@ class ClienteService {
 
     if (clientes.length !== ids.length) {
       const notFoundIds = ids.filter(
-        (id_cliente) => !clientes.some((cliente) => cliente.id_cliente === id_cliente)
+        (id_cliente) =>
+          !clientes.some((cliente) => cliente.id_cliente === id_cliente)
       );
       throw new Error(
         `Las siguientes clientes no fueron encontradas: ${notFoundIds.join(
@@ -149,9 +201,13 @@ class ClienteService {
   async calcularPorcentajeClientesNuevos() {
     try {
       // Calcular rango de fechas del mes pasado
-      const mesPasado = moment().subtract(1, "month").startOf("month").format("YYYY-MM-DD HH:mm:ss");
-      const inicioMesActual = moment().startOf("month").format("YYYY-MM-DD HH:mm:ss");
-
+      const mesPasado = moment()
+        .subtract(1, "month")
+        .startOf("month")
+        .format("YYYY-MM-DD HH:mm:ss");
+      const inicioMesActual = moment()
+        .startOf("month")
+        .format("YYYY-MM-DD HH:mm:ss");
 
       // Obtener la cantidad de clientes nuevos registrados desde el mes pasado
       const cantidadClientesNuevos =

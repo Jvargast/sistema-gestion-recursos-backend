@@ -25,11 +25,66 @@ class ProductoRetornableController {
 
   async getPendientes(req, res) {
     try {
-      const pendientes =
+      const { id_sucursal_recepcion, search, page, limit } = req.query;
+      const user = req.user;
+      const isAdmin =
+        (user?.rol && user.rol.toString().toLowerCase() === "administrador") ||
+        (user?.rol?.nombre &&
+          user.rol.nombre.toString().toLowerCase() === "administrador");
+
+      const sucursal = isAdmin
+        ? id_sucursal_recepcion
+          ? Number(id_sucursal_recepcion)
+          : null
+        : user?.id_sucursal
+        ? Number(user.id_sucursal)
+        : null;
+
+      if (!isAdmin && !sucursal) {
+        return res
+          .status(400)
+          .json({ error: "No se pudo determinar la sucursal del usuario." });
+      }
+
+      const filters = { estado: "pendiente_inspeccion" };
+      if (sucursal) filters.id_sucursal_recepcion = sucursal;
+
+      const hasPagination =
+        page != null &&
+        limit != null &&
+        !Number.isNaN(Number(page)) &&
+        !Number.isNaN(Number(limit));
+
+      if (!hasPagination) {
+        const rows = await ProductoRetornableService.getAllProductosRetornables(
+          filters,
+          { search }
+        );
+        return res.status(200).json(rows);
+      }
+
+      const p = Math.max(1, Number(page));
+      const l = Math.max(1, Number(limit));
+
+      const result =
+        await ProductoRetornableService.getAllProductosRetornablesPaginated(
+          filters,
+          { search, page: p, limit: l }
+        );
+      return res.status(200).json({
+        data: result.rows,
+        total: {
+          items: result.count,
+          page: p,
+          limit: l,
+          totalPages: Math.ceil(result.count / l),
+        },
+      });
+      /*  const pendientes =
         await ProductoRetornableService.getAllProductosRetornables({
           estado: "pendiente_inspeccion",
-        });
-      res.status(200).json(pendientes);
+        }); */
+      /*  res.status(200).json(pendientes); */
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -70,7 +125,13 @@ class ProductoRetornableController {
 
   async inspeccionarRetornables(req, res) {
     try {
-      const { items } = req.body;
+      const { id_sucursal_inspeccion, items } = req.body || {};
+
+      if (!id_sucursal_inspeccion) {
+        return res
+          .status(400)
+          .json({ error: "id_sucursal_inspeccion es requerido" });
+      }
 
       if (!Array.isArray(items) || items.length === 0) {
         return res
@@ -78,9 +139,12 @@ class ProductoRetornableController {
           .json({ error: "No hay items para inspeccionar." });
       }
 
-      await ProductoRetornableService.inspeccionarRetornables(items);
+      const result = await ProductoRetornableService.inspeccionarRetornables(
+        Number(id_sucursal_inspeccion),
+        items
+      );
 
-      res.status(200).json({ message: "Inspección registrada correctamente." });
+      res.status(200).json(result);
     } catch (error) {
       console.error("Error al inspeccionar:", error);
       res.status(500).json({ error: error.message });

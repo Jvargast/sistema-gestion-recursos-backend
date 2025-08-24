@@ -10,6 +10,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
+import SucursalRepository from "../../auth/infraestructure/repositories/SucursalRepository.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -26,6 +27,10 @@ class CotizacionService {
       ];
     }
 
+    if (filters.id_sucursal) {
+      where.id_sucursal = Number(filters.id_sucursal);
+    }
+
     const include = [
       {
         model: ClienteRepository.getModel(),
@@ -39,7 +44,7 @@ class CotizacionService {
       },
     ];
 
-    // Paginación y orden
+
     const result = await paginate(CotizacionRepository.getModel(), options, {
       where,
       include,
@@ -56,9 +61,9 @@ class CotizacionService {
       notas,
       impuesto,
       descuento_total_porcentaje,
+      id_sucursal,
     } = data;
 
-    // 1. Validaciones iniciales
     const cliente = id_cliente
       ? await ClienteRepository.findById(id_cliente)
       : null;
@@ -75,18 +80,18 @@ class CotizacionService {
       throw new Error("Debe incluir al menos un producto en la cotización.");
     }
 
-    // Obtener la sucursal del vendedor
-    const sucursal = vendedor.id_sucursal;
+    const sucursalId = Number(id_sucursal);
+    if (!sucursalId) {
+      throw new Error("Debes indicar una sucursal (id_sucursal).");
+    }
+    const sucursal = await SucursalRepository.getSucursalById(sucursalId);
     if (!sucursal) {
-      throw new Error(
-        `El vendedor con RUT ${id_usuario_creador} no está asociado a ninguna sucursal.`
-      );
+      throw new Error(`Sucursal con ID ${sucursalId} no encontrada.`);
     }
 
     const productosSolo = productos.filter((item) => !!item.id_producto);
     const insumosSolo = productos.filter((item) => !!item.id_insumo);
 
-    // 2. Calcular totales
     let subtotal = 0;
     let descuentoTotalProductos = 0;
 
@@ -108,11 +113,9 @@ class CotizacionService {
       };
     });
 
-    // Aplicar descuento total (si corresponde)
     const descuentoTotalCompra = (subtotal * descuento_total_porcentaje) / 100;
     const descuentoTotal = descuentoTotalProductos + descuentoTotalCompra;
 
-    // Calcular impuestos y total final
     const totalAntesImpuestos = subtotal - descuentoTotal;
 
     const impuestos_totales =
@@ -122,11 +125,10 @@ class CotizacionService {
 
     const totalConImpuesto = totalAntesImpuestos + impuestos_totales;
 
-    // 3. Registrar la cotización
     const cotizacion = await CotizacionRepository.create({
       id_cliente,
       id_vendedor: id_usuario_creador,
-      id_sucursal: sucursal,
+      id_sucursal: sucursalId,
       fecha: new Date(),
       fecha_vencimiento,
       total: totalConImpuesto,
@@ -164,7 +166,6 @@ class CotizacionService {
       detallesGuardados.push(nuevoDetalle);
     }
 
-    // 4. Registrar los detalles de la cotización
     for (const detalle of detalles) {
       const nuevoDetalle = await DetalleCotizacionRepository.create({
         id_cotizacion: cotizacion.id_cotizacion,
@@ -173,7 +174,6 @@ class CotizacionService {
       detallesGuardados.push(nuevoDetalle);
     }
 
-    // 5. Registrar en LogCotizacion
     await LogCotizacionRepository.create({
       id_cotizacion: cotizacion.id_cotizacion,
       accion: "creación",
@@ -182,7 +182,6 @@ class CotizacionService {
       detalle: `Cotización creada con estado inicial 'activa'.`,
     });
 
-    // 5. Retornar la cotización creada con sus detalles
     return {
       cotizacion,
       detalles: detallesGuardados,

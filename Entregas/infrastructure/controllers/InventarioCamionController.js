@@ -1,5 +1,6 @@
 import AgendaCargaService from "../../application/AgendaCargaService.js";
 import InventarioCamionService from "../../application/InventarioCamionService.js";
+import CamionRepository from "../repositories/CamionRepository.js";
 
 class InventarioCamionController {
   async addProduct(req, res) {
@@ -35,23 +36,26 @@ class InventarioCamionController {
   }
   async getInventarioDisponible(req, res) {
     try {
-      let { id_camion } = req.params; 
-  
+      let { id_camion } = req.params;
+
       if (!id_camion || isNaN(parseInt(id_camion))) {
-        return res.status(400).json({ message: "El ID del camión es requerido y debe ser un número." });
+        return res.status(400).json({
+          message: "El ID del camión es requerido y debe ser un número.",
+        });
       }
-  
-      id_camion = parseInt(id_camion); 
-  
-      const inventario = await InventarioCamionService.getInventarioDisponible(id_camion);
-  
+
+      id_camion = parseInt(id_camion);
+
+      const inventario = await InventarioCamionService.getInventarioDisponible(
+        id_camion
+      );
+
       res.status(200).json({ data: inventario });
     } catch (error) {
       console.error("Error al obtener el inventario disponible:", error);
       res.status(500).json({ message: error.message });
     }
   }
-  
 
   async getInventarioDisponiblePorChofer(req, res) {
     try {
@@ -84,19 +88,25 @@ class InventarioCamionController {
   async getEstadoInventarioCamion(req, res) {
     try {
       let { id_camion } = req.params;
-  
+
       if (!id_camion || isNaN(parseInt(id_camion))) {
-        return res.status(400).json({ message: "El ID del camión es requerido y debe ser un número." });
+        return res.status(400).json({
+          message: "El ID del camión es requerido y debe ser un número.",
+        });
       }
-  
+
       id_camion = parseInt(id_camion);
-  
+
       // Llamar al servicio para obtener el inventario en uso y disponible
-      const inventarioEstado = await InventarioCamionService.getEstadoInventario(id_camion);
-  
+      const inventarioEstado =
+        await InventarioCamionService.getEstadoInventario(id_camion);
+
       res.status(200).json({ data: inventarioEstado });
     } catch (error) {
-      console.error("Error al obtener el estado del inventario del camión:", error);
+      console.error(
+        "Error al obtener el estado del inventario del camión:",
+        error
+      );
       res.status(500).json({ message: error.message });
     }
   }
@@ -104,13 +114,17 @@ class InventarioCamionController {
   async getInventarioPorChofer(req, res) {
     try {
       const { id_chofer } = req.params;
-  
+
       if (!id_chofer) {
-        return res.status(400).json({ message: "El ID del chofer es requerido y debe ser un número." });
+        return res.status(400).json({
+          message: "El ID del chofer es requerido y debe ser un número.",
+        });
       }
-  
-      const inventario = await InventarioCamionService.getInventarioPorChofer(id_chofer);
-  
+
+      const inventario = await InventarioCamionService.getInventarioPorChofer(
+        id_chofer
+      );
+
       res.status(200).json({ data: inventario });
     } catch (error) {
       console.error("Error al obtener el inventario del camión:", error);
@@ -121,9 +135,20 @@ class InventarioCamionController {
   async vaciarCamion(req, res) {
     try {
       const { id_camion } = req.params;
-      const { descargarDisponibles = true, descargarRetorno = true } = req.body || {};
+      const { descargarDisponibles = true, descargarRetorno = true } =
+        req.body || {};
+
+      const camion = await CamionRepository.findById(id_camion);
+      if (!camion)
+        return res.status(404).json({ error: "Camión no encontrado" });
+      if (!camion.id_sucursal) {
+        return res
+          .status(400)
+          .json({ error: "El camión no tiene id_sucursal asignado" });
+      }
 
       const result = await InventarioCamionService.vaciarCamion(id_camion, {
+        id_sucursal: camion.id_sucursal,
         descargarDisponibles,
         descargarRetorno,
       });
@@ -134,8 +159,6 @@ class InventarioCamionController {
       res.status(400).json({ error: error.message });
     }
   }
-  
-  
 }
 
 export default new InventarioCamionController();

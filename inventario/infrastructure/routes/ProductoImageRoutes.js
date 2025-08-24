@@ -5,7 +5,6 @@ import { uploadImage } from "../../../shared/services/cloudinaryService.js";
 
 const router = express.Router();
 
-// Configuración de Multer para manejar archivos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "./public/images"); // Directorio temporal para almacenar imágenes

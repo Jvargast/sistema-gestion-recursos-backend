@@ -17,7 +17,6 @@ class VentaChoferController {
         monto_recibido,
       } = req.body;
       const rut = req.user.id;
-      // Llamar al servicio
       const resultado = await VentaChoferService.realizarVentaChofer(
         rut,
         id_cliente,
@@ -39,16 +38,15 @@ class VentaChoferController {
   }
   async getVentasChofer(req, res) {
     try {
-      const filters = req.query; // Filtros enviados en los query params
-      const rut = req.user.id; // Obtener el RUT del chofer autenticado
-      const rol = req.user.rol; // Obtener el rol del usuario autenticado
+      const filters = req.query;
+      const rut = req.user.id;
+      const rol = req.user.rol;
       let options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
         search: req.query.search,
       };
 
-      // Si el usuario es chofer, solo mostrar sus ventas
       if (rol === "chofer") {
         options.id_chofer = rut;
       }
@@ -70,12 +68,15 @@ class VentaChoferController {
       const page = parseInt(req.query.page, 10) || 1;
       const limit = parseInt(req.query.limit, 10) || 10;
       const search = req.query.search;
+      const id_sucursal_raw = req.query.id_sucursal;
+      const id_sucursal = Number(id_sucursal_raw);
 
       const result = await VentaChoferService.obtenerMisVentas({
         id_chofer,
         page,
         limit,
         search,
+        id_sucursal,
       });
 
       return res.status(200).json({

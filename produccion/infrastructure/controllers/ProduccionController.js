@@ -6,13 +6,16 @@ class ProduccionController {
   }
   async registrarProduccion(req, res) {
     try {
-      const { id_formula, cantidad_lote } = req.body;
+      const { id_formula, cantidad_lote, id_sucursal, insumos_consumidos } =
+        req.body;
       const rut_usuario = req.user?.id;
 
       const resultado = await this.produccion.crear({
         id_formula,
         cantidad_lote,
+        id_sucursal,
         rut_usuario,
+        insumos_consumidos,
       });
 
       res.status(201).json(resultado);
@@ -24,9 +27,22 @@ class ProduccionController {
 
   async listarProducciones(req, res) {
     try {
-      const prods = await this.produccion.listar(req.query);
-      res.json({
-        data: prods.data,
+      const filters = { ...req.query };
+      const options = {
+        page: parseInt(req.query.page, 10) || 1,
+        limit: parseInt(req.query.limit, 10) || 20,
+        search: req.query.search || undefined,
+        fecha: req.query.fecha || undefined, 
+      };
+      delete filters.page;
+      delete filters.limit;
+      delete filters.search;
+      delete filters.fecha;
+
+      const prods = await this.produccion.listar(filters, options);
+
+      res.status(200).json({
+        producciones: prods.data,
         paginacion: prods.pagination,
       });
     } catch (err) {

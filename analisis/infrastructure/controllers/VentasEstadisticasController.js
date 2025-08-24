@@ -20,10 +20,11 @@ class VentasEstadisticasController {
 
   async obtenerPorMes(req, res) {
     try {
-      const { mes, anio } = req.query;
+      const { mes, anio, id_sucursal } = req.query;
       const data = await VentasEstadisticasService.obtenerEstadisticasPorMes(
         mes,
-        anio
+        anio,
+        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
       );
       return res.status(200).json(data);
     } catch (error) {
@@ -34,8 +35,11 @@ class VentasEstadisticasController {
 
   async obtenerKpiDelDia(req, res) {
     try {
+      const { id_sucursal } = req.query;
       const hoy = obtenerFechaActualChile();
-      const datos = await VentasEstadisticasService.obtenerKpiPorFecha(hoy);
+      const datos = await VentasEstadisticasService.obtenerKpiPorFecha(hoy, {
+        id_sucursal: id_sucursal ? Number(id_sucursal) : undefined,
+      });
       return res.status(200).json(datos);
     } catch (error) {
       console.error("Error al obtener KPI de ventas:", error.message);
@@ -45,7 +49,10 @@ class VentasEstadisticasController {
 
   async obtenerResumenSemanal(req, res) {
     try {
-      const datos = await VentasEstadisticasService.obtenerResumenSemanal();
+      const { id_sucursal } = req.query;
+      const datos = await VentasEstadisticasService.obtenerResumenSemanal({
+        id_sucursal: id_sucursal ? Number(id_sucursal) : undefined,
+      });
       return res.status(200).json(datos);
     } catch (error) {
       console.error(
@@ -104,13 +111,14 @@ class VentasEstadisticasController {
 
   async resumenPorTipoEntrega(req, res) {
     try {
-      const fecha = req.query.fecha;
+      const { fecha, id_sucursal } = req.query;
       if (!fecha) {
         return res.status(400).json({ message: "La fecha es requerida" });
       }
 
       const data = await VentasEstadisticasService.resumenVentasPorTipoEntrega(
-        fecha
+        fecha,
+        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
       );
       return res.status(200).json(data);
     } catch (error) {

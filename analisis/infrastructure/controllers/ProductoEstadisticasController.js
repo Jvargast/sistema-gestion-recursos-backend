@@ -1,4 +1,7 @@
-import { convertirFechaLocal, obtenerFechaActualChile } from "../../../shared/utils/fechaUtils.js";
+import {
+  convertirFechaLocal,
+  obtenerFechaActualChile,
+} from "../../../shared/utils/fechaUtils.js";
 import ProductoEstadisticasService from "../../application/ProductoEstadisticasService.js";
 
 class ProductoEstadisticasController {
@@ -20,10 +23,11 @@ class ProductoEstadisticasController {
 
   async obtenerPorMes(req, res) {
     try {
-      const { mes, anio } = req.query;
+      const { mes, anio, id_sucursal } = req.query;
       const data = await ProductoEstadisticasService.obtenerPorMesYAnio(
         mes,
-        anio
+        anio,
+        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
       );
       return res.status(200).json(data);
     } catch (error) {
@@ -36,9 +40,12 @@ class ProductoEstadisticasController {
   }
   async obtenerKpiDelDia(req, res) {
     try {
+      const { id_sucursal } = req.query;
       const hoy = obtenerFechaActualChile();
       const fecha = convertirFechaLocal(hoy, "YYYY-MM-DD");
-      const data = await ProductoEstadisticasService.obtenerKpiPorFecha(fecha);
+      const data = await ProductoEstadisticasService.obtenerKpiPorFecha(fecha, {
+        id_sucursal: id_sucursal ? Number(id_sucursal) : undefined,
+      });
       return res.status(200).json(data);
     } catch (error) {
       console.error("Error al obtener KPI de productos:", error.message);
@@ -48,13 +55,14 @@ class ProductoEstadisticasController {
 
   async obtenerResumenPorFecha(req, res) {
     try {
-      const fecha = req.query.fecha;
+      const { fecha, id_sucursal } = req.query;
       if (!fecha) {
         return res.status(400).json({ message: "La fecha es requerida" });
       }
 
       const resumen = await ProductoEstadisticasService.getResumenPorFecha(
-        fecha
+        fecha,
+        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
       );
       res.json(resumen);
     } catch (error) {

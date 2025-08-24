@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Cliente from "./Cliente.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const Cotizacion = sequelize.define(
   "Cotizacion",
@@ -24,8 +25,15 @@ const Cotizacion = sequelize.define(
       allowNull: false,
       references: {
         model: Usuarios,
-        key: "rut"
-      }
+        key: "rut",
+      },
+    },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: { model: Sucursal, key: "id_sucursal" },
+      onUpdate: "CASCADE",
+      onDelete: "RESTRICT",
     },
     fecha: {
       type: DataTypes.DATE,
@@ -37,20 +45,20 @@ const Cotizacion = sequelize.define(
     },
     impuesto: {
       type: DataTypes.DECIMAL(5, 2),
-      allowNull: true, 
-      defaultValue: 0.19, 
+      allowNull: true,
+      defaultValue: 0.19,
     },
     impuestos_totales: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
       defaultValue: 0,
-    },        
+    },
     total: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
     },
     descuento_total: {
-      type: DataTypes.DECIMAL(10, 2), 
+      type: DataTypes.DECIMAL(10, 2),
       allowNull: true,
       defaultValue: 0,
     },

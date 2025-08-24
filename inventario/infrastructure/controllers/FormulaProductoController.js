@@ -44,8 +44,14 @@ class FormulaProductoController {
 
   static async getFormulaById(req, res) {
     const { id } = req.params;
+    const idSucursal = req.query?.id_sucursal
+      ? Number(req.query.id_sucursal)
+      : undefined;
     try {
-      const formula = await FormulaProductoService.getFormulaById(id);
+      const formula = await FormulaProductoService.getFormulaById(
+        id,
+        idSucursal
+      );
       if (!formula) {
         return res.status(404).json({ error: "Fórmula no encontrada" });
       }

@@ -32,6 +32,9 @@ class CuentaPorCobrarService {
     if (filters.estado) {
       where.estado = filters.estado;
     }
+    if (filters.id_sucursal != null) {
+      where.id_sucursal = Number(filters.id_sucursal);
+    }
 
     return await paginate(CuentaPorCobrarRepository.getModel(), options, {
       where,
@@ -65,19 +68,16 @@ class CuentaPorCobrarService {
     const doc = new PDFDocument({ margin: 50 });
     doc.pipe(stream);
 
-    // Logo
     const logoPath = path.join(__dirname, "../../public/images/logoLogin.png");
     if (fs.existsSync(logoPath)) {
       doc.image(logoPath, 50, 50, { width: 100 });
     }
 
-    // Encabezado
     doc
       .fillColor("#1e88e5")
       .fontSize(24)
       .text("FACTURA", 0, 50, { align: "right" });
 
-    // Empresa
     doc
       .fillColor("#000")
       .fontSize(10)
@@ -106,7 +106,6 @@ class CuentaPorCobrarService {
         160
       );
 
-    // Cliente
     doc
       .fontSize(12)
       .fillColor("#1e88e5")
@@ -116,7 +115,6 @@ class CuentaPorCobrarService {
       .text(`Razón Social: ${cuenta.venta.cliente.razon_social}`, 50, y + 15)
       .text(`RUT: ${cuenta.venta.cliente.rut}`, 50, y + 30);
 
-    // Documento asociado
     doc
       .fillColor("#1e88e5")
       .fontSize(12)
@@ -132,13 +130,11 @@ class CuentaPorCobrarService {
       )
       .text(`Estado: ${cuenta.estado}`, 300, y + 30);
 
-    // Línea divisora
     doc
       .moveTo(50, y + 60)
       .lineTo(550, y + 60)
       .stroke("#ccc");
 
-    // Tabla de detalles
     const headers = ["Producto", "Cantidad", "P/U", "Subtotal"];
     const columnWidths = [200, 100, 100, 100];
     let posY = y + 80;
@@ -193,10 +189,8 @@ class CuentaPorCobrarService {
       posY += 20;
     });
 
-    // Línea final tabla
     doc.moveTo(50, posY).lineTo(550, posY).stroke("#ccc");
 
-    // Totales
     posY += 20;
     doc
       .font("Helvetica-Bold")
@@ -205,7 +199,6 @@ class CuentaPorCobrarService {
       .text(`Pagado: ${CLP(cuenta.monto_pagado)}`, 400, posY + 15)
       .text(`Pendiente: ${CLP(cuenta.saldo_pendiente)}`, 400, posY + 30);
 
-    // Mensaje final
     doc
       .font("Helvetica")
       .fillColor("#888")
@@ -263,6 +256,8 @@ class CuentaPorCobrarService {
       ? (await EstadoVentaRepository.findByNombre("Pagada")).id_estado_venta
       : venta.id_estado_venta;
 
+    const idSucursal = venta.id_sucursal;
+
     await PagoRepository.create({
       id_venta: cuenta.id_venta,
       id_documento: cuenta.id_documento,
@@ -271,6 +266,7 @@ class CuentaPorCobrarService {
       monto: pago,
       fecha_pago: new Date(),
       referencia: referencia || null,
+      id_sucursal: idSucursal,
     });
 
     await DocumentoRepository.update(cuenta.id_documento, {

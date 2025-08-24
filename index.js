@@ -9,6 +9,11 @@ import cookieParser from "cookie-parser";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import setupAnalysisCronJobs from "./analisis/infrastructure/cron/analysisCronJobs.js";
 
@@ -61,10 +66,9 @@ import PedidosEstadisticasRoutes from "./analisis/infrastructure/routes/PedidosE
 import ProductoEstadisticasRoutes from "./analisis/infrastructure/routes/ProductoEstadisticaRoutes.js";
 import WebSocketServer from "./shared/websockets/WebSocketServer.js";
 /* MÓDULO PRODUCCIÓN */
-import ProduccionRoutes from "./produccion/infrastructure/routes/ProduccionRoutes.js"
+import ProduccionRoutes from "./produccion/infrastructure/routes/ProduccionRoutes.js";
 
 import SearchRoutes from "./busqueda/infrastructure/routes/SearchRoutes.js";
-
 
 /* Configuración */
 const env = process.env.NODE_ENV || "development";
@@ -83,7 +87,12 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://192.168.1.121:3000",
   "http://127.0.0.1:3000",
+  "http://10.56.30.76:3000",
   "http://192.168.1.187:3000",
+  "http://192.168.1.83:3000",
+  "http://192.168.100.7:3000",
+  "http://10.252.238.9:3000",
+  "http://10.56.30.19:3000",
   "http://10.97.137.228:3000",
   "http://192.168.62.228:3000",
   "http://192.168.223.228:3000",
@@ -104,7 +113,13 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "x-scope-mode",
+    "x-sucursal-id",
+  ],
+  exposedHeaders: ["x-scope-mode", "x-sucursal-id"],
 };
 app.set("trust proxy", 1);
 app.use(cors(corsOptions));
@@ -121,6 +136,9 @@ if (process.env.NODE_ENV === "production") {
   app.use(helmet());
   app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" }));
 }
+
+app.use("/api/images", express.static(path.join(__dirname, "public/images")));
+
 // 📝 Logging
 app.use(morgan(env === "production" ? "combined" : "dev"));
 app.use(bodyParser.json());
@@ -139,7 +157,6 @@ app.use("/api/audit-logs", AuditLogsRoutes);
 app.use("/api/security-settings", SecuritySettingsRoutes);
 app.use("/api/sucursales", SucursalesRoutes);
 app.use("/api/ubicacion-chofer", UbicacionChoferRoutes);
-
 
 /* MÓDULO INVENTARIO */
 app.use("/api/estados-productos", EstadoProductoRoutes);

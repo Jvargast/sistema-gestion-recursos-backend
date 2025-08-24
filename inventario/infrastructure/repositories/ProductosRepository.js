@@ -3,6 +3,8 @@ import Producto from "../../domain/models/Producto.js";
 import CategoriaProducto from "../../domain/models/CategoriaProducto.js";
 import EstadoProducto from "../../domain/models/EstadoProducto.js";
 import Inventario from "../../domain/models/Inventario.js";
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
+import Insumo from "../../domain/models/Insumo.js";
 
 class ProductoRepository extends IProductoRepository {
   async findById(id) {
@@ -11,9 +13,27 @@ class ProductoRepository extends IProductoRepository {
         { model: CategoriaProducto, as: "categoria" },
         { model: EstadoProducto, as: "estadoProducto" },
         {
-          model: Inventario, 
+          model: Inventario,
           as: "inventario",
-          attributes: ["cantidad", "fecha_actualizacion"], 
+          attributes: ["cantidad", "fecha_actualizacion", "id_sucursal"],
+          include: [
+            {
+              model: Sucursal,
+              as: "sucursal",
+              attributes: ["id_sucursal", "nombre"],
+            },
+          ],
+        },
+        {
+          model: Insumo,
+          as: "insumo_retorno",
+          attributes: [
+            "id_insumo",
+            "nombre_insumo",
+            "unidad_de_medida",
+            "codigo_barra",
+            "image_url",
+          ],
         },
       ],
     });
@@ -26,9 +46,16 @@ class ProductoRepository extends IProductoRepository {
         { model: EstadoProducto, as: "estadoProducto" },
 
         {
-          model: Inventario, //Se incluye para optimizar la consulta, solo prueba
+          model: Inventario,
           as: "inventario",
-          attributes: ["cantidad", "fecha_actualizacion"], // Solo los campos necesarios
+          attributes: ["cantidad", "fecha_actualizacion", "id_sucursal"],
+          include: [
+            {
+              model: Sucursal,
+              as: "sucursal",
+              attributes: ["id_sucursal", "nombre"],
+            },
+          ],
         },
       ],
     });

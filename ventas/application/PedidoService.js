@@ -23,6 +23,8 @@ import AgendaCargaRepository from "../../Entregas/infrastructure/repositories/Ag
 import AgendaCargaDetalleRepository from "../../Entregas/infrastructure/repositories/AgendaCargaDetalleRepository.js";
 import InventarioService from "../../inventario/application/InventarioService.js";
 import EntregaRepository from "../../Entregas/infrastructure/repositories/EntregaRepository.js";
+import VentaRepository from "../infrastructure/repositories/VentaRepository.js";
+import RolRepository from "../../auth/infraestructure/repositories/RolRepository.js";
 
 class PedidoService {
   // Se crea en Pendiente
@@ -44,6 +46,8 @@ class PedidoService {
         lng,
         id_venta = null,
         prioridad,
+        id_sucursal,
+        id_caja,
       } = data;
 
       let cliente = await ClienteRepository.findById(id_cliente);
@@ -63,13 +67,25 @@ class PedidoService {
       );
       if (!estadoInicial) throw new Error("Estado inicial no configurado.");
 
+      // Sucursal y caja
+
+      let effectiveSucursalId = id_sucursal ?? null;
+      if (!effectiveSucursalId && id_venta) {
+        const ventaOrigen = await VentaRepository.findById(id_venta);
+        if (!ventaOrigen) throw new Error("La venta asociada no existe.");
+        effectiveSucursalId = ventaOrigen.id_sucursal;
+      }
+      if (!effectiveSucursalId) {
+        throw new Error("Debe especificar una sucursal para el pedido.");
+      }
+
       const fecha_pedido = obtenerFechaActualChile();
 
-      console.log("Fecha Chile:", fecha_pedido);
       const nuevoPedido = await PedidoRepository.create(
         {
           id_cliente: cliente.id_cliente,
           id_creador,
+          id_sucursal: effectiveSucursalId,
           direccion_entrega,
           lat,
           lng,
@@ -78,6 +94,7 @@ class PedidoService {
           notas: notas ? notas : null,
           total: 0,
           estado_pago: pagado ? "Pagado" : "Pendiente",
+          pagado: !!pagado,
           fecha_pedido: fecha_pedido,
           prioridad,
         },
@@ -91,34 +108,47 @@ class PedidoService {
           const producto = await ProductosRepository.findById(item.id_producto);
           if (!producto)
             throw new Error(`Producto no encontrado ID ${item.id_producto}`);
-          totalPedido += producto.precio * item.cantidad;
+
+          const precioUnit =
+            item.precio_unitario != null
+              ? Number(item.precio_unitario)
+              : Number(producto.precio);
+
+          totalPedido += precioUnit * item.cantidad;
 
           await DetallePedidoRepository.create(
             {
               id_pedido: nuevoPedido.id_pedido,
               id_producto: item.id_producto,
               cantidad: item.cantidad,
-              precio_unitario: producto.precio,
-              subtotal: producto.precio * item.cantidad,
+              precio_unitario: precioUnit,
+              subtotal: precioUnit * item.cantidad,
               tipo: "producto",
             },
             { transaction }
           );
         } else if (item.tipo === "insumo") {
           const insumo = await InsumoRepository.findById(item.id_insumo);
-          if (!insumo || !insumo.es_para_venta)
+          if (!insumo || !insumo.es_para_venta) {
             throw new Error(
               `Insumo ${item.id_insumo} no válido o no vendible.`
             );
-          totalPedido += insumo.precio * item.cantidad;
+          }
+
+          const precioUnit =
+            item.precio_unitario != null
+              ? Number(item.precio_unitario)
+              : Number(insumo.precio);
+
+          totalPedido += precioUnit * item.cantidad;
 
           await DetallePedidoRepository.create(
             {
               id_pedido: nuevoPedido.id_pedido,
               id_insumo: item.id_insumo,
               cantidad: item.cantidad,
-              precio_unitario: insumo.precio,
-              subtotal: insumo.precio * item.cantidad,
+              precio_unitario: precioUnit,
+              subtotal: precioUnit * item.cantidad,
               tipo: "insumo",
             },
             { transaction }
@@ -132,21 +162,18 @@ class PedidoService {
         { transaction }
       );
 
-      let ventaRegistrada = null;
-
       const requiereFactura = tipo_documento === "factura";
       const ventaPagada = pagado && !requiereFactura;
-      const asignada = await CajaRepository.findByAsignado(id_creador);
-
       const vieneDesdeVenta = Boolean(data.id_venta);
 
-      if (!vieneDesdeVenta && (ventaPagada || requiereFactura)) {
+      /* if (!vieneDesdeVenta && (ventaPagada || requiereFactura)) {
         console.log("Entro a crear venta");
         ventaRegistrada = await VentaService.createVenta(
           {
             id_cliente,
             id_vendedor: id_creador,
-            id_caja: asignada.id_caja,
+            id_caja: caja.id_caja,
+            id_sucursal: effectiveSucursalId,
             tipo_entrega: "pedido_pagado_anticipado",
             direccion_entrega,
             productos,
@@ -172,15 +199,96 @@ class PedidoService {
           },
           { transaction }
         );
-      }
+      } */
 
       if (vieneDesdeVenta) {
+        const ventaOrigen = await VentaRepository.findById(id_venta);
+        if (!ventaOrigen) throw new Error("La venta asociada no existe.");
+
+        if (ventaOrigen.id_sucursal !== effectiveSucursalId) {
+          await PedidoRepository.update(
+            nuevoPedido.id_pedido,
+            { id_sucursal: ventaOrigen.id_sucursal },
+            { transaction }
+          );
+        }
         await PedidoRepository.update(
           nuevoPedido.id_pedido,
           {
             id_venta,
             id_estado_pedido: estadoInicial.id_estado_venta,
             estado_pago: pagado ? "Pagado" : "Pendiente",
+            pagado: !!pagado,
+          },
+          { transaction }
+        );
+        await transaction.commit();
+        return await PedidoRepository.findById(nuevoPedido.id_pedido);
+      }
+
+      if (ventaPagada || requiereFactura) {
+        let cajaElegida = null;
+
+        if (id_caja) {
+          cajaElegida = await CajaRepository.findById(id_caja);
+          const valida =
+            cajaElegida &&
+            cajaElegida.estado === "abierta" &&
+            cajaElegida.id_usuario === id_creador &&
+            cajaElegida.id_sucursal === effectiveSucursalId;
+
+          if (!valida) {
+            throw new Error(
+              "La caja indicada no es válida (debe estar abierta, ser tuya y pertenecer a la misma sucursal)."
+            );
+          }
+        } else {
+          const abiertas = await CajaRepository.findAbiertasByUsuarioYSucursal(
+            id_creador,
+            effectiveSucursalId
+          );
+          if (abiertas.length === 0) {
+            throw new Error(
+              "No tienes cajas abiertas en la sucursal seleccionada."
+            );
+          }
+          if (abiertas.length > 1) {
+            throw new Error(
+              "Tienes varias cajas abiertas en esa sucursal. Debes seleccionar una (id_caja)."
+            );
+          }
+          cajaElegida = abiertas[0];
+        }
+
+        const ventaRegistrada = await VentaService.createVenta(
+          {
+            id_cliente,
+            id_vendedor: id_creador,
+            id_caja: cajaElegida.id_caja,
+            id_sucursal: effectiveSucursalId,
+            tipo_entrega: "pedido_pagado_anticipado",
+            direccion_entrega,
+            productos,
+            productos_retornables: [],
+            id_metodo_pago: metodo_pago,
+            notas,
+            impuesto: 0,
+            tipo_documento,
+            pago_recibido: ventaPagada ? pago_recibido : null,
+            referencia: ventaPagada ? referencia : null,
+            id_pedido_asociado: nuevoPedido.id_pedido,
+          },
+          id_creador,
+          transaction
+        );
+
+        await PedidoRepository.update(
+          nuevoPedido.id_pedido,
+          {
+            id_venta: ventaRegistrada.venta.id_venta,
+            id_estado_pedido: estadoInicial.id_estado_venta,
+            estado_pago: requiereFactura ? "Pendiente" : "Pagado",
+            pagado: !!pagado,
           },
           { transaction }
         );
@@ -196,7 +304,6 @@ class PedidoService {
     }
   }
 
-  // Pedido pasa a En Entrega
   async registrarDesdePedido({
     id_pedido,
     id_caja,
@@ -209,14 +316,21 @@ class PedidoService {
   }) {
     const transaction = await sequelize.transaction();
     try {
-      // 1. Buscar el pedido
       const pedido = await PedidoRepository.findById(id_pedido, {
         transaction,
+        lock: transaction.LOCK.UPDATE,
       });
       if (!pedido) throw new Error("Pedido no encontrado.");
 
-      if (pedido.estado_pago === "Pagado" || pedido.pagado === true)
-        throw new Error("El pedido ya fue pagado.");
+      if (
+        pedido.id_venta ||
+        pedido.estado_pago === "Pagado" ||
+        pedido.pagado === true
+      ) {
+        throw new Error(
+          "El pedido ya fue pagado o ya tiene una venta asociada."
+        );
+      }
 
       const cliente = await ClienteRepository.findById(pedido.id_cliente, {
         transaction,
@@ -239,26 +353,32 @@ class PedidoService {
         ? await CajaRepository.findById(id_caja, { transaction })
         : null;
 
-      // 2. Obtener detalles del pedido
       const detallesPedido = await DetallePedidoRepository.findByPedidoId(
         id_pedido,
         { transaction }
       );
 
-      const productos = detallesPedido.map((d) => ({
-        id_producto: d.id_producto,
-        id_insumo: d.id_insumo,
-        cantidad: d.cantidad,
-        precio_unitario: d.precio_unitario,
-        tipo: d.id_producto ? "producto" : "insumo",
-      }));
+      const productos = detallesPedido.map((d) => {
+        if (d.id_producto) {
+          return {
+            id_producto: d.id_producto,
+            cantidad: d.cantidad,
+            precio_unitario: d.precio_unitario,
+          };
+        }
+        return {
+          id_producto: `insumo_${d.id_insumo}`,
+          cantidad: d.cantidad,
+          precio_unitario: d.precio_unitario,
+        };
+      });
 
-      // 3. Crear venta usando el servicio ya existente
       const ventaResult = await VentaService.createVenta(
         {
           id_cliente: cliente.id_cliente,
           id_vendedor: id_usuario_creador,
           id_caja: caja?.id_caja ?? null,
+          id_sucursal: pedido.id_sucursal,
           tipo_entrega: "pedido_pagado_anticipado",
           direccion_entrega: pedido.direccion_entrega,
           productos,
@@ -271,11 +391,8 @@ class PedidoService {
           referencia,
           id_pedido_asociado: pedido.id_pedido,
         },
-        id_usuario_creador,
-        transaction
+        id_usuario_creador
       );
-
-      // 4. Asociar la venta al pedido
 
       await PedidoRepository.update(
         id_pedido,
@@ -509,15 +626,30 @@ class PedidoService {
         { transaction }
       );
 
-      admin = await UsuariosRepository.findByRol("administrador", {
+      /*       admin = await UsuariosRepository.findByRol("administrador", {
         transaction,
-      });
+      }); */
 
-      notificacion = await NotificacionService.enviarNotificacion({
+      /*  notificacion = await NotificacionService.enviarNotificacion({
         id_usuario: admin.rut,
         mensaje: `El chofer ${id_chofer} confirmó el pedido ${id_pedido}.`,
         tipo: "pedido_confirmado",
-      });
+      }); */
+
+      const rolAdministrador = await RolRepository.findByName("administrador");
+      const admins = await UsuariosRepository.findAllByRol(rolAdministrador.id);
+
+      for (const admin of admins) {
+        notificacion = await NotificacionService.enviarNotificacion({
+          id_usuario: admin.rut,
+          mensaje: `El chofer ${id_chofer} confirmó el pedido ${id_pedido}.`,
+          tipo: "pedido_confirmado",
+          datos_adicionales: {
+            id_agenda_viaje: viajeActivo?.id_agenda_viaje || null,
+            id_pedido,
+          },
+        });
+      }
 
       await transaction.commit();
       if (viajeActivo) {
@@ -1014,14 +1146,15 @@ class PedidoService {
   }
 
   async getPedidos(filters = {}, options = {}) {
-    const allowedFields = [
+    const intFields = [
       "id_cliente",
       "id_chofer",
       "id_estado_pedido",
-      "direccion_entrega",
+      "id_sucursal",
     ];
+    const textFields = ["direccion_entrega"];
 
-    const where = createFilter(filters, allowedFields);
+    const where = createFilter(filters, { intFields, textFields });
 
     if (options.search) {
       where[Op.or] = [
@@ -1089,7 +1222,7 @@ class PedidoService {
     const result = await paginate(PedidoRepository.getModel(), options, {
       where,
       include,
-      order: [["id_pedido", "DESC"]],
+      order: [["fecha_pedido", "DESC"]],
     });
 
     return result;

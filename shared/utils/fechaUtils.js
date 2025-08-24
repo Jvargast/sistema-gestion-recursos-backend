@@ -36,3 +36,18 @@ export const convertirALaUtc = (fechaLocal, formato = null) => {
     ? dayjs(fechaLocal).tz(ZONA_HORARIA).utc().format(formato)
     : dayjs(fechaLocal).tz(ZONA_HORARIA).utc();
 };
+
+export function obtenerRangoUTCDesdeFechaLocal(
+  fechaLocal,
+  tz = "America/Santiago"
+) {
+  if (!fechaLocal) return { inicioUTC: undefined, finUTC: undefined };
+
+  const startLocal = DateTime.fromISO(fechaLocal, { zone: tz }).startOf("day");
+  const endLocal = startLocal.endOf("day");
+
+  return {
+    inicioUTC: startLocal.toUTC().toJSDate(),
+    finUTC: endLocal.toUTC().toJSDate(),
+  };
+}

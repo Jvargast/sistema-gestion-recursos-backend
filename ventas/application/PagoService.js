@@ -1,3 +1,4 @@
+import SucursalRepository from "../../auth/infraestructure/repositories/SucursalRepository.js";
 import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
 import DocumentoRepository from "../infrastructure/repositories/DocumentoRepository.js";
@@ -23,8 +24,13 @@ class PagoService {
       "monto",
       "fecha_pago",
       "referencia",
+      "id_sucursal",
     ];
     const where = createFilter(filters, allowedFields);
+
+    if (filters.id_sucursal != null) {
+      where.id_sucursal = Number(filters.id_sucursal);
+    }
 
     const include = [
       {
@@ -43,12 +49,19 @@ class PagoService {
         model: MetodoPagoRepository.getModel(),
         as: "metodoPago",
       },
+      {
+        model: SucursalRepository.getModel(),
+        as: "Sucursal",
+        attributes: ["id_sucursal", "nombre"],
+        required: false,
+      },
     ];
 
     const result = await paginate(PagoRepository.getModel(), options, {
       where,
       include,
       order: [["fecha_pago", "DESC"]],
+      subQuery: false,
     });
 
     return result;

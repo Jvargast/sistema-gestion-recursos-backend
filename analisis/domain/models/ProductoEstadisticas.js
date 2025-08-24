@@ -5,6 +5,7 @@ const ProductosEstadisticas = sequelize.define(
   "ProductosEstadisticas",
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    id_sucursal: { type: DataTypes.INTEGER, allowNull: true },
     id_producto: { type: DataTypes.INTEGER, allowNull: true },
     id_insumo: { type: DataTypes.INTEGER, allowNull: true }, 
     fecha: { type: DataTypes.DATEONLY, allowNull: false },

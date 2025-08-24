@@ -2,7 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import EstadoProducto from "./EstadoProducto.js";
 import CategoriaProducto from "./CategoriaProducto.js";
-
+import Insumo from "./Insumo.js";
 
 const Producto = sequelize.define(
   "Producto",
@@ -14,7 +14,7 @@ const Producto = sequelize.define(
     },
     nombre_producto: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
     },
     marca: {
       type: DataTypes.STRING,
@@ -22,7 +22,7 @@ const Producto = sequelize.define(
     },
     codigo_barra: {
       type: DataTypes.STRING,
-      allowNull: true, 
+      allowNull: true,
     },
     precio: {
       type: DataTypes.DECIMAL(10, 2),
@@ -61,17 +61,21 @@ const Producto = sequelize.define(
     },
     image_url: {
       type: DataTypes.STRING,
-      allowNull: true, 
+      allowNull: true,
     },
     es_para_venta: {
       type: DataTypes.BOOLEAN,
-      defaultValue: true, 
+      defaultValue: true,
+    },
+    id_insumo_retorno: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: Insumo, key: "id_insumo" },
     },
     es_retornable: {
       type: DataTypes.BOOLEAN,
-      defaultValue: false, 
-    }
-    
+      defaultValue: false,
+    },
   },
   {
     tableName: "Producto",

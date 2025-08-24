@@ -12,9 +12,19 @@ class UsuarioRepository extends IUsuariosRepository {
   async findByRut(rut) {
     return await Usuario.findOne({
       where: { rut, activo: true },
-      /* attributes: { exclude: ["password"] }, */
       include: [
-        { model: Roles, as: "rol", attributes: ["id", "nombre"] },
+        {
+          model: Roles,
+          as: "rol",
+          attributes: ["id", "nombre"],
+          include: [
+            {
+              model: RolesPermisos,
+              as: "rolesPermisos",
+              include: [{ model: Permisos, as: "permiso" }],
+            },
+          ],
+        },
         { model: Empresa, as: "Empresa", attributes: ["id_empresa", "nombre"] },
         {
           model: Sucursal,
@@ -57,9 +67,16 @@ class UsuarioRepository extends IUsuariosRepository {
     });
   }
 
-  async findAllByRolId(rolId) {
+  async findAllByRolId(
+    rolId,
+    {
+      whereExtra = {},
+      includeExtra = [],
+      order = [["fecha_registro", "ASC"]],
+    } = {}
+  ) {
     return await Usuario.findAll({
-      where: { rolId },
+      where: { rolId, ...whereExtra },
       attributes: [
         "rut",
         "nombre",
@@ -69,36 +86,34 @@ class UsuarioRepository extends IUsuariosRepository {
         "fecha_registro",
         [
           literal(`(
-            SELECT COUNT(*)
-            FROM "Pedido"
-            WHERE "Pedido".id_chofer = "Usuarios".rut
-          )`),
+          SELECT COUNT(*) FROM "Pedido"
+          WHERE "Pedido".id_chofer = "Usuarios".rut
+        )`),
           "pedidosCount",
         ],
         [
           literal(`(
-            SELECT COALESCE(SUM(ic.cantidad), 0)
-            FROM "InventarioCamion" AS ic
-            INNER JOIN "Camion" AS c ON c.id_camion = ic.id_camion
-            WHERE c.id_chofer_asignado = "Usuarios".rut
-          )`),
+          SELECT COALESCE(SUM(ic.cantidad), 0)
+          FROM "InventarioCamion" AS ic
+          INNER JOIN "Camion" AS c ON c.id_camion = ic.id_camion
+          WHERE c.id_chofer_asignado = "Usuarios".rut
+        )`),
           "inventarioActual",
         ],
         [
           literal(`(
-            SELECT COALESCE(SUM(c.capacidad), 0)
-            FROM "Camion" AS c
-            WHERE c.id_chofer_asignado = "Usuarios".rut
-          )`),
+          SELECT COALESCE(SUM(c.capacidad), 0)
+          FROM "Camion" AS c
+          WHERE c.id_chofer_asignado = "Usuarios".rut
+        )`),
           "camionCapacidad",
         ],
       ],
-      include: {
-        model: Roles,
-        as: "rol",
-        attributes: ["nombre"],
-      },
-      order: [["fecha_registro", "ASC"]],
+      include: [
+        { model: Roles, as: "rol", attributes: ["nombre"] },
+        ...includeExtra,
+      ],
+      order,
     });
   }
 
@@ -152,6 +167,7 @@ class UsuarioRepository extends IUsuariosRepository {
             "fecha_apertura",
             "fecha_cierre",
             "estado",
+            "id_sucursal",
           ],
         },
         {
@@ -192,6 +208,10 @@ class UsuarioRepository extends IUsuariosRepository {
               ],
             },
           ],
+        },
+        {
+          model: Sucursal,
+          as: "Sucursal",
         },
       ],
     });
