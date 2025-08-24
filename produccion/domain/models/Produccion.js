@@ -2,7 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import FormulaProducto from "../../../inventario/domain/models/FormulaProducto.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
-
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const Produccion = sequelize.define(
   "Produccion",
@@ -21,9 +21,17 @@ const Produccion = sequelize.define(
         key: "id_formula",
       },
     },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: Sucursal, 
+        key: "id_sucursal",
+      },
+    },
 
     rut_usuario: {
-      type: DataTypes.STRING, 
+      type: DataTypes.STRING,
       allowNull: false,
       references: {
         model: Usuarios,

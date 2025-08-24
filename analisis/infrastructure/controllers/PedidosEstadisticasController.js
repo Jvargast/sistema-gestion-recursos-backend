@@ -1,4 +1,7 @@
-import { convertirFechaLocal, obtenerFechaActualChile } from "../../../shared/utils/fechaUtils.js";
+import {
+  convertirFechaLocal,
+  obtenerFechaActualChile,
+} from "../../../shared/utils/fechaUtils.js";
 import PedidosEstadisticasService from "../../application/PedidosEstadisticasService.js";
 
 class PedidosEstadisticasController {
@@ -17,10 +20,11 @@ class PedidosEstadisticasController {
 
   async obtenerPorMes(req, res) {
     try {
-      const { mes, anio } = req.query;
+      const { mes, anio, id_sucursal } = req.query;
       const data = await PedidosEstadisticasService.obtenerEstadisticasPorMes(
         mes,
-        anio
+        anio,
+        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
       );
       return res.status(200).json(data);
     } catch (error) {
@@ -31,10 +35,12 @@ class PedidosEstadisticasController {
 
   async obtenerKpiDelDia(req, res) {
     try {
-      const hoy = obtenerFechaActualChile(); // Date en UTC correspondiente a hora Chile
+      const { id_sucursal } = req.query;
+      const hoy = obtenerFechaActualChile();
       const fechaChile = convertirFechaLocal(hoy, "YYYY-MM-DD");
       const datos = await PedidosEstadisticasService.obtenerKpiPorFecha(
-        fechaChile
+        fechaChile,
+        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
       );
       return res.status(200).json(datos);
     } catch (error) {

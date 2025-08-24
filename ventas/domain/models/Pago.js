@@ -4,6 +4,7 @@ import Venta from "./Venta.js";
 import Documento from "./Documento.js";
 import MetodoPago from "./MetodoPago.js";
 import EstadoPago from "./EstadoPago.js";
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const Pago = sequelize.define(
   "Pago",
@@ -41,9 +42,14 @@ const Pago = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       references: {
-        model: EstadoPago, 
+        model: EstadoPago,
         key: "id_estado_pago",
       },
+    },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: Sucursal, key: "id_sucursal" },
     },
     monto: {
       type: DataTypes.DECIMAL(10, 2),
@@ -61,6 +67,11 @@ const Pago = sequelize.define(
   {
     tableName: "Pago",
     timestamps: false,
+    indexes: [
+      { fields: ["id_sucursal"] },
+      { fields: ["fecha_pago"] },
+      { fields: ["id_sucursal", "fecha_pago"] },
+    ],
   }
 );
 

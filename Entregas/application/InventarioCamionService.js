@@ -87,7 +87,14 @@ class InventarioCamionService {
   }
 
   async vaciarCamion(id_camion, options = {}) {
-    const { descargarDisponibles = true, descargarRetorno = true } = options;
+    const {
+      id_sucursal,
+      descargarDisponibles = true,
+      descargarRetorno = true,
+    } = options;
+
+    if (!id_sucursal)
+      throw new Error("id_sucursal es requerido para vaciar el camión.");
     const transaction = await sequelize.transaction();
 
     try {
@@ -101,6 +108,7 @@ class InventarioCamionService {
           if (item.id_producto) {
             await InventarioService.incrementStock(
               item.id_producto,
+              id_sucursal,
               item.cantidad,
               { transaction }
             );
@@ -115,6 +123,7 @@ class InventarioCamionService {
               tipo_movimiento: "Descarga camión",
               estado: "Regresado",
               fecha: new Date(),
+              id_sucursal,
             },
             { transaction }
           );
@@ -128,9 +137,11 @@ class InventarioCamionService {
             {
               id_producto: item.id_producto || null,
               id_insumo: item.id_insumo || null,
+              id_sucursal,
               cantidad: item.cantidad,
               estado: "pendiente_inspeccion",
               fecha_retorno: new Date(),
+              id_sucursal_recepcion: id_sucursal,
             },
             { transaction }
           );
@@ -144,6 +155,7 @@ class InventarioCamionService {
               tipo_movimiento: "Descarga camión",
               estado: "Retorno",
               fecha: new Date(),
+              id_sucursal,
             },
             { transaction }
           );
@@ -156,6 +168,7 @@ class InventarioCamionService {
           if (item.id_producto) {
             await InventarioService.incrementStock(
               item.id_producto,
+              id_sucursal,
               item.cantidad,
               { transaction }
             );
@@ -170,6 +183,7 @@ class InventarioCamionService {
               tipo_movimiento: "Descarga camión",
               estado: "Reservado",
               fecha: new Date(),
+              id_sucursal,
             },
             { transaction }
           );
@@ -191,10 +205,14 @@ class InventarioCamionService {
 
   async vaciarCamionDesdeFinalizar(id_camion, options = {}) {
     const {
+      id_sucursal,
       descargarDisponibles = true,
       descargarRetorno = true,
       transaction: extTransaction,
     } = options;
+    if (!id_sucursal) {
+      throw new Error("id_sucursal es requerido para vaciar el camión.");
+    }
     const transaction = extTransaction || (await sequelize.transaction());
 
     const isOwnTransaction = !extTransaction;
@@ -210,6 +228,7 @@ class InventarioCamionService {
           if (item.id_producto) {
             await InventarioService.incrementStock(
               item.id_producto,
+              id_sucursal,
               item.cantidad,
               { transaction }
             );
@@ -224,6 +243,7 @@ class InventarioCamionService {
               tipo_movimiento: "Descarga camión",
               estado: "Regresado",
               fecha: new Date(),
+              id_sucursal,
             },
             { transaction }
           );
@@ -237,13 +257,14 @@ class InventarioCamionService {
             {
               id_producto: item.id_producto || null,
               id_insumo: item.id_insumo || null,
+              id_sucursal,
               cantidad: item.cantidad,
               estado: "pendiente_inspeccion",
               fecha_retorno: new Date(),
+              id_sucursal_recepcion: id_sucursal,
             },
             { transaction }
           );
-
           await InventarioCamionLogsRepository.create(
             {
               id_camion,
@@ -265,6 +286,7 @@ class InventarioCamionService {
           if (item.id_producto) {
             await InventarioService.incrementStock(
               item.id_producto,
+              id_sucursal,
               item.cantidad,
               { transaction }
             );

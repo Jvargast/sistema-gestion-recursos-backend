@@ -9,14 +9,20 @@ import CategoriaProductoRepository from "../infrastructure/repositories/Categori
 import { Op } from "sequelize";
 import InventarioRepository from "../infrastructure/repositories/InventarioRepository.js";
 import InsumoRepository from "../infrastructure/repositories/InsumoRepository.js";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const toBool = (v) => v === true || v === "true" || v === 1 || v === "1";
+const toIntOrNull = (v) => (v === "" || v == null ? null : Number(v));
 
 class ProductoService {
   async getProductoById(id) {
     const producto = await ProductosRepository.findById(id);
     if (!producto) throw new Error("Producto no encontrado.");
-
-    const inventario = await InventarioService.getInventarioByProductoId(id);
-    producto.dataValues.inventario = inventario;
 
     return producto;
   }
@@ -30,6 +36,7 @@ class ProductoService {
       "id_categoria",
       "id_estado_producto",
       "id_inventario",
+      "id_sucursal",
     ];
     const where = createFilter(filters, allowedFields);
 
@@ -48,10 +55,21 @@ class ProductoService {
           },
         },
         { marca: { [Op.like]: `%${options.search}%` } },
-        { descripcion: { [Op.like]: `%${options.search}%` } }, 
+        { descripcion: { [Op.like]: `%${options.search}%` } },
         { nombre_producto: { [Op.like]: `%${options.search}%` } },
       ];
     }
+
+    const inventarioInclude = {
+      model: InventarioRepository.getModel(),
+      as: "inventario",
+      attributes: ["cantidad", "fecha_actualizacion", "id_sucursal"],
+    };
+    if (options.id_sucursal) {
+      inventarioInclude.where = { id_sucursal: options.id_sucursal };
+      inventarioInclude.required = false;
+    }
+
     const include = [
       {
         model: CategoriaProductoRepository.getModel(),
@@ -63,11 +81,7 @@ class ProductoService {
         as: "estadoProducto",
         attributes: ["nombre_estado", "descripcion"],
       },
-      {
-        model: InventarioRepository.getModel(),
-        as: "inventario",
-        attributes: ["cantidad", "fecha_actualizacion"],
-      },
+      inventarioInclude,
     ];
 
     const result = await paginate(ProductosRepository.getModel(), options, {
@@ -80,92 +94,87 @@ class ProductoService {
   }
 
   async createProducto(data) {
-    const { cantidad_inicial, ...productoData } = data;
+    const { nombre_producto, precio, id_categoria, ...rest } = data;
 
-    if (!productoData.nombre_producto) {
+    if (!nombre_producto)
       throw new Error("El campo 'nombre_producto' es obligatorio");
-    }
-    if (
-      !productoData.precio ||
-      isNaN(Number(productoData.precio)) ||
-      Number(productoData.precio) < 0
-    ) {
+
+    if (!precio || isNaN(Number(precio)) || Number(precio) < 0) {
       throw new Error(
         "El campo 'precio' debe ser un número válido y mayor o igual a 0"
       );
     }
-    if (!productoData.id_categoria) {
-      throw new Error("El campo 'id_categoria' es obligatorio");
-    }
 
-    await CategoriaProductoService.getCategoriaById(productoData.id_categoria);
+    if (!id_categoria)
+      throw new Error("El campo 'id_categoria' es obligatorio");
+
+    await CategoriaProductoService.getCategoriaById(id_categoria);
 
     const productoExistente = await ProductosRepository.findByNombre(
-      productoData.nombre_producto
+      nombre_producto
     );
-
-    if (productoExistente) {
+    if (productoExistente)
       throw new Error("El producto ya se encuentra registrado");
-    }
-
-    productoData.precio = Number(productoData.precio);
 
     const producto = await ProductosRepository.create({
-      ...productoData,
+      nombre_producto,
+      precio: Number(precio),
+      id_categoria,
       id_estado_producto: 1,
       image_url: "https://via.placeholder.com/150",
+      ...rest,
     });
 
-    // Crear el inventario inicial para el producto
-    if (cantidad_inicial !== undefined && cantidad_inicial >= 0) {
-      await InventarioRepository.create({
-        id_producto: producto.id_producto,
-        cantidad: Number(cantidad_inicial),
-        fecha_actualizacion: new Date(),
-      });
-    }
     return await this.getProductoById(producto.id_producto);
   }
 
-  async updateProducto(id, data) {
-    const { stock, codigo_barra, ...productoData } = data;
+  async updateProducto(id, data, file) {
+    console.log("DATA", data);
 
     const producto = await this.getProductoById(id);
-    if (!producto) {
-      throw new Error("El producto no existe");
+    if (!producto) throw new Error("El producto no existe");
+
+    let imageUrl = data.image_url || undefined;
+
+    if (file) {
+      if (producto.image_url && producto.image_url.startsWith("/images/")) {
+        const oldImagePath = path.join(
+          __dirname,
+          "../../public",
+          producto.image_url
+        );
+        if (fs.existsSync(oldImagePath)) fs.unlinkSync(oldImagePath);
+      }
+      imageUrl = `/images/${file.filename}`;
     }
 
-    const productoConCodigo = await ProductosRepository.findByCodigo(
-      codigo_barra
-    );
+    // ⬇️ aplanar y castear
+    const payload = {
+      nombre_producto: data.nombre_producto,
+      marca: data.marca,
+      codigo_barra: data.codigo_barra,
+      descripcion: data.descripcion,
 
-    if (
-      productoConCodigo &&
-      producto.codigo_barra !== productoConCodigo.codigo_barra
-    ) {
-      throw new Error(
-        `Ya existe un producto con el código de barras: ${codigo_barra}`
-      );
-    }
+      precio: data.precio !== undefined ? Number(data.precio) : undefined,
+      id_categoria: data.id_categoria ? Number(data.id_categoria) : undefined,
+      id_estado_producto: data.id_estado_producto
+        ? Number(data.id_estado_producto)
+        : undefined,
 
-    const updatedRows = await ProductosRepository.update(id, {
-      ...productoData,
-      codigo_barra,
-    });
+      es_para_venta: toBool(data.es_para_venta),
+      activo: toBool(data.activo),
+      es_retornable: toBool(data.es_retornable),
 
-    if (!updatedRows || updatedRows[0] === 0) {
-      throw new Error(
-        "No se pudo actualizar el producto. Verifique los datos."
-      );
-    }
+      id_insumo_retorno: toBool(data.es_retornable)
+        ? toIntOrNull(data.id_insumo_retorno)
+        : null,
 
-    if (stock) {
-      await InventarioRepository.update(producto.id_producto, {
-        cantidad: stock,
-      });
-    }
+      ...(imageUrl && { image_url: imageUrl }),
+    };
 
-    return await this.getProductoById(id);
+    const [rows] = await ProductosRepository.update(id, payload); // ✅ objeto PLANO
+    if (rows === 0) return producto;
+    return this.getProductoById(id);
   }
 
   async deleteProducto(id) {
@@ -243,12 +252,10 @@ class ProductoService {
       "id_estado_producto",
     ];
     const where = createFilter(filters, allowedFields);
-    // Filtro adicional para estado no "Eliminado"
     if (options.estado) {
       where["$estadoProducto.nombre_estado$"] = options.estado;
     }
 
-    // Filtro de categoría (ignorar si es "all" o no está definido)
     if (options.categoria && options.categoria !== "all") {
       where["$categoria.nombre_categoria$"] = options.categoria;
     }
@@ -257,15 +264,15 @@ class ProductoService {
       where[Op.or] = [
         {
           "$categoria.nombre_categoria$": { [Op.like]: `%${options.search}%` },
-        }, // Buscar en categoria.nombre
+        },
         {
           "$estadoProducto.nombre_estado$": {
             [Op.like]: `%${options.search}%`,
           },
-        }, // Buscar en estado.nombre_estado
-        { marca: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
-        { descripcion: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
-        { nombre_producto: { [Op.like]: `%${options.search}%` } }, // Buscar en marca
+        },
+        { marca: { [Op.like]: `%${options.search}%` } },
+        { descripcion: { [Op.like]: `%${options.search}%` } },
+        { nombre_producto: { [Op.like]: `%${options.search}%` } },
       ];
     }
     const include = [
@@ -282,9 +289,12 @@ class ProductoService {
       {
         model: InventarioRepository.getModel(),
         as: "inventario",
-        attributes: ["cantidad"], // Campos relevantes del inventario
+        attributes: ["cantidad", "id_sucursal"],
         where: {
-          cantidad: { [Op.gt]: 50 },
+          cantidad: { [Op.gt]: 0 },
+          ...(filters.id_sucursal && {
+            id_sucursal: filters.id_sucursal,
+          }),
         },
       },
     ];
@@ -298,11 +308,10 @@ class ProductoService {
   }
 
   async getAvailableVendibles(filters = {}, options = {}) {
-    // 1. Obtener productos
     const productosRaw = await this.getAvailableProductos(filters, {
       ...options,
       page: 1,
-      limit: 9999, // Obtener todos para mezclar
+      limit: 9999,
     });
 
     const productosFormateados = Array.isArray(productosRaw?.data)
@@ -312,7 +321,6 @@ class ProductoService {
         }))
       : [];
 
-    // 2. Obtener insumos vendibles
     const insumosVendibles = await InsumoRepository.getModel().findAll({
       where: {
         es_para_venta: true,
@@ -321,8 +329,13 @@ class ProductoService {
         {
           model: InventarioRepository.getModel(),
           as: "inventario",
-          attributes: ["cantidad"],
-          where: { cantidad: { [Op.gt]: 0 } },
+          attributes: ["cantidad", "id_sucursal"],
+          where: {
+            cantidad: { [Op.gt]: 0 },
+            ...(filters.id_sucursal && {
+              id_sucursal: filters.id_sucursal,
+            }),
+          },
         },
       ],
       attributes: ["id_insumo", "nombre_insumo", "precio", "descripcion"],
@@ -330,22 +343,24 @@ class ProductoService {
     });
 
     const insumosFormateados = Array.isArray(insumosVendibles)
-      ? insumosVendibles.map((insumo) => ({
-          id_producto: `insumo_${insumo.id_insumo}`,
-          nombre_producto: insumo.nombre_insumo,
-          precio: insumo.precio,
-          descripcion: insumo.descripcion,
-          tipo: "insumo",
-          inventario: {
-            cantidad: insumo.inventario?.cantidad || 0, 
-          },
-        }))
+      ? insumosVendibles.map((insumo) => {
+          const inventarioItem = Array.isArray(insumo.inventario)
+            ? insumo.inventario[0]
+            : insumo.inventario;
+
+          return {
+            id_producto: `insumo_${insumo.id_insumo}`,
+            nombre_producto: insumo.nombre_insumo,
+            precio: insumo.precio,
+            descripcion: insumo.descripcion,
+            tipo: "insumo",
+            inventario: insumo.inventario,
+          };
+        })
       : [];
 
-    // 🔀 Unificar productos e insumos
     const combinado = [...productosFormateados, ...insumosFormateados];
 
-    // 📦 Paginar manualmente
     const page = options.page || 1;
     const limit = options.limit || 10;
     const offset = (page - 1) * limit;

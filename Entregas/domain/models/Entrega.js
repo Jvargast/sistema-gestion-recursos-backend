@@ -4,6 +4,7 @@ import Cliente from "../../../ventas/domain/models/Cliente.js";
 import AgendaViajes from "./AgendaViaje.js";
 import Camion from "./Camion.js";
 import Documento from "../../../ventas/domain/models/Documento.js";
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const Entrega = sequelize.define(
   "Entrega",
@@ -12,6 +13,11 @@ const Entrega = sequelize.define(
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
+    },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: Sucursal, key: "id_sucursal" },
     },
     id_agenda_viaje: {
       type: DataTypes.INTEGER,
@@ -57,7 +63,13 @@ const Entrega = sequelize.define(
       allowNull: false,
     },
     estado_entrega: {
-      type: DataTypes.ENUM("pendiente", "en_proceso", "completada", "fallida", "anulada"),
+      type: DataTypes.ENUM(
+        "pendiente",
+        "en_proceso",
+        "completada",
+        "fallida",
+        "anulada"
+      ),
     },
     fecha_hora: {
       type: DataTypes.DATE,

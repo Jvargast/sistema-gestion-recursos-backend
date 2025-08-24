@@ -84,10 +84,23 @@ class AgendaViajesService {
         throw new Error("No se encontró la caja asignada para cerrar.");
       }
 
+      const id_sucursal_base =
+        agenda.id_sucursal ??
+        cajaAsignada.id_sucursal ??
+        camion.id_sucursal ??
+        null;
+
+      if (!id_sucursal_base) {
+        throw new Error(
+          "No se pudo determinar la sucursal base para descargar."
+        );
+      }
+
       if (descargarAuto || dejaRetornables) {
         await InventarioCamionService.vaciarCamionDesdeFinalizar(
           camion.id_camion,
           {
+            id_sucursal: id_sucursal_base,
             descargarDisponibles: descargarAuto ? descargarDisponibles : false,
             descargarRetorno: dejaRetornables,
             transaction,

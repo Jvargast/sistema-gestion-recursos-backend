@@ -95,6 +95,22 @@ class EntregaService {
         throw new Error("Agenda de viaje no encontrada");
       }
 
+      const id_sucursal =
+        agendaViaje.id_sucursal ?? pedido?.id_sucursal ?? null;
+      if (!id_sucursal)
+        throw new Error("No se pudo determinar la sucursal de la entrega.");
+
+      if (pedido?.id_sucursal && pedido.id_sucursal !== id_sucursal) {
+        throw new Error(
+          "El pedido no pertenece a la misma sucursal del viaje."
+        );
+      }
+      if (cajaChofer?.id_sucursal && cajaChofer.id_sucursal !== id_sucursal) {
+        throw new Error(
+          "La caja abierta no pertenece a la sucursal del viaje."
+        );
+      }
+
       let ventaRegistrada = null;
       let pago_recibido = null;
       let metodo = null;
@@ -126,6 +142,7 @@ class EntregaService {
           referencia: payment_reference,
           pago_recibido,
           id_pedido_asociado: pedido.id_pedido,
+          id_sucursal,
         };
 
         ventaRegistrada = await VentaService.createVenta(data, id_chofer, {
@@ -145,7 +162,7 @@ class EntregaService {
         }
       } else {
         // Ya tiene venta asociada
-        console.log("Es factura y ya tiene venta");
+        console.log("Ya tiene venta");
         ventaRegistrada = await VentaRepository.findById(pedido.id_venta, {
           transaction,
         });
@@ -166,10 +183,13 @@ class EntregaService {
 
       pedido.id_estado_pedido = estadoCompletada.id_estado_venta;
 
+      const idVenta =
+        ventaRegistrada?.venta?.id_venta ?? ventaRegistrada?.id_venta;
+
       await PedidoRepository.updateFromVenta(
         pedido.id_pedido,
         {
-          id_venta: ventaRegistrada.id_venta,
+          id_venta: idVenta,
           pagado: !esFactura,
           estado_pago: esFactura ? "Pendiente" : "Pagado",
           id_estado_pedido: estadoCompletada.id_estado_venta,
@@ -217,8 +237,14 @@ class EntregaService {
         }
       }
 
+      const docId =
+        ventaRegistrada?.documento?.id_documento ??
+        documento?.[0]?.id_documento ??
+        null;
+
       const nuevaEntrega = await EntregaRepository.create(
         {
+          id_sucursal,
           id_agenda_viaje,
           id_camion: agendaViaje.id_camion,
           id_cliente: pedido.id_cliente,
@@ -229,7 +255,7 @@ class EntregaService {
           monto_total,
           estado_entrega: "completada",
           fecha_hora: fecha,
-          id_documento: ventaRegistrada?.documento?.id_documento || null,
+          id_documento: docId,
           motivo_fallo: null,
           id_pedido: pedido.id_pedido,
         },
@@ -242,20 +268,22 @@ class EntregaService {
         botellones_retorno.items &&
         Array.isArray(botellones_retorno.items)
       ) {
-        for (const item of botellones_retorno?.items) {
-          await ProductoRetornableCamionRepository.create({
-            id_camion: agendaViaje.id_camion,
-            id_producto: item.id_producto,
-            id_entrega: nuevaEntrega.id_entrega,
-            cantidad: item.cantidad,
-            estado:
-              item.estado === "defectuoso"
-                ? "defectuoso"
-                : "pendiente_inspeccion",
-            tipo_defecto:
-              item.estado === "defectuoso" ? item.tipo_defecto : null,
-            fecha_registro: fecha,
-          });
+        for (const item of botellones_retorno.items) {
+          const cantidad = Math.max(0, Number(item.cantidad) || 0);
+          if (!cantidad) continue;
+
+          await ProductoRetornableCamionRepository.create(
+            {
+              id_camion: agendaViaje.id_camion,
+              id_entrega: nuevaEntrega.id_entrega,
+              id_producto: Number(item.id_producto),
+              cantidad: Number(item.cantidad) || 0,
+              estado: "pendiente_inspeccion",
+              tipo_defecto: null,
+              fecha_registro: fecha,
+            },
+            { transaction }
+          );
 
           const registro =
             await InventarioCamionRepository.findByCamionProductoAndEstado(
@@ -277,7 +305,7 @@ class EntregaService {
               { transaction }
             );
           } else {
-            registro.cantidad += item.cantidad;
+            registro.cantidad += Number(item.cantidad) || 0;
             await registro.save({ transaction });
           }
         }

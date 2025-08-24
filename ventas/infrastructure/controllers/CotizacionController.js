@@ -3,8 +3,8 @@ import CotizacionService from "../../application/CotizacionService.js";
 class CotizacionController {
   async createCotizacion(req, res) {
     try {
-      const cotizacionData = req.body; // Datos enviados desde el frontend
-      const rut = req.user.id; // Asumiendo que el usuario está autenticado y su RUT está en req.user
+      const cotizacionData = req.body;
+      const rut = req.user.id; 
       const { cotizacion, detalles } = await CotizacionService.createCotizacion(
         cotizacionData,
         rut
@@ -22,7 +22,7 @@ class CotizacionController {
 
   async getCotizacionById(req, res) {
     try {
-      const { id } = req.params; // ID de la cotización enviado en la URL
+      const { id } = req.params; 
       const cotizacion = await CotizacionService.getCotizacionById(id);
 
       if (!cotizacion) {
@@ -37,13 +37,13 @@ class CotizacionController {
 
   async getAllCotizaciones(req, res) {
     try {
-      const filters = req.query; // Filtros enviados en la URL como query params
+      const filters = req.query; 
       const options = {
-        page: parseInt(req.query.page, 10) || 1, // Página actual
-        limit: parseInt(req.query.limit, 10) || 10, // Límite de resultados por página
+        page: parseInt(req.query.page, 10) || 1, 
+        limit: parseInt(req.query.limit, 10) || 10,
       };
 
-      delete filters.page; // Eliminar filtros no válidos
+      delete filters.page; 
       delete filters.limit;
 
       const cotizaciones = await CotizacionService.getAllCotizaciones(
@@ -52,8 +52,8 @@ class CotizacionController {
       );
 
       res.status(200).json({
-        data: cotizaciones.data, // Cotizaciones encontradas
-        total: cotizaciones.pagination, // Información de la paginación
+        data: cotizaciones.data, 
+        total: cotizaciones.pagination,
       });
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -62,8 +62,8 @@ class CotizacionController {
 
   async updateCotizacion(req, res) {
     try {
-      const { id } = req.params; // ID de la cotización enviada en la URL
-      const updateData = req.body; // Datos enviados desde el frontend
+      const { id } = req.params; 
+      const updateData = req.body; 
       const updatedCotizacion = await CotizacionService.updateCotizacion(
         id,
         updateData
@@ -86,7 +86,7 @@ class CotizacionController {
 
   async deleteCotizacion(req, res) {
     try {
-      const { id } = req.params; // ID de la cotización enviada en la URL
+      const { id } = req.params; 
       const rut = req.user?.id;
       const deleted = await CotizacionService.deleteCotizacion(id, rut);
 

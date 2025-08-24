@@ -8,12 +8,6 @@ const router = Router();
 const produccionController = new ProduccionController();
 router.use(authenticate)
 
-/* body:
-   {
-     "id_formula": 3,
-     "cantidad_lotes": 5             
-   }
-*/
 router.post(
   "/",
   /* checkPermissions("produccion.registrar"), */

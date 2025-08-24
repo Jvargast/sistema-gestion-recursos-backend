@@ -27,6 +27,7 @@ import {
 import UbicacionChoferService from "../../auth/application/UbicacionChoferService.js";
 import WebSocketServer from "../../shared/websockets/WebSocketServer.js";
 import RolRepository from "../../auth/infraestructure/repositories/RolRepository.js";
+import SucursalRepository from "../../auth/infraestructure/repositories/SucursalRepository.js";
 
 class AgendaCargaService {
   // Pedido de Confirmado -> En Preparación
@@ -37,7 +38,8 @@ class AgendaCargaService {
     prioridad,
     notas,
     productos,
-    descargarRetornables = false
+    descargarRetornables = false,
+    id_sucursal
   ) {
     const t = await sequelize.transaction();
 
@@ -59,6 +61,9 @@ class AgendaCargaService {
       const camion = await CamionRepository.findById(id_camion, {
         transaction: t,
       });
+      if (Number(camion.id_sucursal) !== Number(id_sucursal)) {
+        throw new Error("El camión no pertenece a la sucursal seleccionada.");
+      }
       if (!camion || camion.estado !== "Disponible") {
         throw new Error("El camión seleccionado no está disponible.");
       }
@@ -107,6 +112,7 @@ class AgendaCargaService {
           estado: "Pendiente",
           notas,
           fecha_hora: fecha,
+          id_sucursal,
         },
         { transaction: t }
       );
@@ -171,6 +177,7 @@ class AgendaCargaService {
             }
             await InventarioService.decrementarStock(
               item.id_producto,
+              id_sucursal,
               item.cantidad,
               { transaction: t }
             );
@@ -198,7 +205,9 @@ class AgendaCargaService {
             }
             await InventarioService.decrementarStockInsumo(
               item.id_insumo,
-              item.cantidad
+              id_sucursal,
+              item.cantidad,
+              { transaction: t }
             );
 
             await InventarioCamionService.addOrUpdateProductoCamion(
@@ -256,6 +265,7 @@ class AgendaCargaService {
 
           await InventarioService.decrementarStock(
             adicional.id_producto,
+            id_sucursal,
             adicional.cantidad,
             { transaction: t }
           );
@@ -294,7 +304,9 @@ class AgendaCargaService {
           }
           await InventarioService.decrementarStockInsumo(
             adicional.id_insumo,
-            adicional.cantidad
+            id_sucursal,
+            adicional.cantidad,
+            { transaction: t }
           );
 
           await InventarioCamionService.addOrUpdateProductoCamion(
@@ -366,6 +378,11 @@ class AgendaCargaService {
       if (camion.estado !== "Disponible")
         throw new Error("Camión no disponible para iniciar ruta.");
 
+      const chofer = await UsuariosRepository.findByRut(id_chofer, {
+        transaction,
+      });
+      if (!chofer) throw new Error("Chofer no encontrado.");
+
       const inventarioCamion = await InventarioCamionRepository.findByCamionId(
         camion.id_camion,
         { transaction }
@@ -380,6 +397,10 @@ class AgendaCargaService {
         disponibles: {},
         reservados: {},
       };
+
+      const id_sucursal = chofer?.id_sucursal;
+      if (!id_sucursal)
+        throw new Error("El chofer no tiene sucursal asignada.");
 
       inventarioCamion.forEach((item) => {
         const key = item.id_producto
@@ -542,6 +563,7 @@ class AgendaCargaService {
           id_agenda_carga,
           id_camion: camion.id_camion,
           id_chofer,
+          id_sucursal,
           inventario_inicial: productosCargados,
           destinos,
           estado: "En Tránsito",
@@ -606,6 +628,10 @@ class AgendaCargaService {
         where.estado = filters.estado;
       }
 
+      if (filters.id_sucursal) {
+        where.id_sucursal = Number(filters.id_sucursal);
+      }
+
       const result = await paginate(AgendaCargaRepository.getModel(), options, {
         where,
         include: [
@@ -618,6 +644,10 @@ class AgendaCargaService {
             model: CamionRepository.getModel(),
             as: "camion",
             attributes: ["id_camion", "placa"],
+          },
+          {
+            model: SucursalRepository.getModel(),
+            as: "Sucursal",
           },
         ],
         order: [["fecha_hora", "DESC"]],

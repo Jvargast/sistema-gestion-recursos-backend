@@ -3,9 +3,8 @@ import CamionService from "../../application/CamionService.js";
 class CamionController {
   async create(req, res) {
     try {
-      const data = req.body;
-      const camion = await CamionService.createCamion(data);
-      res.status(201).json(camion);
+      const camion = await CamionService.createCamion(req.body);
+      res.status(201).json({message: "Ok"});
     } catch (error) {
       res.status(400).json({ error: error.message });
     }

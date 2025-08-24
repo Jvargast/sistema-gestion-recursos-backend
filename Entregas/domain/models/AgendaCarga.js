@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
 import Camion from "./Camion.js";
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const AgendaCarga = sequelize.define(
   "AgendaCarga",
@@ -15,6 +16,14 @@ const AgendaCarga = sequelize.define(
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
+    },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: Sucursal,
+        key: "id_sucursal",
+      },
     },
     id_usuario_chofer: {
       type: DataTypes.STRING,
@@ -54,15 +63,16 @@ const AgendaCarga = sequelize.define(
     validada_por_chofer: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
-    },    
+    },
     notas: {
       type: DataTypes.TEXT,
-      allowNull: true, // Para información adicional si es necesaria
+      allowNull: true,
     },
   },
   {
     tableName: "AgendaCarga",
     timestamps: false,
+    indexes: [{ fields: ["id_sucursal"] }],
   }
 );
 

@@ -1,3 +1,4 @@
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 import Insumo from "../../domain/models/Insumo.js";
 import Inventario from "../../domain/models/Inventario.js";
 import TipoInsumo from "../../domain/models/TipoInsumo.js";
@@ -11,9 +12,19 @@ class InsumoRepository {
           model: Inventario,
           as: "inventario",
           attributes: ["cantidad", "fecha_actualizacion"],
+          include: [
+            {
+              model: Sucursal,
+              as: "sucursal",
+            },
+          ],
         },
       ],
     });
+  }
+
+  async findByCodigo(codigo_barra) {
+    return await Insumo.findOne({ where: { codigo_barra } });
   }
 
   async findAll() {

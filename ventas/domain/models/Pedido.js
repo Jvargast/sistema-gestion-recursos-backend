@@ -4,6 +4,7 @@ import Cliente from "./Cliente.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
 import EstadoVenta from "./EstadoVenta.js";
 import MetodoPago from "./MetodoPago.js";
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const Pedido = sequelize.define(
   "Pedido",
@@ -20,6 +21,11 @@ const Pedido = sequelize.define(
         model: Cliente,
         key: "id_cliente",
       },
+    },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: Sucursal, key: "id_sucursal" },
     },
     id_chofer: {
       type: DataTypes.STRING,

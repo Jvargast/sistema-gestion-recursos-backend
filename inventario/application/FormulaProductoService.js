@@ -48,8 +48,8 @@ class FormulaProductoService {
     return await this.formulaRepository.findByProductoId(idProducto);
   }
 
-  async getFormulaById(idFormula) {
-    return await this.formulaRepository.findById(idFormula);
+  async getFormulaById(idFormula, idSucursal) {
+    return await this.formulaRepository.findById(idFormula, { idSucursal });
   }
 
   async createFormula(formulaData) {

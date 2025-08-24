@@ -1,6 +1,7 @@
 import ProductoRetornable from "../../domain/models/ProductoRetornable.js";
 import Producto from "../../domain/models/Producto.js";
 import Insumo from "../../domain/models/Insumo.js";
+import { Op } from "sequelize";
 
 class ProductoRetornableRepository {
   async findById(id) {
@@ -13,13 +14,36 @@ class ProductoRetornableRepository {
   }
 
   async findAll(filters = {}, options = {}) {
+    const { search, ...rest } = options;
+
+    const where = { ...filters };
+
+    if (search && String(search).trim() !== "") {
+      const term = String(search).trim();
+      where[Op.or] = [
+        { "$Producto.nombre_producto$": { [Op.iLike]: `%${term}%` } },
+        { "$Insumo.nombre_insumo$": { [Op.iLike]: `%${term}%` } },
+      ];
+    }
+
     return await ProductoRetornable.findAll({
-      where: filters,
+      where,
       include: [
-        { model: Producto, as: "Producto" },
+        {
+          model: Producto,
+          as: "Producto",
+          attributes: ["id_producto", "nombre_producto", "id_insumo_retorno"],
+          include: [
+            {
+              model: Insumo,
+              as: "insumo_retorno",
+              attributes: ["id_insumo", "nombre_insumo"],
+            },
+          ],
+        },
         { model: Insumo, as: "Insumo" },
       ],
-      ...options,
+      ...rest,
     });
   }
 

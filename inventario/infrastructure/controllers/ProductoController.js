@@ -19,9 +19,9 @@ class ProductoController {
         search: req.query.search,
         estado: req.query.estado,
         categoria: req.query.categoria,
+        id_sucursal: req.query.id_sucursal,
       };
       delete filters.offset;
-
 
       const productos = await ProductoService.getAllProductos(filters, options);
 
@@ -46,7 +46,8 @@ class ProductoController {
     try {
       const producto = await ProductoService.updateProducto(
         req.params.id,
-        req.body
+        req.body,
+        req.file
       );
       res.status(200).json(producto);
     } catch (error) {

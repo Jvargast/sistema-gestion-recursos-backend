@@ -33,7 +33,7 @@ const Sucursal = sequelize.define(
   },
   {
     tableName: "Sucursales",
-    timestamps: true, // createdAt, updatedAt
+    timestamps: true, 
   }
 );
 

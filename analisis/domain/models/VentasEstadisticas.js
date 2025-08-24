@@ -5,8 +5,9 @@ const VentasEstadisticas = sequelize.define(
   "VentasEstadisticas",
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    id_sucursal: { type: DataTypes.INTEGER, allowNull: true },
     fecha: { type: DataTypes.DATEONLY, allowNull: false },
-    mes: { type: DataTypes.INTEGER, allowNull: false }, // 1-12
+    mes: { type: DataTypes.INTEGER, allowNull: false }, 
     anio: { type: DataTypes.INTEGER, allowNull: false },
     total_ventas: { type: DataTypes.INTEGER, defaultValue: 0 },
     monto_total: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },

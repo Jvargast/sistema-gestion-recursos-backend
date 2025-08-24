@@ -2,7 +2,10 @@ import { Op, fn, col } from "sequelize";
 import Pedido from "../../ventas/domain/models/Pedido.js";
 import PedidosEstadisticasRepository from "../infrastructure/repositories/PedidosEstadisticasRepository.js";
 import EstadoVentaRepository from "../../ventas/infrastructure/repositories/EstadoVentaRepository.js";
-import { convertirALaUtc, convertirFechaLocal } from "../../shared/utils/fechaUtils.js";
+import {
+  convertirALaUtc,
+  convertirFechaLocal,
+} from "../../shared/utils/fechaUtils.js";
 
 class PedidosEstadisticasService {
   async generarEstadisticasPorDia(fecha) {
@@ -27,17 +30,20 @@ class PedidosEstadisticasService {
         },
       },
       attributes: [
+        "id_sucursal",
         "estado_pago",
         "id_estado_pedido",
         [fn("COUNT", col("id_pedido")), "cantidad"],
         [fn("SUM", col("total")), "monto_total"],
       ],
-      group: ["estado_pago", "id_estado_pedido"],
+      group: ["id_sucursal", "estado_pago", "id_estado_pedido"],
       raw: true,
     });
 
     const mes = fechaChile.month() + 1;
     const anio = fechaChile.year();
+
+    const fechaStr = fechaChile.format("YYYY-MM-DD");
 
     const registros = await Promise.all(
       pedidos.map(async (p) => {
@@ -45,18 +51,20 @@ class PedidosEstadisticasService {
         const estadoPedidoId = parseInt(p.id_estado_pedido);
         const cantidad = parseInt(p.cantidad);
         const monto = parseFloat(p.monto_total);
+        const idSucursal = p.id_sucursal ? Number(p.id_sucursal) : null;
 
-        const yaExiste =
-          await PedidosEstadisticasRepository.findByFechaEstadoPagoYEstadoPedido(
-            inicioDia,
-            estadoPago,
-            estadoPedidoId
-          );
+        const yaExiste = await PedidosEstadisticasRepository.findByClaveDiaria({
+          fecha: fechaStr,
+          estado_pago: estadoPago,
+          id_estado_pedido: estadoPedidoId,
+          id_sucursal: idSucursal,
+        });
 
         const data = {
           fecha: fechaChile.format("YYYY-MM-DD"),
           mes,
           anio,
+          id_sucursal: idSucursal,
           estado_pago: estadoPago,
           id_estado_pedido: estadoPedidoId,
           total_pedidos: cantidad,
@@ -82,15 +90,19 @@ class PedidosEstadisticasService {
     return registros;
   }
 
-  async obtenerEstadisticasPorMes(mes, anio) {
-    return await PedidosEstadisticasRepository.findAllByMesYAnio(mes, anio);
+  async obtenerEstadisticasPorMes(mes, anio, { id_sucursal } = {}) {
+    return await PedidosEstadisticasRepository.findAllByMesYAnio(mes, anio, {
+      id_sucursal,
+    });
   }
 
   async eliminarEstadisticasPorFecha(fecha) {
     return await PedidosEstadisticasRepository.deleteByFecha(fecha);
   }
-  async obtenerKpiPorFecha(fecha) {
-    const registros = await PedidosEstadisticasRepository.findByFecha(fecha);
+  async obtenerKpiPorFecha(fecha, { id_sucursal } = {}) {
+    const registros = await PedidosEstadisticasRepository.findByFecha(fecha, {
+      id_sucursal,
+    });
 
     if (!registros || registros.length === 0) {
       return {

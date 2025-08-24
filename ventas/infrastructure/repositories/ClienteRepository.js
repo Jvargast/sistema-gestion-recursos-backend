@@ -1,3 +1,4 @@
+import SucursalRepository from "../../../auth/infraestructure/repositories/SucursalRepository.js";
 import Cliente from "../../domain/models/Cliente.js";
 import { Op } from "sequelize";
 
@@ -6,8 +7,20 @@ class ClienteRepository {
     return await Cliente.findAll({ where });
   }
 
-  async findById(id_cliente) {
-    return await Cliente.findByPk(id_cliente);
+  async findById(id_cliente, { id_sucursal } = {}) {
+    return await Cliente.findByPk(id_cliente, {
+      include: [
+        {
+          model: SucursalRepository.getModel(),
+          as: "Sucursales",
+          attributes: ["id_sucursal", "nombre", "direccion", "telefono"],
+          through: { attributes: [] },
+          ...(id_sucursal
+            ? { where: { id_sucursal: Number(id_sucursal) }, required: false }
+            : {}),
+        },
+      ],
+    });
   }
 
   async findByDireccion(direccion) {
@@ -25,24 +38,51 @@ class ClienteRepository {
   async update(id_cliente, data) {
     return await Cliente.update(data, { where: { id_cliente } });
   }
-  async updateWithconditions(id, data) {
-    if (!id) {
-      throw new Error("Se requiere de un Rut de cliente para actualizar.");
-    }
 
-    const cliente = await Cliente.findByPk(id);
-    if (!cliente) {
-      throw new Error(`Cliente con RUT ${id} no encontrado.`);
-    }
+  async updateWithconditions(id, data, { transaction } = {}) {
+    if (!id) throw new Error("Se requiere un ID de cliente para actualizar.");
 
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== undefined && cliente[key] !== undefined) {
-        cliente[key] = value;
+    const cliente = await Cliente.findByPk(id, { transaction });
+    if (!cliente) throw new Error(`Cliente con ID ${id} no encontrado.`);
+
+    const { sucursalesIds, ...campos } = data ?? {};
+
+    const BLOCKED = new Set(["id_cliente", "fecha_registro", "creado_por"]);
+
+    Object.entries(campos).forEach(([k, v]) => {
+      if (v === undefined) return;
+      if (BLOCKED.has(k)) return;
+      if (Cliente.rawAttributes[k]) {
+        cliente.set(k, v);
       }
-    }
-    await cliente.save();
+    });
 
-    return cliente;
+    await cliente.save({ transaction });
+
+    if (Array.isArray(sucursalesIds)) {
+      const ids = sucursalesIds.map(Number).filter(Number.isFinite);
+      const sucursales = ids.length
+        ? await SucursalRepository.getModel().findAll({
+            where: { id_sucursal: { [Op.in]: ids } },
+            transaction,
+          })
+        : [];
+      await cliente.setSucursales(sucursales, { transaction });
+    }
+
+    const updated = await Cliente.findByPk(id, {
+      include: [
+        {
+          model: SucursalRepository.getModel(),
+          as: "Sucursales",
+          attributes: ["id_sucursal", "nombre"],
+          through: { attributes: [] },
+        },
+      ],
+      transaction,
+    });
+
+    return updated;
   }
 
   async deactivate(id) {

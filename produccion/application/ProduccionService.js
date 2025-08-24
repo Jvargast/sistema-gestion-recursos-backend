@@ -1,10 +1,14 @@
+import SucursalRepository from "../../auth/infraestructure/repositories/SucursalRepository.js";
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import sequelize from "../../database/database.js";
 import SequelizeFormulaRepository from "../../inventario/infrastructure/repositories/FormulaProductoRepository.js";
 import InventarioRepository from "../../inventario/infrastructure/repositories/InventarioRepository.js";
 import LogInventarioRepository from "../../inventario/infrastructure/repositories/LogInventarioRepository.js";
 import ProductosRepository from "../../inventario/infrastructure/repositories/ProductosRepository.js";
-import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
+import {
+  obtenerFechaActualChile,
+  obtenerRangoUTCDesdeFechaLocal,
+} from "../../shared/utils/fechaUtils.js";
 import createFilter from "../../shared/utils/helpers.js";
 import paginate from "../../shared/utils/pagination.js";
 import ConsumoInsumoRepository from "../infrastructure/repositories/ConsumoInsumoRepository.js";
@@ -14,10 +18,16 @@ class ProduccionService {
   constructor() {
     this.formulaRepository = new SequelizeFormulaRepository();
   }
-  async crear({ id_formula, cantidad_lote, rut_usuario }) {
-    if (!id_formula || !cantidad_lote || cantidad_lote <= 0) {
+  async crear({
+    id_formula,
+    cantidad_lote,
+    id_sucursal,
+    rut_usuario,
+    insumos_consumidos,
+  }) {
+    if (!id_formula || !cantidad_lote || cantidad_lote <= 0 || !id_sucursal) {
       throw new Error(
-        "Parámetros inválidos: id_formula y cantidad_lote > 0 son obligatorios"
+        "Parámetros inválidos: id_formula, cantidad_lote > 0 e id_sucursal son obligatorios"
       );
     }
 
@@ -33,9 +43,15 @@ class ProduccionService {
     }));
 
     for (const det of detalles) {
-      const inv = await InventarioRepository.findByInsumoId(det.id_insumo);
-      if (!inv || inv.cantidad < det.requerido) {
-        throw new Error(`Stock insuficiente para insumo ID ${det.id_insumo}`);
+      const inv = await InventarioRepository.findInsumoEnSucursal(
+        det.id_insumo,
+        id_sucursal
+      );
+      const cantidad = Number(inv?.cantidad || 0);
+      if (cantidad < det.requerido) {
+        throw new Error(
+          `Stock insuficiente para insumo ID ${det.id_insumo} en sucursal ${id_sucursal}`
+        );
       }
     }
 
@@ -49,6 +65,7 @@ class ProduccionService {
           ),
           rut_usuario,
           fecha_produccion: obtenerFechaActualChile(),
+          id_sucursal,
         },
         { transaction }
       );
@@ -64,18 +81,24 @@ class ProduccionService {
       );
 
       for (const det of detalles) {
-        const invInsumo = await InventarioRepository.findByInsumoId(
+        const invInsumo = await InventarioRepository.findInsumoEnSucursal(
           det.id_insumo,
+          id_sucursal,
           { transaction }
         );
-
-        await invInsumo.decrement("cantidad", {
-          by: Math.round(det.requerido),
-          transaction,
-        });
+        if (!invInsumo) {
+          throw new Error(
+            `No existe inventario para insumo ${det.id_insumo} en sucursal ${id_sucursal}`
+          );
+        }
 
         const cantidadAnterior = invInsumo.cantidad;
         const cantidadConsumida = Math.round(det.requerido);
+
+        await invInsumo.decrement("cantidad", {
+          by: cantidadConsumida,
+          transaction,
+        });
 
         await LogInventarioRepository.createLog(
           {
@@ -92,9 +115,9 @@ class ProduccionService {
       }
 
       const unidades = Number.parseInt(produccion.unidades_fabricadas);
-      console.log("UNIDADES (typeof):", typeof unidades, unidades);
-      const invProd = await InventarioRepository.findByProductoId(
+      const invProd = await InventarioRepository.findProductoEnSucursal(
         formula.id_producto_final,
+        id_sucursal,
         { transaction }
       );
 
@@ -104,6 +127,7 @@ class ProduccionService {
         await InventarioRepository.create(
           {
             id_producto: formula.id_producto_final,
+            id_sucursal,
             cantidad: unidades,
           },
           { transaction }
@@ -130,22 +154,43 @@ class ProduccionService {
     });
   }
 
-  async listar(filters = {}, { page = 1, limit = 20 } = {}) {
-    const allowedFields = [
-      "rut_usuario",
+  async listar(filters = {}, options = {}) {
+    const intFields = [
+      "id_sucursal",
+      "id_formula",
       "cantidad_lote",
       "unidades_fabricadas",
-      "fecha_produccion",
-      "activo",
     ];
-    const where = createFilter(filters, allowedFields);
+    const boolFields = ["activo"];
+
+    const where = createFilter(filters, { intFields, boolFields });
+
+    if (options.search) {
+      where[Op.or] = [
+        {
+          "$formula.Producto.nombre_producto$": {
+            [Op.like]: `%${options.search}%`,
+          },
+        },
+        { "$Usuarios.nombre$": { [Op.like]: `%${options.search}%` } },
+        { "$Usuarios.apellido$": { [Op.like]: `%${options.search}%` } },
+      ];
+    }
+
+    if (options.fecha) {
+      const { inicioUTC, finUTC } = obtenerRangoUTCDesdeFechaLocal(
+        options.fecha
+      );
+      where.fecha_produccion = { [Op.between]: [inicioUTC, finUTC] };
+    }
+
     const include = [
       {
         model: this.formulaRepository.getModel(),
         as: "formula",
         include: [
           {
-            model: ProductosRepository.getModel(), 
+            model: ProductosRepository.getModel(),
             as: "Producto",
             attributes: ["id_producto", "nombre_producto"],
           },
@@ -156,10 +201,17 @@ class ProduccionService {
         as: "operario",
         attributes: ["rut", "nombre", "apellido"],
       },
+      {
+        model: SucursalRepository.getModel(),
+        as: "Sucursal",
+        attributes: ["id_sucursal", "nombre"],
+        required: false,
+      },
     ];
+
     const result = await paginate(
       ProduccionRepository.getModel(),
-      { page, limit },
+      { page: options.page, limit: options.limit },
       {
         where,
         include,
@@ -167,13 +219,13 @@ class ProduccionService {
         subQuery: false,
       }
     );
+
     return result;
   }
 
   async detalle(id_produccion) {
     return await ProduccionRepository.findById(id_produccion);
   }
-
 }
 
 export default ProduccionService;

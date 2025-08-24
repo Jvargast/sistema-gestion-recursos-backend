@@ -43,17 +43,15 @@ class CajaService {
 
   async verificarEstadoCaja(rutUsuario, rol) {
     const usuario = await UsuariosRepository.findByRut(rutUsuario);
-    if (!usuario) {
-      throw new Error("Usuario no encontrado");
+    if (!usuario) throw new Error("Usuario no encontrado");
+
+    const cajas = await CajaRepository.findCajasAbiertasByUsuario(rutUsuario);
+
+    if (cajas?.length > 0) {
+      return cajas;
+    } else {
+      return [];
     }
-
-    const estado = "abierta";
-
-    if (rol === "administrador") {
-      return await CajaRepository.findCajaEstado(estado);
-    }
-
-    return await CajaRepository.findCajaEstadoByUsuario(rutUsuario, estado);
   }
 
   async getCajaAsignada(rutUsuario) {
@@ -62,13 +60,12 @@ class CajaService {
       throw new Error("Usuario no encontrado.");
     }
 
-    const caja = await CajaRepository.findByAsignado(rutUsuario);
+    const cajas = await CajaRepository.findAllByAsignado(rutUsuario);
 
-    if (!caja) return null;
-
-    const cajaListaParaAbrir = caja.estado === "cerrada";
-
-    return { caja, cajaListaParaAbrir };
+    return {
+      cajas,
+      cajaListaParaAbrir: !cajas.some((c) => c.estado === "abierta"),
+    };
   }
 
   async abrirCaja(idCaja, saldoInicial, rutUsuario) {

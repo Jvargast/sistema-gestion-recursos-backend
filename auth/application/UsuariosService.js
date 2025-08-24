@@ -9,6 +9,7 @@ import { Op } from "sequelize";
 import EmpresaRepository from "../infraestructure/repositories/EmpresaRepository.js";
 import SucursalRepository from "../infraestructure/repositories/SucursalRepository.js";
 import paginate from "../../shared/utils/pagination.js";
+import CajaRepository from "../../ventas/infrastructure/repositories/CajaRepository.js";
 
 class UsuarioService {
   /**
@@ -117,6 +118,10 @@ class UsuarioService {
         { email: { [Op.like]: `%${options.search}%` } },
       ];
     }
+
+    if (filters.id_sucursal) {
+      where.id_sucursal = Number(filters.id_sucursal);
+    }
     const include = [
       {
         model: RolesRepository.getModel(),
@@ -131,7 +136,7 @@ class UsuarioService {
       {
         model: SucursalRepository.getModel(),
         as: "Sucursal",
-        attributes: ["nombre", "direccion", "telefono"],
+        attributes: ["id_sucursal", "nombre", "direccion", "telefono"],
       },
     ];
     const result = await paginate(UsuariosRepository.getModel(), options, {
@@ -146,10 +151,40 @@ class UsuarioService {
   async getAllChoferes(filters = {}, options) {
     try {
       const rolIdChofer = await RolesService.getRolIdByName("chofer");
+      const includeExtra = [
+        {
+          model: SucursalRepository.getModel(),
+          as: "Sucursal",
+          attributes: ["id_sucursal", "nombre"],
+          required: false,
+        },
+        {
+          model: CajaRepository.getModel(),
+          as: "cajasAsignadas",
+          attributes: ["id_sucursal"],
+          required: false,
+        },
+      ];
 
-      const choferes = await UsuariosRepository.findAllByRolId(rolIdChofer);
+      let whereExtra = {};
+      if (filters.id_sucursal != null && filters.id_sucursal !== "") {
+        const sid = Number(filters.id_sucursal);
+        whereExtra = {
+          [Op.or]: [
+            { id_sucursal: sid },
+            { "$Sucursal.id_sucursal$": sid },
+            { "$cajasAsignadas.id_sucursal$": sid },
+          ],
+        };
+      }
 
-      return choferes;
+      /*       const choferes = await UsuariosRepository.findAllByRolId(rolIdChofer); */
+
+      return await UsuariosRepository.findAllByRolId(rolIdChofer, {
+        whereExtra,
+        includeExtra,
+        order: [["nombre", "ASC"]],
+      });
     } catch (error) {
       throw new Error(`Error al obtener choferes: ${error.message}`);
     }

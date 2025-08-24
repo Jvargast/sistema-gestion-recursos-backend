@@ -31,6 +31,7 @@ class AgendaCargaController {
         notas,
         productos,
         descargarRetornables,
+        id_sucursal,
       } = req.body;
       const rut = req.user.id;
 
@@ -41,7 +42,8 @@ class AgendaCargaController {
         prioridad,
         notas,
         productos,
-        descargarRetornables
+        descargarRetornables,
+        id_sucursal
       );
       res.status(201).json(nuevaAgenda);
     } catch (error) {
@@ -123,13 +125,30 @@ class AgendaCargaController {
 
   async getAgendaCargaDelDia(req, res) {
     try {
-      const id_chofer = req.user.id;
+      const rutSolicitado =
+        req.query.rutChofer || req.body?.rutChofer || req.user.id;
       const fechaFormateada = obtenerFechaChile("YYYY-MM-DD");
       const [inicioUTC, finUTC] =
         obtenerLimitesUTCParaDiaChile(fechaFormateada);
 
+      const esMismoUsuario = String(rutSolicitado) === String(req.user.id);
+
+      console.log("RUTSOLICITADO", rutSolicitado)
+      console.log("Mismo usuario",esMismoUsuario)
+      const esAdmin =
+        req.user?.rol === "administrador" ||
+        req.user?.rol?.nombre === "administrador";
+
+      if (!esMismoUsuario && !esAdmin) {
+        return res
+          .status(403)
+          .json({
+            error: "No autorizado para consultar agendas de otros choferes.",
+          });
+      }
+
       const agenda = await AgendaCargaService.getAgendaCargaDelDia(
-        id_chofer,
+        rutSolicitado,
         inicioUTC,
         finUTC
       );

@@ -1,3 +1,4 @@
+import Sucursal from "../../auth/domain/models/Sucursal.js";
 import Usuarios from "../../auth/domain/models/Usuarios.js";
 import Insumo from "../../inventario/domain/models/Insumo.js";
 import Producto from "../../inventario/domain/models/Producto.js";
@@ -49,6 +50,9 @@ function loadEntregasAssociations(models) {
     foreignKey: "id_camion",
     as: "agendasAsociadas",
   });
+
+  AgendaCarga.belongsTo(Sucursal, { foreignKey: "id_sucursal" });
+  Sucursal.hasMany(AgendaCarga, { foreignKey: "id_sucursal" });
 
   /**
    *
@@ -117,6 +121,17 @@ function loadEntregasAssociations(models) {
     as: "viajes",
   });
 
+  AgendaViajes.belongsTo(Sucursal, {
+    foreignKey: "id_sucursal",
+    as: "sucursal",
+    onUpdate: "CASCADE",
+    onDelete: "RESTRICT",
+  });
+  Sucursal.hasMany(AgendaViajes, {
+    foreignKey: "id_sucursal",
+    as: "agendasViaje",
+  });
+
   /**
    *
    *
@@ -134,6 +149,8 @@ function loadEntregasAssociations(models) {
     foreignKey: "id_chofer_asignado",
     as: "camionesAsignados",
   });
+
+  Camion.belongsTo(Sucursal, { as: "Sucursal", foreignKey: "id_sucursal" });
 
   /**
    *
@@ -226,6 +243,17 @@ function loadEntregasAssociations(models) {
   Camion.hasMany(InventarioCamionLogs, {
     foreignKey: "id_camion",
     as: "logsInventarioCamion",
+  });
+
+  Entrega.belongsTo(Sucursal, {
+    foreignKey: "id_sucursal",
+    as: "sucursal",
+    onUpdate: "CASCADE",
+    onDelete: "RESTRICT",
+  });
+  Sucursal.hasMany(Entrega, {
+    foreignKey: "id_sucursal",
+    as: "entregas",
   });
 
   /**
@@ -362,6 +390,11 @@ function loadEntregasAssociations(models) {
   VentasChofer.hasMany(Documento, {
     foreignKey: "id_venta_chofer",
     as: "documentos",
+  });
+
+  VentasChofer.belongsTo(Sucursal, {
+    as: "Sucursal",
+    foreignKey: "id_sucursal",
   });
 
   /**

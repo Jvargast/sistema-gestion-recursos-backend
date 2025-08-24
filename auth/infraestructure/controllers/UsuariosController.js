@@ -88,7 +88,12 @@ class UsuarioController {
 
   async getAllChoferes(req, res) {
     try {
-      const choferes = await UsuariosService.getAllChoferes();
+      const { id_sucursal } = req.query;
+      const filters = {};
+      if (id_sucursal !== undefined && id_sucursal !== "") {
+        filters.id_sucursal = Number(id_sucursal);
+      }
+      const choferes = await UsuariosService.getAllChoferes(filters);
       res.status(200).json(choferes);
     } catch (error) {
       console.error("Error al obtener choferes:", error.message);

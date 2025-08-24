@@ -33,15 +33,11 @@ class CajaController {
     const rolUsuario = req.user.rol;
 
     try {
-      const caja = await CajaService.verificarEstadoCaja(
+      const cajas = await CajaService.verificarEstadoCaja(
         rutUsuario,
         rolUsuario
       );
-      if (caja) {
-        return res.status(200).json({ cajaAbierta: true, caja });
-      } else {
-        return res.status(200).json({ cajaAbierta: false });
-      }
+      return res.status(200).json({ cajas });
     } catch (error) {
       console.error("Error al obtener el estado de la caja:", error);
       res.status(500).json({ message: error.message });
@@ -52,20 +48,13 @@ class CajaController {
     const rutUsuario = req.query.rutUsuario || req.user.id;
 
     try {
-      const resultado = await CajaService.getCajaAsignada(
-        rutUsuario,
-        req.user.rol
-      );
+      const resultado = await CajaService.getCajaAsignada(rutUsuario);
 
-      if (resultado?.caja) {
-        return res.status(200).json({
-          asignada: true,
-          caja: resultado.caja,
-          cajaListaParaAbrir: resultado.cajaListaParaAbrir,
-        });
-      } else {
-        return res.status(200).json({ asignada: false });
-      }
+      return res.status(200).json({
+        asignada: resultado.cajas?.length > 0,
+        cajas: resultado.cajas || [],
+        cajaListaParaAbrir: resultado.cajaListaParaAbrir,
+      });
     } catch (error) {
       res.status(500).json({ message: error.message });
     }

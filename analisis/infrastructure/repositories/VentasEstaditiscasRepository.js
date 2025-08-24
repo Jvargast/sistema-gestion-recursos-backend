@@ -2,8 +2,10 @@ import { col, fn, Op, where } from "sequelize";
 import VentasEstadisticas from "../../domain/models/VentasEstadisticas.js";
 
 class VentasEstadisticasRepository {
-  async findAllByMesYAnio(mes, anio) {
-    return await VentasEstadisticas.findAll({ where: { mes, anio } });
+  async findAllByMesYAnio(mes, anio, { id_sucursal } = {}) {
+    return await VentasEstadisticas.findAll({
+      where: { mes, anio, ...(id_sucursal ? { id_sucursal } : {}) },
+    });
   }
 
   async create(data) {
@@ -30,14 +32,24 @@ class VentasEstadisticasRepository {
     return await VentasEstadisticas.findByPk(id);
   }
 
-  async findByFecha(fecha) {
+  async findByFecha(fecha, { id_sucursal } = {}) {
     return await VentasEstadisticas.findAll({
       where: {
-        [Op.and]: [
-          where(fn("DATE", col("fecha")), fecha), // ✅ Extrae solo la parte de la fecha
-        ],
+        [Op.and]: [where(fn("DATE", col("fecha")), fecha)],
+        ...(id_sucursal ? { id_sucursal } : {}),
       },
+      raw: true,
     });
+  }
+
+  findByKey({ fecha, id_sucursal = null, tipo_entrega = null }) {
+    return VentasEstadisticas.findOne({
+      where: { fecha, id_sucursal, tipo_entrega },
+    });
+  }
+
+  getModel() {
+    return VentasEstadisticas;
   }
 }
 

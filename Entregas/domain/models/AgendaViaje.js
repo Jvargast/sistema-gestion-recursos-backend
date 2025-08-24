@@ -3,6 +3,7 @@ import sequelize from "../../../database/database.js";
 import AgendaCarga from "./AgendaCarga.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
 import Camion from "./Camion.js";
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const AgendaViajes = sequelize.define(
   "AgendaViajes",
@@ -33,6 +34,11 @@ const AgendaViajes = sequelize.define(
         key: "rut",
       },
     },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: Sucursal, key: "id_sucursal" },
+    },
     inventario_inicial: {
       type: DataTypes.JSON,
       allowNull: false,
@@ -42,7 +48,7 @@ const AgendaViajes = sequelize.define(
       allowNull: true,
     },
     origen_inicial: {
-      type: DataTypes.JSON, 
+      type: DataTypes.JSON,
       allowNull: true,
     },
     estado: {

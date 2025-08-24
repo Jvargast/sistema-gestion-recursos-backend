@@ -1,6 +1,7 @@
 import { DataTypes } from "sequelize";
 import sequelize from "../../../database/database.js";
 import Usuarios from "../../../auth/domain/models/Usuarios.js";
+import Sucursal from "../../../auth/domain/models/Sucursal.js";
 
 const Camion = sequelize.define(
   "Camion",
@@ -12,15 +13,15 @@ const Camion = sequelize.define(
     },
     placa: {
       type: DataTypes.STRING,
-      allowNull: false, // Identificador único del camión (placa)
+      allowNull: false,
     },
     ubicacion_actual: {
       type: DataTypes.STRING,
-      allowNull: true, // Ejemplo: "lat,long" o "Ciudad, País".
+      allowNull: true,
     },
     capacidad: {
       type: DataTypes.INTEGER,
-      allowNull: false, // Capacidad del camión (en unidades o peso)
+      allowNull: false,
     },
     estado: {
       type: DataTypes.ENUM("Disponible", "En Ruta", "Mantenimiento"),
@@ -32,6 +33,11 @@ const Camion = sequelize.define(
         model: Usuarios,
         key: "rut",
       },
+    },
+    id_sucursal: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: { model: Sucursal, key: "id_sucursal" },
     },
   },
   {

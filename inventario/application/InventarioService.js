@@ -1,18 +1,30 @@
+import SucursalRepository from "../../auth/infraestructure/repositories/SucursalRepository.js";
+import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
+import InsumoRepository from "../infrastructure/repositories/InsumoRepository.js";
 import InventarioRepository from "../infrastructure/repositories/InventarioRepository.js";
 import LogInventarioRepository from "../infrastructure/repositories/LogInventarioRepository.js";
+import ProductosRepository from "../infrastructure/repositories/ProductosRepository.js";
 import ProductosService from "./ProductosService.js";
 
 class InventarioService {
-  async getInventarioByProductoId(id_producto) {
-    const inventario = await InventarioRepository.findByProductoId(id_producto);
-    if (!inventario) throw new Error("Inventario no encontrado.");
-    return inventario;
+  async getInventarioByProductoId(id_producto, id_sucursal, opts = {}) {
+    const inv = await InventarioRepository.findProductoEnSucursal(
+      id_producto,
+      id_sucursal,
+      opts
+    );
+    if (!inv) throw new Error("Inventario no encontrado para esa sucursal.");
+    return inv;
   }
 
-  async getInventarioByInsumoId(id_insumo) {
-    const inventario = await InventarioRepository.findByInsumoId(id_insumo);
-    if (!inventario) throw new Error("Inventario no encontrado.");
-    return inventario;
+  async getInventarioByInsumoId(id_insumo, id_sucursal, opts = {}) {
+    const inv = await InventarioRepository.findInsumoEnSucursal(
+      id_insumo,
+      id_sucursal,
+      opts
+    );
+    if (!inv) throw new Error("Inventario no encontrado para esa sucursal.");
+    return inv;
   }
 
   async getAllInventarios() {
@@ -71,77 +83,156 @@ class InventarioService {
     return nuevoInventario;
   }
 
-  async incrementStock(id_producto, cantidad) {
-    const inventario = await this.getInventarioByProductoId(id_producto);
-    if (!inventario) throw new Error("Producto no encontrado en inventario.");
-
-    inventario.cantidad += cantidad;
-    await InventarioRepository.update(id_producto, {
-      cantidad: inventario.cantidad,
+  async incrementStock(id_producto, id_sucursal, cantidad, opts = {}) {
+    const inv = await this.getInventarioByProductoId(id_producto, id_sucursal, {
+      transaction: opts.transaction,
+      lock: "UPDATE",
     });
-
-    return inventario;
+    inv.cantidad += cantidad;
+    await InventarioRepository.updateProductoEnSucursal(
+      id_producto,
+      id_sucursal,
+      { cantidad: inv.cantidad },
+      { transaction: opts.transaction }
+    );
+    return inv;
   }
-  async incrementStockInsumo(id_insumo, cantidad) {
-    const inventario = await this.getInventarioByInsumoId(id_insumo);
-    if (!inventario) throw new Error("Insumo no encontrado en inventario.");
-
-    inventario.cantidad += cantidad;
-    await InventarioRepository.updateInsumo(id_insumo, {
-      cantidad: inventario.cantidad,
+  async incrementStockInsumo(id_insumo, id_sucursal, cantidad, opts = {}) {
+    const inv = await this.getInventarioByInsumoId(id_insumo, id_sucursal, {
+      transaction: opts.transaction,
+      lock: "UPDATE",
     });
-
-    return inventario;
-  }
-
-  async validarDisponibilidad(id_producto, cantidad) {
-    if (cantidad <= 0) {
-      throw new Error("Cantidad debe ser un número positivo.");
-    }
-
-    const inventario = await this.getInventarioByProductoId(id_producto);
-    if (!inventario) {
-      throw new Error("Producto no encontrado en inventario.");
-    }
-
-    return Math.floor(inventario.cantidad) >= Math.floor(cantidad);
+    inv.cantidad += cantidad;
+    await InventarioRepository.updateInsumoEnSucursal(
+      id_insumo,
+      id_sucursal,
+      { cantidad: inv.cantidad },
+      { transaction: opts.transaction }
+    );
+    return inv;
   }
 
-  async decrementarStock(id_producto, cantidad) {
-    // Validar cantidad positiva
-    if (cantidad <= 0) {
-      throw new Error("Cantidad debe ser un número positivo.");
+  async ensureInventarioInsumoSucursal(id_insumo, id_sucursal, opts = {}) {
+    let inv = await InventarioRepository.findInsumoEnSucursal(
+      id_insumo,
+      id_sucursal,
+      { transaction: opts.transaction, lock: "UPDATE" }
+    );
+
+    if (!inv) {
+      inv = await InventarioRepository.createInsumoEnSucursal(
+        { id_insumo, id_sucursal, cantidad: 0 },
+        { transaction: opts.transaction }
+      );
     }
-    const inventario = await this.getInventarioByProductoId(id_producto);
-    if (!inventario) throw new Error("Producto no encontrado en inventario.");
-
-    if (Math.floor(inventario.cantidad) < Math.floor(cantidad)) {
-      throw new Error("Stock insuficiente en  InventarioService");
-    }
-
-    inventario.cantidad -= cantidad;
-    await InventarioRepository.update(id_producto, {
-      cantidad: inventario.cantidad,
-    });
-
-    return inventario;
+    return inv;
   }
 
-  async decrementarStockInsumo(id_insumo, cantidad) {
-    if (cantidad <= 0) {
-      throw new Error("Cantidad debe ser un número positivo.");
-    }
-    const inventario = await this.getInventarioByInsumoId(id_insumo);
-    if (!inventario) throw new Error("Insumo no encontrado en inventario.");
+  async incrementarStockInsumoSucursal(
+    id_insumo,
+    cantidad,
+    id_sucursal,
+    opts = {}
+  ) {
+    const qty = Number(cantidad) || 0;
+    if (qty <= 0) return null;
 
-    if (Math.floor(inventario.cantidad) < Math.floor(cantidad)) {
-      throw new Error("Stock insuficiente en  InventarioService");
-    }
+    await this.ensureInventarioInsumoSucursal(id_insumo, id_sucursal, opts);
 
-    inventario.cantidad -= cantidad;
-    await InventarioRepository.updateInsumo(id_insumo, {
-      cantidad: inventario.cantidad,
+    return await this.incrementStockInsumo(id_insumo, id_sucursal, qty, opts);
+  }
+
+  async validarDisponibilidad(id_producto, id_sucursal, cantidad, opts = {}) {
+    if (cantidad <= 0) throw new Error("Cantidad debe ser positiva.");
+    const inv = await this.getInventarioByProductoId(id_producto, id_sucursal, {
+      transaction: opts.transaction,
+      lock: "UPDATE",
     });
+    return Math.floor(inv.cantidad) >= Math.floor(cantidad);
+  }
+
+  async decrementarStock(id_producto, id_sucursal, cantidad, opts = {}) {
+    if (cantidad <= 0) throw new Error("Cantidad debe ser positiva.");
+
+    const inv = await this.getInventarioByProductoId(id_producto, id_sucursal, {
+      transaction: opts.transaction,
+      lock: "UPDATE",
+    });
+    if (Math.floor(inv.cantidad) < Math.floor(cantidad)) {
+      throw new Error("Stock insuficiente en la sucursal.");
+    }
+
+    inv.cantidad -= cantidad;
+    await InventarioRepository.updateProductoEnSucursal(
+      id_producto,
+      id_sucursal,
+      { cantidad: inv.cantidad },
+      { transaction: opts.transaction }
+    );
+    return inv;
+  }
+
+  async decrementarStockInsumo(id_insumo, id_sucursal, cantidad, opts = {}) {
+    if (cantidad <= 0) throw new Error("Cantidad debe ser positiva.");
+
+    const inv = await this.getInventarioByInsumoId(id_insumo, id_sucursal, {
+      transaction: opts.transaction,
+      lock: "UPDATE",
+    });
+    if (Math.floor(inv.cantidad) < Math.floor(cantidad)) {
+      throw new Error("Stock insuficiente en la sucursal.");
+    }
+
+    inv.cantidad -= cantidad;
+    await InventarioRepository.updateInsumoEnSucursal(
+      id_insumo,
+      id_sucursal,
+      { cantidad: inv.cantidad },
+      { transaction: opts.transaction }
+    );
+    return inv;
+  }
+
+  async agregarInventario({ tipo, id_elemento, id_sucursal, cantidad }) {
+    if (!id_elemento || !id_sucursal || cantidad == null)
+      throw new Error("Faltan datos para inventario");
+
+    if (tipo === "producto") {
+      const producto = await ProductosRepository.findById(id_elemento);
+      if (!producto) throw new Error("Producto no existe");
+    } else if (tipo === "insumo") {
+      const insumo = await InsumoRepository.findById(id_elemento);
+      if (!insumo) throw new Error("Insumo no existe");
+    } else {
+      throw new Error("Tipo inválido");
+    }
+
+    const sucursal = await SucursalRepository.getSucursalById(id_sucursal);
+    if (!sucursal) throw new Error("Sucursal no existe");
+
+    let inventario = await InventarioRepository.findByElementoYSucursal({
+      tipo,
+      id_elemento,
+      id_sucursal,
+    });
+
+    const fecha = obtenerFechaActualChile();
+
+    if (inventario) {
+      inventario.cantidad += Number(cantidad);
+      inventario.fecha_actualizacion = fecha;
+      await inventario.save();
+    } else {
+      const data = {
+        id_sucursal,
+        cantidad: Number(cantidad),
+        fecha_actualizacion: fecha,
+      };
+      if (tipo === "producto") data.id_producto = id_elemento;
+      if (tipo === "insumo") data.id_insumo = id_elemento;
+
+      inventario = await InventarioRepository.create(data);
+    }
 
     return inventario;
   }

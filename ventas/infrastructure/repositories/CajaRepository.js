@@ -32,13 +32,22 @@ class CajaRepository {
     });
   }
 
+  async findAbiertasByUsuarioYSucursal(rut, id_sucursal) {
+    return await Caja.findAll({
+      where: {
+        estado: "abierta",
+        id_sucursal,
+        [Op.or]: [{ usuario_apertura: rut }, { usuario_asignado: rut }],
+      },
+      include: [{ model: Sucursal, as: "sucursal" }],
+      order: [["fecha_apertura", "DESC"]],
+    });
+  }
+
   async findCajaEstadoByUsuario(rut, estado) {
     return await Caja.findOne({
       where: {
-        [Op.or]: [
-          { usuario_apertura: rut }, // Si el usuario abrió la caja
-          { usuario_asignado: rut }, // O si el usuario tiene asignada la caja
-        ],
+        [Op.or]: [{ usuario_apertura: rut }, { usuario_asignado: rut }],
         estado: estado,
       },
     });
@@ -55,6 +64,24 @@ class CajaRepository {
     return await Caja.findAll({
       where: {
         estado: estado,
+      },
+      order: [["fecha_apertura", "DESC"]],
+    });
+  }
+
+  async findAllByAsignado(rut) {
+    return await Caja.findAll({
+      where: { usuario_asignado: rut },
+      include: [{ model: Sucursal, as: "sucursal" }],
+      order: [["fecha_apertura", "DESC"]],
+    });
+  }
+
+  async findCajasAbiertasByUsuario(rut) {
+    return await Caja.findAll({
+      where: {
+        estado: "abierta",
+        [Op.or]: [{ usuario_apertura: rut }, { usuario_asignado: rut }],
       },
       order: [["fecha_apertura", "DESC"]],
     });

@@ -24,6 +24,13 @@ class AuthController {
         "Autenticación",
         ip
       );
+
+      const plain = usuario.get({ plain: true });
+      const permisos = (plain?.rol?.rolesPermisos || [])
+        .map((rp) => rp?.permiso?.nombre)
+        .filter(Boolean);
+      delete plain.password;
+      if (plain.rol) delete plain.rol.rolesPermisos;
       res.cookie("authToken", token, {
         ...getCookieSettings(),
         maxAge: 1 * 60 * 60 * 1000, // Expira en 1 hora
@@ -34,7 +41,12 @@ class AuthController {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
       });
 
-      res.status(200).json({ success: true, usuario });
+      res.status(200).json({
+        success: true,
+        usuario: plain,
+        rol: plain.rol ? { id: plain.rol.id, nombre: plain.rol.nombre } : null,
+        permisos,
+      });
     } catch (error) {
       res.status(401).json({ error: error.message });
     }
@@ -77,11 +89,20 @@ class AuthController {
         return res.status(401).json({ error: "Usuario no autenticado" });
       }
 
-      const { id, nombre, apellido, email, rol, permisos, id_sucursal } = user;
+      const {
+        id,
+        nombre,
+        apellido,
+        email,
+        rol,
+        permisos,
+        id_sucursal,
+        nombre_sucursal,
+      } = user;
 
       res.status(200).json({
         message: "Usuario autenticado con éxito",
-        usuario: { id, nombre, apellido, email, id_sucursal },
+        usuario: { id, nombre, apellido, email, id_sucursal, nombre_sucursal },
         rol,
         permisos,
       });

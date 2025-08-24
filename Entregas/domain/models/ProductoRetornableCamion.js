@@ -31,7 +31,7 @@ const ProductoRetornableCamion = sequelize.define(
     },
     id_entrega: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: Entrega,
         key: "id_entrega",

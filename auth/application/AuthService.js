@@ -66,7 +66,6 @@ class AuthService {
     if (!user) {
       throw new Error("Usuario no encontrado");
     }
-
     // Extraer permisos desde RolesPermisos
     const permisos = user.rol.rolesPermisos.map((rp) => rp.permiso.nombre);
     return {
@@ -77,9 +76,10 @@ class AuthService {
       email: user.email,
       rut: user.rut,
       activo: user.activo,
-      rol: user.rol.nombre, // Asegúrate de incluir la relación del rol
+      rol: user.rol.nombre, 
       rolId: user.rolId,
       permisos,
+      nombre_sucursal: user?.Sucursal?.nombre
     };
   }
 
