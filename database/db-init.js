@@ -7,6 +7,7 @@ import loadAnalysisAssociations from '../analisis/domain/associate-models.js';
 import loadEntregasAssociations from "../Entregas/domain/associate-model.js";
 import loadNotificacionAssociations from "../shared/domain/associate-models.js";
 import loadProduccionAssociations from "../produccion/domain/associate-models.js";
+import loadCostosAssociations from "../costos/domain/associate-models.js";
 //import loadGeografiaAssociations from '../geografia/domain/associate-models.js';
 //import loadManagementAssociations from '../management/domain/associate-models.js';
 //import loadProveedoresAssociations from '../proveedores/domain/associate-models.js';
@@ -25,6 +26,7 @@ async function initializeDatabase() {
     loadNotificacionAssociations();
     loadAnalysisAssociations();
     loadProduccionAssociations();
+    loadCostosAssociations();
 
     await sequelize.sync({ alter: !isProduction ? true : false }); 
     console.log("Modelos sincronizados con la base de datos.");

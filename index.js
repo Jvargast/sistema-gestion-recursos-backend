@@ -67,6 +67,13 @@ import ProductoEstadisticasRoutes from "./analisis/infrastructure/routes/Product
 import WebSocketServer from "./shared/websockets/WebSocketServer.js";
 /* MÓDULO PRODUCCIÓN */
 import ProduccionRoutes from "./produccion/infrastructure/routes/ProduccionRoutes.js";
+/* MÓDULO COMPRAS */
+import comprasRouter from "./costos/infrastructure/routes/ComprasRoutes.js";
+import centrosCostoRouter from "./costos/infrastructure/routes/CentroCostoRoutes.js";
+import proveedoresRouter from "./costos/infrastructure/routes/ProveedorRoutes.js";
+import CategoriaGastoRoutes from "./costos/infrastructure/routes/CategoriaGastoRoutes.js";
+import OrdenPagoRoutes from "./costos/infrastructure/routes/OrdenPagoRoutes.js";
+import GastoRoutes from "./costos/infrastructure/routes/GastoRoutes.js";
 
 import SearchRoutes from "./busqueda/infrastructure/routes/SearchRoutes.js";
 
@@ -90,6 +97,7 @@ const allowedOrigins = [
   "http://10.56.30.76:3000",
   "http://192.168.1.187:3000",
   "http://192.168.1.83:3000",
+  "http://10.117.101.81:3000",
   "http://192.168.100.7:3000",
   "http://10.252.238.9:3000",
   "http://10.56.30.19:3000",
@@ -138,6 +146,14 @@ if (process.env.NODE_ENV === "production") {
 }
 
 app.use("/api/images", express.static(path.join(__dirname, "public/images")));
+app.use(
+  "/api/uploads",
+  express.static(path.resolve("uploads"), {
+    fallthrough: false,
+    immutable: true,
+    maxAge: "30d",
+  })
+);
 
 // 📝 Logging
 app.use(morgan(env === "production" ? "combined" : "dev"));
@@ -203,6 +219,14 @@ app.use("/api/search", SearchRoutes);
 
 /* MÓDULO DE PRODUCCIÓN */
 app.use("/api/produccion", ProduccionRoutes);
+
+/* MÓDULO DE COMPRAS */
+app.use("/api/costos/compras", comprasRouter);
+app.use("/api/costos/centros-costo", centrosCostoRouter);
+app.use("/api/costos/proveedores", proveedoresRouter);
+app.use("/api/costos/categorias-gasto", CategoriaGastoRoutes);
+app.use("/api/costos/ordenes-pago", OrdenPagoRoutes);
+app.use("/api/costos/gastos", GastoRoutes);
 
 const PORT = process.env.PORT || 9000;
 
