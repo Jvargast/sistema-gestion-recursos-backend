@@ -57,11 +57,23 @@ class CamionRepository {
   }
 
   async delete(id) {
-    const camion = await Camion.findByPk(id);
+    const camion = await Camion.findByPk(id, {
+      attributes: ["id_camion", "id_chofer_asignado"],
+    });
     if (!camion) {
-      throw new Error("Camion not found");
+      const err = new Error("Camión no encontrado");
+      err.code = "CAMION_NOT_FOUND";
+      throw err;
     }
-    return await camion.destroy();
+    if (camion.id_chofer_asignado) {
+      const err = new Error(
+        "No se puede eliminar: el camión tiene un chofer asignado."
+      );
+      err.code = "CAMION_TIENE_CHOFER";
+      throw err;
+    }
+    await camion.destroy();
+    return true;
   }
 
   getModel() {

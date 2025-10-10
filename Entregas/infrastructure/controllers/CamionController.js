@@ -4,7 +4,7 @@ class CamionController {
   async create(req, res) {
     try {
       const camion = await CamionService.createCamion(req.body);
-      res.status(201).json({message: "Ok"});
+      res.status(201).json({ message: "Ok" });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
@@ -56,18 +56,17 @@ class CamionController {
     try {
       const { id } = req.params;
       const { id_chofer } = req.body;
-
       const camionActualizado = await CamionService.asignarChofer(
         id,
         id_chofer
       );
-
-      res.status(200).json({
+      return res.status(200).json({
         mensaje: "Chofer asignado correctamente al camión",
         camion: camionActualizado,
       });
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      const status = /no existe/i.test(error.message) ? 404 : 400;
+      return res.status(status).json({ error: error.message });
     }
   }
 
@@ -75,13 +74,13 @@ class CamionController {
     try {
       const { id } = req.params;
       const camionActualizado = await CamionService.desasignarChofer(id);
-
-      res.status(200).json({
-        mensaje: "Chofer desasignado con éxito.",
+      return res.status(200).json({
+        mensaje: "Chofer desasignado correctamente",
         camion: camionActualizado,
       });
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      const status = /no existe/i.test(error.message) ? 404 : 400;
+      return res.status(status).json({ error: error.message });
     }
   }
 
@@ -100,9 +99,16 @@ class CamionController {
     try {
       const { id } = req.params;
       await CamionService.deleteCamion(id);
-      res.status(204).send();
+      return res.status(204).send();
     } catch (error) {
-      res.status(400).json({ error: error.message });
+      const map = {
+        CAMION_TIENE_CHOFER: 409,
+        CAMION_NOT_FOUND: 404,
+      };
+      const status = map[error.code] ?? 400;
+      return res
+        .status(status)
+        .json({ error: error.message, code: error.code });
     }
   }
 }
