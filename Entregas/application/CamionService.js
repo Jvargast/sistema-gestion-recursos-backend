@@ -116,11 +116,6 @@ class CamionService {
       throw new Error("El chofer no existe.");
     }
 
-    const camionAsignado = await CamionRepository.findByChofer(id_chofer);
-    if (camionAsignado) {
-      throw new Error("Este chofer ya está asignado a otro camión.");
-    }
-
     await CamionRepository.update(id_camion, {
       id_chofer_asignado: id_chofer,
     });
