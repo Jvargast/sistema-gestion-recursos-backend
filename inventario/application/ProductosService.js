@@ -12,6 +12,7 @@ import InsumoRepository from "../infrastructure/repositories/InsumoRepository.js
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import sequelize from "../../database/database.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -148,7 +149,6 @@ class ProductoService {
       imageUrl = `/images/${file.filename}`;
     }
 
-    // ⬇️ aplanar y castear
     const payload = {
       nombre_producto: data.nombre_producto,
       marca: data.marca,
@@ -307,7 +307,7 @@ class ProductoService {
     return result;
   }
 
-  async getAvailableVendibles(filters = {}, options = {}) {
+  /*   async getAvailableVendibles(filters = {}, options = {}) {
     const productosRaw = await this.getAvailableProductos(filters, {
       ...options,
       page: 1,
@@ -372,6 +372,304 @@ class ProductoService {
         page,
         totalItems: combinado.length,
         totalPages: Math.ceil(combinado.length / limit),
+      },
+    };
+  } */
+
+  async getAvailableProductosFull(filters = {}, options = {}) {
+    const where = {};
+    if (options.estado)
+      where["$estadoProducto.nombre_estado$"] = options.estado;
+    if (options.categoria && options.categoria !== "all") {
+      where["$categoria.nombre_categoria$"] = options.categoria;
+    }
+    if (options.search) {
+      const s = options.search;
+      where[Op.or] = [
+        { "$categoria.nombre_categoria$": { [Op.iLike]: `%${s}%` } },
+        { "$estadoProducto.nombre_estado$": { [Op.iLike]: `%${s}%` } },
+        { marca: { [Op.iLike]: `%${s}%` } },
+        { descripcion: { [Op.iLike]: `%${s}%` } },
+        { nombre_producto: { [Op.iLike]: `%${s}%` } },
+      ];
+    }
+
+    const include = [
+      {
+        model: CategoriaProductoRepository.getModel(),
+        as: "categoria",
+        attributes: ["nombre_categoria"],
+        required: false,
+      },
+      {
+        model: EstadoProductoRepository.getModel(),
+        as: "estadoProducto",
+        attributes: ["nombre_estado"],
+        required: false,
+      },
+      {
+        model: InventarioRepository.getModel(),
+        as: "inventario",
+        attributes: ["cantidad", "id_sucursal"],
+        required: true,
+        where: {
+          cantidad: { [Op.gt]: 0 },
+          ...(filters.id_sucursal && { id_sucursal: filters.id_sucursal }),
+        },
+      },
+    ];
+
+    const rows = await ProductosRepository.getModel().findAll({
+      where,
+      include,
+      attributes: ["id_producto", "nombre_producto", "precio", "descripcion"],
+      order: [["id_producto", "ASC"]],
+      subQuery: false,
+      raw: true,
+      nest: true,
+    });
+
+    return rows.map((p) => ({
+      id_producto: p.id_producto,
+      nombre_producto: p.nombre_producto,
+      precio: p.precio,
+      descripcion: p.descripcion,
+      tipo: "producto",
+      inventario: Array.isArray(p.inventario) ? p.inventario : [p.inventario],
+    }));
+  }
+
+  async getInsumosVendiblesFull(filters = {}, options = {}) {
+    const whereInsumo = { es_para_venta: true };
+    const include = [
+      {
+        model: InventarioRepository.getModel(),
+        as: "inventario",
+        attributes: ["cantidad", "id_sucursal"],
+        required: true, // inner join
+        where: {
+          cantidad: { [Op.gt]: 0 },
+          ...(filters.id_sucursal && { id_sucursal: filters.id_sucursal }),
+        },
+      },
+    ];
+
+    if (options.search) {
+      whereInsumo[Op.or] = [
+        { nombre_insumo: { [Op.iLike]: `%${options.search}%` } },
+        { descripcion: { [Op.iLike]: `%${options.search}%` } },
+      ];
+    }
+
+    const insumos = await InsumoRepository.getModel().findAll({
+      where: whereInsumo,
+      include,
+      attributes: ["id_insumo", "nombre_insumo", "precio", "descripcion"],
+      order: [["id_insumo", "ASC"]],
+      subQuery: false,
+      raw: true,
+      nest: true,
+    });
+
+    return insumos.map((i) => ({
+      id_producto: `insumo_${i.id_insumo}`,
+      nombre_producto: i.nombre_insumo,
+      precio: i.precio,
+      descripcion: i.descripcion,
+      tipo: "insumo",
+      inventario: Array.isArray(i.inventario) ? i.inventario : [i.inventario],
+    }));
+  }
+
+  async getAvailableVendibles(filters = {}, options = {}) {
+    const [productos, insumos] = await Promise.all([
+      this.getAvailableProductosFull(filters, options),
+      this.getInsumosVendiblesFull(filters, options),
+    ]);
+
+    const combinado = [...productos, ...insumos];
+
+    return {
+      data: combinado,
+      pagination: {
+        page: 1,
+        totalItems: combinado.length,
+        totalPages: 1,
+      },
+    };
+  }
+
+  async getAvailableVendiblesPaged(filters = {}, options = {}) {
+    const id_sucursal = Number(options.id_sucursal ?? filters.id_sucursal ?? 0);
+    const search = options.search ?? "";
+    const limit = Number(options.limit ?? 24);
+    const offset = Number(options.offset ?? 0);
+    const orderBy = options.orderBy === "precio" ? "precio" : "nombre";
+    const orderDir = options.orderDir === "DESC" ? "DESC" : "ASC";
+    const categoria = options.categoria || null;
+
+    if (!id_sucursal) throw new Error("id_sucursal requerido");
+
+    const q = search ? `%${search}%` : null;
+    const hasCategoria = !!categoria;
+
+    const totalRows = await sequelize.query(
+      `
+    SELECT
+      (
+        SELECT COUNT(*)
+        FROM "Producto" p
+        JOIN "Inventario" inv ON inv.id_producto = p.id_producto
+        ${
+          hasCategoria
+            ? `JOIN "CategoriaProducto" c ON c.id_categoria = p.id_categoria`
+            : ""
+        }
+        WHERE inv.cantidad > 0
+          AND inv.id_sucursal = :id_sucursal
+          ${hasCategoria ? `AND c.nombre_categoria = :categoria` : ""}
+          AND (:q IS NULL OR (
+            p.nombre_producto ILIKE :q OR p.descripcion ILIKE :q OR p.marca ILIKE :q
+          ))
+      )
+      ${
+        hasCategoria
+          ? `
+        -- si hay categoría, no contamos insumos
+        + 0
+      `
+          : `
+        +
+        (
+          SELECT COUNT(*)
+          FROM "Insumo" i
+          JOIN "Inventario" inv2 ON inv2.id_insumo = i.id_insumo
+          WHERE inv2.cantidad > 0
+            AND inv2.id_sucursal = :id_sucursal
+            AND i.es_para_venta = true
+            AND (:q IS NULL OR (
+              i.nombre_insumo ILIKE :q OR i.descripcion ILIKE :q
+            ))
+        )
+      `
+      }
+      AS total;
+    `,
+      {
+        replacements: { id_sucursal, q, categoria },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+    const total = Number(totalRows?.[0]?.total ?? 0);
+
+    const rows = await sequelize.query(
+      `
+WITH productos AS (
+  SELECT
+    p.id_producto::text             AS id,
+    p.id_producto                   AS id_producto_real,
+    p.nombre_producto               AS nombre,
+    p.precio                        AS precio,
+    p.descripcion                   AS descripcion,
+    'producto'::text                AS tipo,
+    json_build_array(
+      json_build_object(
+        'cantidad', inv.cantidad,
+        'id_sucursal', inv.id_sucursal
+      )
+    )::json                         AS inventario
+  FROM "Producto" p
+  JOIN "Inventario" inv ON inv.id_producto = p.id_producto
+  ${
+    hasCategoria
+      ? `JOIN "CategoriaProducto" c ON c.id_categoria = p.id_categoria`
+      : ``
+  }
+  WHERE inv.cantidad > 0
+    AND inv.id_sucursal = :id_sucursal
+    ${hasCategoria ? `AND c.nombre_categoria = :categoria` : ``}
+    AND (COALESCE(:q, '') = '' OR (
+      p.nombre_producto ILIKE :q OR p.descripcion ILIKE :q OR p.marca ILIKE :q
+    ))
+)
+, insumos AS (
+  ${
+    hasCategoria
+      ? `
+        -- cuando hay categoría, devolvemos CTE vacío pero con MISMAS columnas
+        SELECT
+          NULL::text    AS id,
+          NULL::int     AS id_producto_real,
+          NULL::text    AS nombre,
+          NULL::numeric AS precio,
+          NULL::text    AS descripcion,
+          NULL::text    AS tipo,
+          NULL::json    AS inventario
+        WHERE FALSE
+      `
+      : `
+        SELECT
+          ('insumo_' || i.id_insumo)::text AS id,
+          i.id_insumo                       AS id_producto_real,
+          i.nombre_insumo                   AS nombre,
+          i.precio                          AS precio,
+          i.descripcion                     AS descripcion,
+          'insumo'::text                    AS tipo,
+          json_build_array(
+            json_build_object(
+              'cantidad', inv2.cantidad,
+              'id_sucursal', inv2.id_sucursal
+            )
+          )::json                           AS inventario
+        FROM "Insumo" i
+        JOIN "Inventario" inv2 ON inv2.id_insumo = i.id_insumo
+        WHERE inv2.cantidad > 0
+          AND inv2.id_sucursal = :id_sucursal
+          AND i.es_para_venta = true
+          AND (COALESCE(:q, '') = '' OR (
+            i.nombre_insumo ILIKE :q OR i.descripcion ILIKE :q
+          ))
+      `
+  }
+)
+SELECT * FROM (
+  SELECT * FROM productos
+  UNION ALL
+  SELECT * FROM insumos
+) t
+ORDER BY ${orderBy} ${orderDir}, id ASC
+LIMIT :limit OFFSET :offset;
+`,
+      {
+        replacements: {
+          id_sucursal,
+          q,
+          limit,
+          offset,
+          categoria,
+        },
+        type: sequelize.QueryTypes.SELECT,
+      }
+    );
+
+    const data = rows.map((r) => ({
+      id_producto:
+        r.tipo === "insumo"
+          ? `insumo_${r.id_producto_real}`
+          : r.id_producto_real,
+      nombre_producto: r.nombre,
+      precio: r.precio,
+      descripcion: r.descripcion,
+      tipo: r.tipo,
+      inventario: r.inventario,
+    }));
+
+    return {
+      data,
+      pagination: {
+        page: Math.floor(offset / limit) + 1,
+        totalItems: total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
       },
     };
   }

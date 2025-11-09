@@ -96,7 +96,6 @@ class CajaService {
       throw new Error("La caja ya está cerrada.");
     }
 
-    // Registrar el historial antes de actualizar el estado de la caja
     await HistorialCajaRepository.create({
       id_caja: idCaja,
       id_sucursal: caja.id_sucursal,
@@ -106,7 +105,6 @@ class CajaService {
       observaciones: `Cierre de caja registrado el ${fecha}`,
     });
 
-    // Actualizar la caja a estado "cerrada"
     const datosActualizados = {
       estado: "cerrada",
       saldo_final: null,

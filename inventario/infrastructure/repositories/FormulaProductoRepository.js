@@ -69,7 +69,7 @@ class SequelizeFormulaRepository {
     if (!formula) {
       return false;
     }
-    await formula.destroy();
+    await formula.update({ activo: false });
     return true;
   }
 

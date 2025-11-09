@@ -26,6 +26,7 @@ import PermisosRoutes from "./auth/infraestructure/routes/PermisosRoutes.js";
 import AuditLogsRoutes from "./auth/infraestructure/routes/AuditLogsRoutes.js";
 import SecuritySettingsRoutes from "./auth/infraestructure/routes/SecuritySettingsRoutes.js";
 import SucursalesRoutes from "./auth/infraestructure/routes/SucursalesRoutes.js";
+import UserPreferencesRoutes from "./auth/infraestructure/routes/UserPreferencesRoutes.js";
 import UbicacionChoferRoutes from "./auth/infraestructure/routes/UbicacionChofersRoutes.js";
 /* MÓDULO INVENTARIO */
 import EstadoProductoRoutes from "./inventario/infrastructure/routes/EstadoProductoRoutes.js";
@@ -173,6 +174,7 @@ app.use("/api/permisos", PermisosRoutes);
 app.use("/api/audit-logs", AuditLogsRoutes);
 app.use("/api/security-settings", SecuritySettingsRoutes);
 app.use("/api/sucursales", SucursalesRoutes);
+app.use("/api/preferences", UserPreferencesRoutes)
 app.use("/api/ubicacion-chofer", UbicacionChoferRoutes);
 
 /* MÓDULO INVENTARIO */

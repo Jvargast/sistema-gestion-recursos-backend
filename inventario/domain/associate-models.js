@@ -36,11 +36,14 @@ function loadInventarioAssociations() {
   FormulaProducto.hasMany(FormulaProductoDetalle, {
     foreignKey: "id_formula",
     sourceKey: "id_formula",
+    onDelete: "CASCADE",
+    hooks: true,
   });
 
   FormulaProductoDetalle.belongsTo(FormulaProducto, {
     foreignKey: "id_formula",
     targetKey: "id_formula",
+    onDelete: "CASCADE",
   });
 
   Insumo.hasMany(FormulaProductoDetalle, {
