@@ -104,65 +104,72 @@ class FormulaProductoService {
   async updateFormula(idFormula, data) {
     const t = await sequelize.transaction();
     try {
-      /* ── 1.  Validaciones básicas ───────────────────────── */
       const {
         nombre_formula,
         id_producto_final,
         cantidad_producto_final,
-        insumos = [],
+        insumos,
+        activo,
       } = data;
+      const has = (k) => Object.prototype.hasOwnProperty.call(data, k);
 
       const header = await this.formulaRepository.findById(idFormula, {
         transaction: t,
       });
       if (!header) throw new Error("Fórmula no encontrada");
 
-      await header.update(
-        {
-          nombre_formula,
-          id_producto_final,
-          cantidad_requerida: cantidad_producto_final,
-        },
-        { transaction: t }
-      );
+      const headerUpdate = {};
+      if (has("nombre_formula")) headerUpdate.nombre_formula = nombre_formula;
+      if (has("id_producto_final"))
+        headerUpdate.id_producto_final = id_producto_final;
+      if (has("cantidad_producto_final"))
+        headerUpdate.cantidad_requerida = cantidad_producto_final;
+      if (has("activo")) headerUpdate.activo = !!activo;
 
-      const existentes = await this.formulaDetalleRepository.findByFormulaId(
-        idFormula,
-        { transaction: t }
-      );
-
-      const mapExist = new Map(existentes.map((d) => [d.id_insumo, d]));
-
-      const idsEnPayload = new Set();
-
-      for (const det of insumos) {
-        const { id_insumo, cantidad, unidad_medida } = det;
-        idsEnPayload.add(id_insumo);
-
-        if (mapExist.has(id_insumo)) {
-          await mapExist.get(id_insumo).update(
-            {
-              cantidad_requerida: cantidad,
-              unidad_de_medida: unidad_medida,
-            },
-            { transaction: t }
-          );
-        } else {
-          await this.formulaDetalleRepository.create(
-            {
-              id_formula: idFormula,
-              id_insumo,
-              cantidad_requerida: cantidad,
-              unidad_de_medida: unidad_medida,
-            },
-            { transaction: t }
-          );
-        }
+      if (Object.keys(headerUpdate).length) {
+        await header.update(headerUpdate, { transaction: t });
       }
 
-      for (const det of existentes) {
-        if (!idsEnPayload.has(det.id_insumo)) {
-          await det.destroy({ transaction: t });
+      if (Array.isArray(insumos)) {
+        const existentes = await this.formulaDetalleRepository.findByFormulaId(
+          idFormula,
+          { transaction: t }
+        );
+        const mapExist = new Map(existentes.map((d) => [d.id_insumo, d]));
+        const idsEnPayload = new Set();
+
+        for (const det of insumos) {
+          const { id_insumo, cantidad, unidad_medida } = det;
+          if (id_insumo == null) continue; 
+          idsEnPayload.add(id_insumo);
+
+          if (mapExist.has(id_insumo)) {
+            await mapExist
+              .get(id_insumo)
+              .update(
+                {
+                  cantidad_requerida: cantidad,
+                  unidad_de_medida: unidad_medida,
+                },
+                { transaction: t }
+              );
+          } else {
+            await this.formulaDetalleRepository.create(
+              {
+                id_formula: idFormula,
+                id_insumo,
+                cantidad_requerida: cantidad,
+                unidad_de_medida: unidad_medida,
+              },
+              { transaction: t }
+            );
+          }
+        }
+
+        for (const det of existentes) {
+          if (!idsEnPayload.has(det.id_insumo)) {
+            await det.destroy({ transaction: t });
+          }
         }
       }
 
