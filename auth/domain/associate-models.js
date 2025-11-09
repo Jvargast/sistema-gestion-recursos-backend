@@ -7,6 +7,8 @@ import Sucursal from "./models/Sucursal.js";
 import AuditLogs from "./models/AuditLogs.js";
 import PermisosDependencias from "./models/PermisosDependencias.js";
 import UbicacionChofer from "./models/UbicacionChofer.js";
+import UserPreferences from "./models/UserPreferences.js";
+import Caja from "../../ventas/domain/models/Caja.js";
 
 function loadAuthAssociations() {
   // Relación: Un Usuario pertenece a un Rol
@@ -94,6 +96,31 @@ function loadAuthAssociations() {
     foreignKey: "rut",
     targetKey: "rut",
     as: "chofer",
+  });
+
+  UserPreferences.belongsTo(Usuarios, {
+    foreignKey: "user_rut",
+    targetKey: "rut",
+    as: "user",
+    onDelete: "CASCADE",
+  });
+  UserPreferences.belongsTo(Usuarios, {
+    foreignKey: "preferred_vendor_rut",
+    targetKey: "rut",
+    as: "preferredVendor",
+    onDelete: "SET NULL",
+  });
+  UserPreferences.belongsTo(Sucursal, {
+    foreignKey: "preferred_branch_id",
+    targetKey: "id_sucursal",
+    as: "preferredBranch",
+    onDelete: "SET NULL",
+  });
+  UserPreferences.belongsTo(Caja, {
+    foreignKey: "preferred_cashbox_id",
+    targetKey: "id_caja",
+    as: "preferredCashbox",
+    onDelete: "SET NULL",
   });
 
   console.log("Asociaciones del módulo de autenticación cargadas");

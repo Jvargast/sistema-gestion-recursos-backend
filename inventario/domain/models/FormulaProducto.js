@@ -34,6 +34,7 @@ const FormulaProducto = sequelize.define(
   {
     tableName: "FormulaProducto",
     timestamps: false,
+    paranoid: true,
   }
 );
 

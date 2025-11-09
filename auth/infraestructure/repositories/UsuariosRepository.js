@@ -198,12 +198,12 @@ class UsuarioRepository extends IUsuariosRepository {
           include: [
             {
               model: RolesPermisos,
-              as: "rolesPermisos", // Usa el alias definido en la relación
+              as: "rolesPermisos",
               include: [
                 {
                   model: Permisos,
-                  as: "permiso", // Usa el alias definido en la relación
-                  attributes: ["nombre"], // Solo queremos el nombre del permiso
+                  as: "permiso",
+                  attributes: ["nombre"], 
                 },
               ],
             },

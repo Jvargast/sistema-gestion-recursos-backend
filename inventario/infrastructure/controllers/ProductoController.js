@@ -75,7 +75,7 @@ class ProductoController {
     }
   }
 
-  async getAvailableProductos(req, res) {
+  /*   async getAvailableProductos(req, res) {
     try {
       const filters = req.query;
 
@@ -101,6 +101,42 @@ class ProductoController {
     } catch (error) {
       console.error("Error al obtener productos e insumos:", error);
       return res.status(500).json({ error: error.message });
+    }
+  } */
+
+  async getAvailableProductos(req, res) {
+    try {
+      const { id_sucursal, search, page, limit, orderBy, orderDir, categoria } =
+        req.query;
+
+      if (page || limit) {
+        const p = Number(page) > 0 ? Number(page) : 1;
+        const l = Number(limit) > 0 ? Number(limit) : 24;
+        const offset = (p - 1) * l;
+
+        const result = await ProductoService.getAvailableVendiblesPaged(
+          {},
+          {
+            id_sucursal: Number(id_sucursal),
+            search,
+            limit: l,
+            offset,
+            orderBy,
+            orderDir,
+            categoria,
+          }
+        );
+        return res.json(result);
+      }
+
+      const result = await ProductoService.getAvailableVendibles(
+        { id_sucursal: Number(id_sucursal) },
+        { search, categoria }
+      );
+      return res.json(result);
+    } catch (e) {
+      console.error("Error al obtener productos e insumos:", e);
+      res.status(500).json({ error: "Error al obtener productos e insumos" });
     }
   }
 }
