@@ -4,7 +4,6 @@ import Pedido from "./Pedido.js";
 import Producto from "../../../inventario/domain/models/Producto.js";
 import Insumo from "../../../inventario/domain/models/Insumo.js";
 
-
 const DetallePedido = sequelize.define(
   "DetallePedido",
   {
@@ -37,10 +36,30 @@ const DetallePedido = sequelize.define(
         key: "id_insumo",
       },
     },
+    cantidad_entregada: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    cantidad_cancelada: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+
+    pendiente: {
+      type: DataTypes.VIRTUAL,
+      get() {
+        const cant = Number(this.getDataValue("cantidad") || 0);
+        const ent = Number(this.getDataValue("cantidad_entregada") || 0);
+        const can = Number(this.getDataValue("cantidad_cancelada") || 0);
+        return cant - ent - can;
+      },
+    },
     tipo: {
-      type: DataTypes.ENUM('producto', 'insumo'),
+      type: DataTypes.ENUM("producto", "insumo"),
       allowNull: true,
-    },    
+    },
     cantidad: {
       type: DataTypes.INTEGER,
       allowNull: false,

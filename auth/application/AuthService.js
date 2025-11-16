@@ -4,20 +4,18 @@ import UsuariosRepository from "../infraestructure/repositories/UsuariosReposito
 
 class AuthService {
   /**
-   * Iniciar sesión: validar credenciales y generar un token JWT.
-   * @param {string} rut - Rut del usuario.
-   * @param {string} password - Contraseña del usuario.
-   * @returns {Promise<string>} - Token JWT.
+   * 
+   * @param {string} rut 
+   * @param {string} password 
+   * @returns {Promise<string>} 
    */
   async login(rut, password) {
-    // Buscar el usuario por rut
     const usuario = await UsuariosRepository.findByRut(rut);
 
     if (!usuario || !usuario.activo) {
       throw new Error("Credenciales inválidas o usuario inactivo");
     }
 
-    // Verificar la contraseña
     const isPasswordValid = await bcrypt.compare(password, usuario.password);
     if (!isPasswordValid) {
       throw new Error("Usuario o contraseña incorrectos.");
@@ -27,7 +25,6 @@ class AuthService {
 
     await UsuariosRepository.updateLastLogin(usuario.rut, now);
 
-    // Generar el token JWT
     const token = jwt.sign(
       { rut: usuario.rut, rolId: usuario.rolId },
       process.env.JWT_SECRET,
@@ -36,10 +33,9 @@ class AuthService {
     const refreshToken = jwt.sign(
       { rut: usuario.rut },
       process.env.REFRESH_SECRET,
-      { expiresIn: "7d" } // Refresh Token válido por 7 días
+      { expiresIn: "7d" } 
     );
 
-    // Guardar el Refresh Token en la base de datos
     const saved = await this.saveRefreshToken(usuario.rut, refreshToken);
 
     if (!saved) {
@@ -53,20 +49,17 @@ class AuthService {
   }
 
   async getUserFromToken(decodedToken) {
-    // El token decodificado contiene la información del usuario (por ejemplo, ID)
     const { rut } = decodedToken;
 
     if (!rut) {
       throw new Error("El token no contiene un ID válido");
     }
 
-    // Buscar el usuario en la base de datos
     const user = await UsuariosRepository.findOne(rut);
 
     if (!user) {
       throw new Error("Usuario no encontrado");
     }
-    // Extraer permisos desde RolesPermisos
     const permisos = user.rol.rolesPermisos.map((rp) => rp.permiso.nombre);
     return {
       id: user.rut,
@@ -85,21 +78,17 @@ class AuthService {
 
   async isValidRefreshToken(token, userId) {
     try {
-      // Decodificar el token para obtener el ID del usuario
       const decoded = jwt.verify(token, process.env.REFRESH_SECRET);
 
-      // Verificar que el ID del usuario en el token coincida con el userId proporcionado
       if (decoded.rut !== userId) {
         return false;
       }
 
-      // Consultar la base de datos para verificar si el token está almacenado y activo
       const user = await UsuariosRepository.findByRut(userId);
 
       if (!user) {
         return false; // Usuario no encontrado
       }
-      // Comprobar si el token existe en la lista de tokens válidos del usuario
       const tokenIsValid = user.refreshTokens.includes(token);
 
       return tokenIsValid;
@@ -111,7 +100,6 @@ class AuthService {
 
   async saveRefreshToken(rut, token) {
     try {
-      // Actualizar el campo refreshToken del usuario
       const result = await UsuariosRepository.update(rut, {
         refreshTokens: token,
       });

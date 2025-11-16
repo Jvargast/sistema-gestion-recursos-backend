@@ -35,6 +35,20 @@ class UsuarioRepository extends IUsuariosRepository {
     });
   }
 
+  async findByRutBasic(rut) {
+    return await Usuario.findOne({
+      where: { rut, activo: true },
+      attributes: ["rut", "nombre", "apellido", "email", "id_sucursal", "activo"],
+      include: [
+        {
+          model: Sucursal,
+          as: "Sucursal",
+          attributes: ["id_sucursal", "nombre"],
+        },
+      ],
+    });
+  }
+
   async create(data) {
     return await Usuario.create({
       ...data,
@@ -203,7 +217,7 @@ class UsuarioRepository extends IUsuariosRepository {
                 {
                   model: Permisos,
                   as: "permiso",
-                  attributes: ["nombre"], 
+                  attributes: ["nombre"],
                 },
               ],
             },

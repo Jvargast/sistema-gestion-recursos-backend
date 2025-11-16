@@ -4,7 +4,7 @@ import AuthService from "../../application/AuthService.js";
 import jwt from "jsonwebtoken";
 class AuthController {
   /**
-   * Iniciar sesión: manejar solicitud HTTP para autenticación.
+   * 
    * @param {Request} req - Solicitud HTTP.
    * @param {Response} res - Respuesta HTTP.
    */
@@ -33,12 +33,12 @@ class AuthController {
       if (plain.rol) delete plain.rol.rolesPermisos;
       res.cookie("authToken", token, {
         ...getCookieSettings(),
-        maxAge: 1 * 60 * 60 * 1000, // Expira en 1 hora
+        maxAge: 1 * 60 * 60 * 1000, 
       });
 
       res.cookie("refreshToken", refreshToken, {
         ...getCookieSettings(),
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+        maxAge: 7 * 24 * 60 * 60 * 1000, 
       });
 
       res.status(200).json({
@@ -53,7 +53,7 @@ class AuthController {
   }
 
   /**
-   * Cerrar sesión: eliminar la cookie.
+   * 
    * @param {Request} req - Solicitud HTTP.
    * @param {Response} res - Respuesta HTTP.
    */

@@ -73,7 +73,7 @@ class AgendaCargaRepository {
       include: [
         {
           model: Camion,
-          as: "camion", // Relación definida en los modelos
+          as: "camion", 
           attributes: ["id_camion", "placa", "estado"],
         },
       ],

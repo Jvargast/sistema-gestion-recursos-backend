@@ -34,7 +34,7 @@ class AgendaViajesService {
   }
 
   async getViajeByChoferId(id_chofer) {
-    const usuario = UsuariosRepository.findByRut(id_chofer);
+    const usuario = UsuariosRepository.findByRutBasic(id_chofer);
     if (!usuario) throw Error(`No existe usuario con el id: ${id_chofer}`);
 
     const viaje = await AgendaViajesRepository.findByChoferAndEstado(
@@ -97,6 +97,7 @@ class AgendaViajesService {
       }
 
       if (descargarAuto || dejaRetornables) {
+        console.log("DENTRO")
         await InventarioCamionService.vaciarCamionDesdeFinalizar(
           camion.id_camion,
           {
