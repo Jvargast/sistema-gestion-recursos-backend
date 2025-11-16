@@ -1,4 +1,3 @@
-
 import { Op } from "sequelize";
 import Producto from "../../../inventario/domain/models/Producto.js";
 import Camion from "../../domain/models/Camion.js";
@@ -25,13 +24,13 @@ class InventarioCamionRepository {
     });
   }
 
-  async findAll(options={}) {
+  async findAll(options = {}) {
     return await InventarioCamion.findAll({
       include: [
         { model: Camion, as: "camion" },
         { model: Producto, as: "producto" },
       ],
-       ...options,
+      ...options,
     });
   }
 
@@ -124,7 +123,7 @@ class InventarioCamionRepository {
     const estado = es_retornable
       ? "En Camión - Reservado"
       : "En Camión - Reservado - Entrega";
-  
+
     return await InventarioCamion.findOne({
       where: {
         id_camion,
@@ -154,11 +153,17 @@ class InventarioCamionRepository {
     });
   }
 
-  async findByCamionAndProduct(id_camion, id_producto, estado, options={}) {
-    return await InventarioCamion.findOne({
-      where: { id_camion, id_producto, estado },
-       ...options,
-    });
+  async findByCamionAndProduct(id_camion, id_producto, estado, options = {}) {
+    try {
+      const inventario = await InventarioCamion.findOne({
+        where: { id_camion, id_producto, estado },
+        ...options,
+      });
+      return inventario;
+    } catch (error) {
+      console.error("[findByCamionAndProduct] FAIL:", error);
+      throw error; 
+    }
   }
 
   async findByCamionAndInsumo(id_camion, id_insumo, estado) {

@@ -662,7 +662,123 @@ class InventarioCamionService {
       );
     }
   }
+  async migrarEstadoEnCamionProducto({
+    id_camion,
+    id_producto,
+    cantidad,
+    estadoOrigen,
+    estadoDestino,
+    transaction,
+  }) {
+    const from = await InventarioCamionRepository.findByCamionAndProduct(
+      id_camion,
+      id_producto,
+      estadoOrigen,
+      { transaction }
+    );
+    if (!from || from.cantidad < cantidad) {
+      throw new Error(
+        `No hay suficiente en '${estadoOrigen}' para producto ${id_producto}.`
+      );
+    }
+    from.cantidad -= cantidad;
+    if (from.cantidad === 0) {
+      await InventarioCamionRepository.deleteProductInCamion(
+        id_camion,
+        id_producto,
+        estadoOrigen,
+        { transaction }
+      );
+    } else {
+      await from.save({ transaction });
+    }
+    const to = await InventarioCamionRepository.findByCamionAndProduct(
+      id_camion,
+      id_producto,
+      estadoDestino,
+      { transaction }
+    );
+    if (to) {
+      to.cantidad += cantidad;
+      await to.save({ transaction });
+    } else {
+      await InventarioCamionRepository.create(
+        {
+          id_camion,
+          id_producto,
+          cantidad,
+          estado: estadoDestino,
+          tipo: estadoDestino.includes("Disponible")
+            ? "Disponible"
+            : "Reservado",
+          es_retornable: from.es_retornable ?? false,
+          fecha_actualizacion: new Date(),
+        },
+        { transaction }
+      );
+    }
 
+    return cantidad;
+  }
+  async migrarEstadoEnCamionInsumo({
+    id_camion,
+    id_insumo,
+    cantidad,
+    estadoOrigen,
+    estadoDestino,
+    transaction,
+  }) {
+    const from = await InventarioCamionRepository.findByCamionAndInsumo(
+      id_camion,
+      id_insumo,
+      estadoOrigen,
+      { transaction }
+    );
+    if (!from || from.cantidad < cantidad) {
+      throw new Error(
+        `No hay suficiente en '${estadoOrigen}' para insumo ${id_insumo}.`
+      );
+    }
+    from.cantidad -= cantidad;
+    if (from.cantidad === 0) {
+      await InventarioCamionRepository.deleteInsumoInCamion(
+        id_camion,
+        id_insumo,
+        estadoOrigen,
+        { transaction }
+      );
+    } else {
+      await from.save({ transaction });
+    }
+
+    const to = await InventarioCamionRepository.findByCamionAndInsumo(
+      id_camion,
+      id_insumo,
+      estadoDestino,
+      { transaction }
+    );
+    if (to) {
+      to.cantidad += cantidad;
+      await to.save({ transaction });
+    } else {
+      await InventarioCamionRepository.create(
+        {
+          id_camion,
+          id_insumo,
+          cantidad,
+          estado: estadoDestino,
+          tipo: estadoDestino.includes("Disponible")
+            ? "Disponible"
+            : "Reservado",
+          es_retornable: from.es_retornable ?? false,
+          fecha_actualizacion: new Date(),
+        },
+        { transaction }
+      );
+    }
+
+    return cantidad;
+  }
   async retirarProductoDelCamion(
     id_camion,
     id_producto,
@@ -672,19 +788,14 @@ class InventarioCamionService {
   ) {
     try {
       const productoEnCamion =
-        await InventarioCamionRepository.findByCamionAndProduct(
-          id_camion,
+        await InventarioCamionRepository.findByProductoAndEstado(
           id_producto,
           estado,
-          transaction
+          id_camion,
+          { transaction }
         );
-      console.log(
-        "Producto encontrado en camión:",
-        productoEnCamion?.toJSON ? productoEnCamion.toJSON() : productoEnCamion
-      );
 
       if (!productoEnCamion) {
-        // Mejor: logea todos los productos en camión para debug rápido
         const allProductos = await InventarioCamionRepository.findAll({
           where: { id_camion, id_producto },
           transaction,
@@ -713,7 +824,6 @@ class InventarioCamionService {
         );
       }
 
-      // Actualizar cantidad
       productoEnCamion.cantidad -= cantidad;
 
       if (productoEnCamion.cantidad === 0) {
@@ -753,7 +863,7 @@ class InventarioCamionService {
           isSequelizeObj: !!transaction?.sequelize,
         });
 
-        await productoEnCamion.save(transaction);
+        await productoEnCamion.save({ transaction });
       }
 
       await InventarioCamionLogsRepository.create(
@@ -772,7 +882,6 @@ class InventarioCamionService {
       throw error;
     }
   }
-
   async retirarInsumoDelCamion(
     id_camion,
     id_insumo,
@@ -786,7 +895,7 @@ class InventarioCamionService {
           id_camion,
           id_insumo,
           estado,
-          transaction
+          { transaction }
         );
       console.log(productoEnCamion);
 
@@ -808,7 +917,6 @@ class InventarioCamionService {
         );
       }
 
-      // Actualizar cantidad
       productoEnCamion.cantidad -= cantidad;
 
       if (productoEnCamion.cantidad === 0) {
@@ -826,7 +934,6 @@ class InventarioCamionService {
         }
         await productoEnCamion.save({ transaction });
       }
-      // Registrar movimiento de regreso
       await InventarioCamionLogsRepository.create(
         {
           id_camion,
@@ -843,7 +950,6 @@ class InventarioCamionService {
       throw error;
     }
   }
-
   async registrarRetornables(id_camion, retornables) {
     for (const retorno of retornables) {
       const { id_producto, cantidad, estado, tipo_defecto } = retorno;
@@ -870,7 +976,6 @@ class InventarioCamionService {
       );
     }
   }
-
   async actualizarProductoEnCamion(id_camion, id_producto, cantidad) {
     const productoEnCamion = await this.getProductoEnCamion(
       id_camion,
@@ -891,7 +996,6 @@ class InventarioCamionService {
     );
     return await this.getProductoEnCamion(id_camion, id_producto);
   }
-
   async addOrUpdateProductoCamion(
     {
       id_camion,
@@ -951,7 +1055,6 @@ class InventarioCamionService {
       throw error;
     }
   }
-
   async reservarDesdeDisponible({
     id_camion,
     id_producto,
@@ -991,7 +1094,6 @@ class InventarioCamionService {
       { transaction }
     );
   }
-
   async getInventarioPorChofer(id_chofer) {
     if (!id_chofer) {
       throw new Error("Se requiere un ID de chofer válido.");
@@ -1008,7 +1110,6 @@ class InventarioCamionService {
     // Obtener el inventario del camión
     return await InventarioCamionRepository.findByCamionId(camion.id_camion);
   }
-
   async devolverProductoAlCamion({
     id_camion,
     id_producto,

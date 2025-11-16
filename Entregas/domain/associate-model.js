@@ -2,7 +2,6 @@ import Sucursal from "../../auth/domain/models/Sucursal.js";
 import Usuarios from "../../auth/domain/models/Usuarios.js";
 import Insumo from "../../inventario/domain/models/Insumo.js";
 import Producto from "../../inventario/domain/models/Producto.js";
-import ProductoRetornable from "../../inventario/domain/models/ProductoRetornable.js";
 import Cliente from "../../ventas/domain/models/Cliente.js";
 import Documento from "../../ventas/domain/models/Documento.js";
 import MetodoPago from "../../ventas/domain/models/MetodoPago.js";

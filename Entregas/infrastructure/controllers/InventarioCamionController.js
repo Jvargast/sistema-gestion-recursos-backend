@@ -97,7 +97,6 @@ class InventarioCamionController {
 
       id_camion = parseInt(id_camion);
 
-      // Llamar al servicio para obtener el inventario en uso y disponible
       const inventarioEstado =
         await InventarioCamionService.getEstadoInventario(id_camion);
 

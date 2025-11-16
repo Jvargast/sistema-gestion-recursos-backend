@@ -67,7 +67,7 @@ class CotizacionService {
     const cliente = id_cliente
       ? await ClienteRepository.findById(id_cliente)
       : null;
-    const vendedor = await UsuariosRepository.findByRut(id_usuario_creador);
+    const vendedor = await UsuariosRepository.findByRutBasic(id_usuario_creador);
 
     if (id_cliente && !cliente) {
       throw new Error(`Cliente con ID ${id_cliente} no encontrado.`);

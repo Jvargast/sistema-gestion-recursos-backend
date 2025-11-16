@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, Transaction } from "sequelize";
 import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
 import sequelize from "../../database/database.js";
 import InventarioCamionService from "../../Entregas/application/InventarioCamionService.js";
@@ -25,6 +25,7 @@ import InventarioService from "../../inventario/application/InventarioService.js
 import EntregaRepository from "../../Entregas/infrastructure/repositories/EntregaRepository.js";
 import VentaRepository from "../infrastructure/repositories/VentaRepository.js";
 import RolRepository from "../../auth/infraestructure/repositories/RolRepository.js";
+import InventarioCamionRepository from "../../Entregas/infrastructure/repositories/InventarioCamionRepository.js";
 
 class PedidoService {
   // Se crea en Pendiente
@@ -53,7 +54,7 @@ class PedidoService {
       let cliente = await ClienteRepository.findById(id_cliente);
       if (!cliente) throw new Error("El cliente no existe.");
 
-      const creador = await UsuariosRepository.findByRut(id_creador);
+      const creador = await UsuariosRepository.findByRutBasic(id_creador);
       if (!creador) throw new Error("Usuario creador no encontrado.");
 
       let metodoPago = null;
@@ -348,7 +349,7 @@ class PedidoService {
       );
       if (!metodoPago)
         throw new Error("Método de pago no encontrado para el pedido.");
-      await UsuariosRepository.findByRut(id_usuario_creador, { transaction });
+      await UsuariosRepository.findByRutBasic(id_usuario_creador, { transaction });
       const caja = id_caja
         ? await CajaRepository.findById(id_caja, { transaction })
         : null;
@@ -424,7 +425,7 @@ class PedidoService {
       const pedido = await PedidoRepository.findById(id_pedido);
       if (!pedido) throw new Error("Pedido no encontrado.");
 
-      const chofer = await UsuariosRepository.findByRut(id_chofer);
+      const chofer = await UsuariosRepository.findByRutBasic(id_chofer);
       if (!chofer) throw new Error("Chofer no encontrado.");
 
       // Estado actual debe ser "Pendiente" para asignar correctamente
@@ -668,8 +669,7 @@ class PedidoService {
     return PedidoRepository.findById(id_pedido);
   }
 
-  //Revertir estado
-  async revertirPedidoAEstado({ id_pedido, id_estado_destino, id_usuario }) {
+  /* async revertirPedidoAEstado({ id_pedido, id_estado_destino, id_usuario }) {
     const transaction = await sequelize.transaction();
     try {
       const pedido = await PedidoRepository.findById(id_pedido, {
@@ -686,7 +686,6 @@ class PedidoService {
         "Completada",
       ];
 
-      //Obtengo estados actual - destino
       const estadoActual = await EstadoVentaRepository.findById(
         pedido.id_estado_pedido,
         { transaction }
@@ -698,7 +697,6 @@ class PedidoService {
       const nombreActual = estadoActual.nombre_estado;
       const nombreDestino = estadoDestino.nombre_estado;
 
-      //Validación si esta dentro de lo permitido
       const idxActual = estados.indexOf(nombreActual);
       const idxDestino = estados.indexOf(nombreDestino);
 
@@ -707,13 +705,12 @@ class PedidoService {
       if (idxDestino >= idxActual)
         throw new Error("Solo se permite volver a estados anteriores");
 
-      // Revertir en reversa desde el estado actual al destino
       for (let i = idxActual; i > idxDestino; i--) {
         const rollbackState = estados[i];
         console.log("RollbackState:", rollbackState);
 
         switch (rollbackState) {
-          case "Completada":
+          case "Completada": {
             const entrega = await EntregaRepository.findEntregaParaReversa(
               { id_pedido: pedido.id_pedido },
               { transaction }
@@ -778,7 +775,8 @@ class PedidoService {
             }
 
             break;
-          case "En Entrega":
+          }
+          case "En Entrega": {
             const viajeActivo =
               await AgendaViajesRepository.findByChoferAndEstado(
                 pedido.id_chofer,
@@ -796,32 +794,6 @@ class PedidoService {
                 { destinos },
                 { transaction }
               );
-
-              const detallesPedido =
-                await DetallePedidoRepository.findByPedidoId(pedido.id_pedido, {
-                  transaction,
-                });
-              for (const item of detallesPedido) {
-                if (item.id_producto) {
-                  await InventarioCamionService.liberarReservadosACamionDisponibleProductos(
-                    {
-                      id_camion: viajeActivo.id_camion,
-                      id_producto: item.id_producto,
-                      cantidad: item.cantidad,
-                      transaction,
-                    }
-                  );
-                } else if (item.id_insumo) {
-                  await InventarioCamionService.liberarReservadosACamionDisponibleInsumos(
-                    {
-                      id_camion: viajeActivo.id_camion,
-                      id_insumo: item.id_insumo,
-                      cantidad: item.cantidad,
-                      transaction,
-                    }
-                  );
-                }
-              }
             }
             console.log(
               `[${rollbackState}] Paso completado para pedido:`,
@@ -829,91 +801,177 @@ class PedidoService {
             );
 
             break;
-          case "En Preparación":
-            const agenda = await AgendaCargaRepository.findByChoferAndEstado(
-              pedido.id_chofer,
-              "Pendiente",
-              { transaction }
-            );
+          }
+          case "En Preparación": {
+            const viajeActivo =
+              await AgendaViajesRepository.findByChoferAndEstado(
+                pedido.id_chofer,
+                "En Tránsito",
+                { transaction }
+              );
+            let id_camion_fuente = null;
+            let detalles = [];
 
-            if (!agenda) break;
-            const detalles =
-              await AgendaCargaDetalleRepository.findByAgendaAndPedido(
-                agenda.id_agenda_carga,
+            if (viajeActivo) {
+              id_camion_fuente = viajeActivo.id_camion;
+              detalles = await DetallePedidoRepository.findByPedidoId(
                 pedido.id_pedido,
                 { transaction }
               );
+            } else {
+              const agenda = await AgendaCargaRepository.findByChoferAndEstado(
+                pedido.id_chofer,
+                "Pendiente",
+                { transaction }
+              );
+              if (!agenda) break;
+
+              id_camion_fuente = agenda.id_camion;
+
+              detalles =
+                await AgendaCargaDetalleRepository.findByAgendaAndPedido(
+                  agenda.id_agenda_carga,
+                  pedido.id_pedido,
+                  { transaction }
+                );
+            }
+
+            const id_sucursal_destino = pedido.id_sucursal;
+            if (!id_sucursal_destino) {
+              throw new Error(
+                "No se pudo determinar id_sucursal para devolver stock."
+              );
+            }
+
+            const ESTADOS_RESERVA = [
+              "En Camión - Reservado - Entrega",
+              "En Camión - Reservado",
+            ];
+
             for (const detalle of detalles) {
-              // 3. Descargar productos/insumos del camión (reservado)
               if (detalle.id_producto) {
-                // Quitar del camión en estado Reservado
-                console.log("→ Llamando a retirarProductoDelCamion con:", {
-                  id_camion: agenda.id_camion,
-                  id_producto: detalle.id_producto,
+                let restante = Number(detalle.cantidad) || 0;
+
+                for (const estado of ESTADOS_RESERVA) {
+                  if (restante <= 0) break;
+
+                  const row =
+                    await InventarioCamionRepository.findByCamionAndProduct(
+                      id_camion_fuente,
+                      detalle.id_producto,
+                      estado,
+                      { transaction }
+                    );
+                  const disponible = Number(row?.cantidad || 0);
+                  if (disponible <= 0) continue;
+
+                  const aRetirar = Math.min(restante, disponible);
+
+                  await InventarioCamionService.retirarProductoDelCamion(
+                    Number(id_camion_fuente),
+                    Number(detalle.id_producto),
+                    aRetirar,
+                    estado,
+                    { transaction }
+                  );
+
+                  restante -= aRetirar;
+                }
+
+                if (restante > 0) {
+                  throw new Error(
+                    `No fue posible retirar ${restante} unid. del producto ${detalle.id_producto} desde el camión.`
+                  );
+                }
+
+                await InventarioService.agregarInventario({
+                  tipo: "producto",
+                  id_elemento: detalle.id_producto,
+                  id_sucursal: id_sucursal_destino,
                   cantidad: detalle.cantidad,
-                  estado: "En Camión - Reservado",
-                  detalle: detalle.toJSON ? detalle.toJSON() : detalle,
+                  transaction,
                 });
+              } else if (detalle.id_insumo) {
+                let restante = Number(detalle.cantidad) || 0;
 
-                await InventarioCamionService.retirarProductoDelCamion(
-                  agenda.id_camion,
-                  detalle.id_producto,
-                  detalle.cantidad,
-                  "En Camión - Reservado",
-                  { transaction }
-                );
-                // Devolver a bodega principal
-                await InventarioService.incrementStock(
-                  detalle.id_producto,
-                  detalle.cantidad,
+                for (const estado of ESTADOS_RESERVA) {
+                  if (restante <= 0) break;
+
+                  const row =
+                    await InventarioCamionRepository.findByCamionAndInsumo(
+                      id_camion_fuente,
+                      detalle.id_insumo,
+                      estado,
+                      { transaction }
+                    );
+                  const disponible = Number(row?.cantidad || 0);
+                  if (disponible <= 0) continue;
+
+                  const aRetirar = Math.min(restante, disponible);
+
+                  await InventarioCamionService.retirarInsumoDelCamion(
+                    id_camion_fuente,
+                    detalle.id_insumo,
+                    aRetirar,
+                    estado,
+                    { transaction }
+                  );
+
+                  restante -= aRetirar;
+                }
+
+                if (restante > 0) {
+                  throw new Error(
+                    `No fue posible retirar ${restante} unid. del insumo ${detalle.id_insumo} desde el camión.`
+                  );
+                }
+
+                await InventarioService.agregarInventario({
+                  tipo: "insumo",
+                  id_elemento: detalle.id_insumo,
+                  id_sucursal: id_sucursal_destino,
+                  cantidad: detalle.cantidad,
+                  transaction,
+                });
+              }
+
+              if (!viajeActivo && detalle.id_agenda_carga_detalle) {
+                await AgendaCargaDetalleRepository.delete(
+                  detalle.id_agenda_carga_detalle,
                   { transaction }
                 );
               }
-              if (detalle.id_insumo) {
-                await InventarioCamionService.retirarInsumoDelCamion(
-                  agenda.id_camion,
-                  detalle.id_insumo,
-                  detalle.cantidad,
-                  "En Camión - Reservado",
+            }
+
+            if (!viajeActivo) {
+              const detallesRestantes =
+                await AgendaCargaDetalleRepository.findByAgendaId(
+                  agenda.id_agenda_carga,
                   { transaction }
                 );
-                await InventarioService.incrementStockInsumo(
-                  detalle.id_insumo,
-                  detalle.cantidad,
+              if (detallesRestantes.length === 0) {
+                await AgendaCargaRepository.update(
+                  agenda.id_agenda_carga,
+                  { estado: "Cancelada" },
                   { transaction }
                 );
               }
-              await AgendaCargaDetalleRepository.delete(
-                detalle.id_agenda_carga_detalle,
-                { transaction }
-              );
-            }
-            const detallesRestantes =
-              await AgendaCargaDetalleRepository.findByAgendaId(
-                agenda.id_agenda_carga,
-                { transaction }
-              );
-            if (detallesRestantes.length === 0) {
-              await AgendaCargaRepository.update(
-                agenda.id_agenda_carga,
-                { estado: "Cancelada" },
-                { transaction }
-              );
             }
 
+            console.log(
+              "[En Preparación] Reversa completada para pedido:",
+              pedido.id_pedido
+            );
+            break;
+          }
+          case "Confirmado": {
             console.log(
               `[${rollbackState}] Paso completado para pedido:`,
               pedido.id_pedido
             );
-
             break;
-          case "Confirmado":
-            console.log(
-              `[${rollbackState}] Paso completado para pedido:`,
-              pedido.id_pedido
-            );
-            break;
-          case "Pendiente de Confirmación":
+          }
+          case "Pendiente de Confirmación": {
             await PedidoRepository.update(
               pedido.id_pedido,
               { id_chofer: null },
@@ -925,6 +983,7 @@ class PedidoService {
             );
 
             break;
+          }
         }
       }
 
@@ -954,7 +1013,343 @@ class PedidoService {
       await transaction.rollback();
       throw error;
     }
+  } */
+
+  async revertirPedidoAEstado({ id_pedido, id_estado_destino, id_usuario }) {
+    const t = await sequelize.transaction();
+    let pedido;
+    let nombreDestino = ""; 
+    let nombreActual = "";
+    try {
+      pedido = await PedidoRepository.findById(id_pedido, { transaction: t });
+      if (!pedido) throw new Error("Pedido no encontrado");
+
+      const estados = [
+        "Pendiente",
+        "Pendiente de Confirmación",
+        "Confirmado",
+        "En Preparación",
+        "En Entrega",
+        "Completada",
+      ];
+      const estadoActual = await EstadoVentaRepository.findById(
+        pedido.id_estado_pedido,
+        { transaction: t }
+      );
+      const estadoDestino = await EstadoVentaRepository.findById(
+        id_estado_destino,
+        { transaction: t }
+      );
+      nombreActual = estadoActual.nombre_estado;
+      nombreDestino = estadoDestino.nombre_estado;
+
+      const idxActual = estados.indexOf(nombreActual);
+      const idxDestino = estados.indexOf(nombreDestino);
+      if (idxDestino === -1 || idxActual === -1)
+        throw new Error("Estado no reconocido");
+      if (idxDestino >= idxActual)
+        throw new Error("Solo se permite volver a estados anteriores");
+
+      for (let i = idxActual; i > idxDestino; i--) {
+        const rollbackState = estados[i];
+
+        switch (rollbackState) {
+          case "Completada": {
+            const entrega = await EntregaRepository.findEntregaParaReversa(
+              { id_pedido: pedido.id_pedido },
+              { transaction: t }
+            );
+            if (entrega) {
+              const ahora = new Date();
+              const fechaEntrega = new Date(entrega.fecha_hora);
+              const horas = Math.abs((ahora - fechaEntrega) / 36e5);
+              if (horas > 24)
+                throw new Error(
+                  "No se puede revertir entregas completadas de hace más de 24 horas."
+                );
+              if (entrega.productos_entregados) {
+                for (const item of entrega.productos_entregados) {
+                  await InventarioCamionService.devolverProductoAlCamion({
+                    id_camion: entrega.id_camion,
+                    id_producto: item.id_producto,
+                    cantidad: item.cantidad,
+                    transaction: t,
+                  });
+                }
+              }
+              if (Array.isArray(entrega.insumo_entregados)) {
+                for (const item of entrega.insumo_entregados) {
+                  await InventarioCamionService.devolverInsumoAlCamion({
+                    id_camion: entrega.id_camion,
+                    id_insumo: item.id_insumo,
+                    cantidad: item.cantidad,
+                    transaction: t,
+                  });
+                }
+              }
+              await EntregaRepository.updateDesdeAnulacion(
+                entrega.id_entrega,
+                { estado_entrega: "anulada" },
+                { transaction: t }
+              );
+            }
+
+            if (pedido.id_venta) {
+              await VentaService.anularVenta(pedido.id_venta, id_usuario, {
+                transaction: t,
+              });
+              await PedidoRepository.update(
+                pedido.id_pedido,
+                { pagado: false, estado_pago: "Pendiente", id_venta: null },
+                { transaction: t }
+              );
+            }
+            break;
+          }
+
+          case "En Entrega": {
+            await this.procesarReversaEnEntrega(pedido, t);
+            break;
+          }
+
+          case "En Preparación": {
+            await this.procesarReversaEnPreparacion(pedido, t, 50);
+            break;
+          }
+
+          case "Confirmado":
+          case "Pendiente de Confirmación": {
+            if (rollbackState === "Pendiente de Confirmación") {
+              await PedidoRepository.update(
+                pedido.id_pedido,
+                { id_chofer: null },
+                { transaction: t }
+              );
+            }
+            break;
+          }
+        }
+      }
+
+      await PedidoRepository.update(
+        id_pedido,
+        { id_estado_pedido: id_estado_destino },
+        { transaction: t }
+      );
+
+      await t.commit();
+    } catch (err) {
+      if (t && !t.finished) await t.rollback();
+      throw err;
+    }
+
+    try {
+      if (pedido?.id_chofer) {
+        await NotificacionService.enviarNotificacion({
+          id_usuario: pedido.id_chofer,
+          mensaje: `Atención: El pedido #${pedido.id_pedido} fue revertido a '${nombreDestino}' por un administrador.`,
+          tipo: "pedido_revertido",
+        });
+        WebSocketServer.emitToUser(pedido.id_chofer, {
+          type: "actualizar_agenda_chofer",
+        });
+      }
+    } catch (notifyErr) {
+      console.error("Notif/WS post-commit error:", notifyErr);
+    }
+
+    return { message: "Pedido regresado exitosamente" };
   }
+
+  /**
+   *
+   */
+  async procesarReversaEnEntrega(pedido, tOuter) {
+    const viajeActivo = await AgendaViajesRepository.findByChoferAndEstado(
+      pedido.id_chofer,
+      "En Tránsito",
+      { transaction: tOuter }
+    );
+    if (viajeActivo) {
+      let destinos = viajeActivo.destinos || [];
+      destinos = destinos.filter((d) => d.id_pedido !== pedido.id_pedido);
+      await AgendaViajesRepository.update(
+        viajeActivo.id_agenda_viaje,
+        { destinos },
+        { transaction: tOuter }
+      );
+    }
+  }
+
+  async procesarReversaEnPreparacion(pedido, tOuter, CHUNK = 50) {
+    const viajeActivo = await AgendaViajesRepository.findByChoferAndEstado(
+      pedido.id_chofer,
+      "En Tránsito",
+      { transaction: tOuter }
+    );
+
+    let id_camion_fuente = null;
+    let detalles = [];
+
+    if (viajeActivo) {
+      id_camion_fuente = viajeActivo.id_camion;
+      detalles = await DetallePedidoRepository.findByPedidoId(
+        pedido.id_pedido,
+        { transaction: tOuter }
+      );
+    } else {
+      const agenda = await AgendaCargaRepository.findByChoferAndEstado(
+        pedido.id_chofer,
+        "Pendiente",
+        { transaction: tOuter }
+      );
+      if (!agenda) return;
+      id_camion_fuente = agenda.id_camion;
+      detalles = await AgendaCargaDetalleRepository.findByAgendaAndPedido(
+        agenda.id_agenda_carga,
+        pedido.id_pedido,
+        { transaction: tOuter }
+      );
+    }
+
+    const id_sucursal_destino = pedido.id_sucursal;
+    if (!id_sucursal_destino) {
+      throw new Error("No se pudo determinar id_sucursal para devolver stock.");
+    }
+
+    const ESTADOS_RESERVA = [
+      "En Camión - Reservado - Entrega",
+      "En Camión - Reservado",
+    ];
+
+    for (let i = 0; i < detalles.length; i += CHUNK) {
+      const slice = detalles.slice(i, i + CHUNK);
+
+      await sequelize.transaction(
+        { transaction: tOuter, type: Transaction.TYPES.IMMEDIATE },
+        async (tChunk) => {
+          for (const det of slice) {
+            if (det.id_producto) {
+              let restante = Number(det.cantidad) || 0;
+
+              for (const estado of ESTADOS_RESERVA) {
+                if (restante <= 0) break;
+
+                const row =
+                  await InventarioCamionRepository.findByCamionAndProduct(
+                    id_camion_fuente,
+                    det.id_producto,
+                    estado,
+                    { transaction: tChunk }
+                  );
+                const disponible = Number(row?.cantidad || 0);
+                if (disponible <= 0) continue;
+
+                const aRetirar = Math.min(restante, disponible);
+
+                await InventarioCamionService.retirarProductoDelCamion(
+                  id_camion_fuente,
+                  det.id_producto,
+                  aRetirar,
+                  estado,
+                  { transaction: tChunk }
+                );
+                restante -= aRetirar;
+              }
+
+              if (restante > 0) {
+                throw new Error(
+                  `No fue posible retirar ${restante} unid. del producto ${det.id_producto} desde el camión.`
+                );
+              }
+
+              await InventarioService.agregarInventario({
+                tipo: "producto",
+                id_elemento: det.id_producto,
+                id_sucursal: id_sucursal_destino,
+                cantidad: det.cantidad,
+                transaction: tChunk,
+              });
+            } else if (det.id_insumo) {
+              let restante = Number(det.cantidad) || 0;
+
+              for (const estado of ESTADOS_RESERVA) {
+                if (restante <= 0) break;
+
+                const row =
+                  await InventarioCamionRepository.findByCamionAndInsumo(
+                    id_camion_fuente,
+                    det.id_insumo,
+                    estado,
+                    { transaction: tChunk }
+                  );
+                const disponible = Number(row?.cantidad || 0);
+                if (disponible <= 0) continue;
+
+                const aRetirar = Math.min(restante, disponible);
+
+                await InventarioCamionService.retirarInsumoDelCamion(
+                  id_camion_fuente,
+                  det.id_insumo,
+                  aRetirar,
+                  estado,
+                  { transaction: tChunk }
+                );
+                restante -= aRetirar;
+              }
+
+              if (restante > 0) {
+                throw new Error(
+                  `No fue posible retirar ${restante} unid. del insumo ${det.id_insumo} desde el camión.`
+                );
+              }
+
+              await InventarioService.agregarInventario({
+                tipo: "insumo",
+                id_elemento: det.id_insumo,
+                id_sucursal: id_sucursal_destino,
+                cantidad: det.cantidad,
+                transaction: tChunk,
+              });
+            }
+
+            if (!viajeActivo && det.id_agenda_carga_detalle) {
+              await AgendaCargaDetalleRepository.delete(
+                det.id_agenda_carga_detalle,
+                { transaction: tChunk }
+              );
+            }
+          }
+        }
+      );
+    }
+
+    if (!viajeActivo) {
+      const agenda = await AgendaCargaRepository.findByChoferAndEstado(
+        pedido.id_chofer,
+        "Pendiente",
+        { transaction: tOuter }
+      );
+      if (agenda) {
+        const quedan = await AgendaCargaDetalleRepository.findByAgendaId(
+          agenda.id_agenda_carga,
+          { transaction: tOuter }
+        );
+        if (quedan.length === 0) {
+          await AgendaCargaRepository.update(
+            agenda.id_agenda_carga,
+            { estado: "Cancelada" },
+            { transaction: tOuter }
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   *
+   *
+   */
 
   async getPedidosConfirmadosPorChofer(id_chofer) {
     if (!id_chofer) {

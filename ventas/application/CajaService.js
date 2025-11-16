@@ -42,7 +42,7 @@ class CajaService {
   }
 
   async verificarEstadoCaja(rutUsuario, rol) {
-    const usuario = await UsuariosRepository.findByRut(rutUsuario);
+    const usuario = await UsuariosRepository.findByRutBasic(rutUsuario);
     if (!usuario) throw new Error("Usuario no encontrado");
 
     const cajas = await CajaRepository.findCajasAbiertasByUsuario(rutUsuario);
@@ -55,7 +55,7 @@ class CajaService {
   }
 
   async getCajaAsignada(rutUsuario) {
-    const usuario = await UsuariosRepository.findByRut(rutUsuario);
+    const usuario = await UsuariosRepository.findByRutBasic(rutUsuario);
     if (!usuario) {
       throw new Error("Usuario no encontrado.");
     }

@@ -52,7 +52,7 @@ class AgendaCargaService {
           "Faltan datos obligatorios para crear la agenda de carga."
         );
       }
-      const chofer = await UsuariosRepository.findByRut(id_usuario_chofer, {
+      const chofer = await UsuariosRepository.findByRutBasic(id_usuario_chofer, {
         transaction: t,
       });
       if (!chofer) {
@@ -85,7 +85,6 @@ class AgendaCargaService {
       if (!estadoConfirmado || !estadoEnPreparacion)
         throw new Error("Estados necesarios no configurados correctamente.");
 
-      //Se buscan pedidos confirmados por chofer
       const pedidosConfirmados =
         await PedidoRepository.findAllByChoferAndEstado(
           id_usuario_chofer,
@@ -357,7 +356,6 @@ class AgendaCargaService {
     const transaction = await sequelize.transaction();
 
     try {
-      // 1. Validar la agenda de carga
       const agendaCarga = await AgendaCargaRepository.findById(
         id_agenda_carga,
         { transaction }

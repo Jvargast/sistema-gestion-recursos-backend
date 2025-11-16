@@ -111,7 +111,7 @@ class CamionService {
       throw new Error("El camión no existe.");
     }
 
-    const chofer = await UsuariosRepository.findByRut(id_chofer);
+    const chofer = await UsuariosRepository.findByRutBasic(id_chofer);
     if (!chofer) {
       throw new Error("El chofer no existe.");
     }

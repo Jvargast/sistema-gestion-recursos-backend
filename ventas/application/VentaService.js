@@ -75,7 +75,7 @@ class VentaService {
         ? await ClienteRepository.findById(venta.id_cliente)
         : null;
 
-      const vendedor = await UsuariosRepository.findByRut(venta.id_vendedor);
+      const vendedor = await UsuariosRepository.findByRutBasic(venta.id_vendedor);
 
       const pedido =
         (await PedidoRepository.findByIdVenta?.(venta.id_venta)) ?? null;
@@ -176,7 +176,7 @@ class VentaService {
       const cliente = id_cliente
         ? await ClienteRepository.findById(id_cliente, { transaction })
         : null;
-      const vendedor = await UsuariosRepository.findByRut(id_vendedor, {
+      const vendedor = await UsuariosRepository.findByRutBasic(id_vendedor, {
         transaction,
       });
       const caja = id_caja

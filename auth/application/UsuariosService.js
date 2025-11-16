@@ -13,7 +13,6 @@ import CajaRepository from "../../ventas/infrastructure/repositories/CajaReposit
 
 class UsuarioService {
   /**
-   * Crear un nuevo usuario con una contraseña generada automáticamente.
    * @param {Object} data - Datos del usuario.
    * @returns {Promise<Object>} - Retorna el usuario creado.
    */
@@ -21,23 +20,19 @@ class UsuarioService {
     const { rut, nombre, apellido, email, rolId, id_empresa, id_sucursal } =
       data;
 
-    const usuario_existente = await UsuariosRepository.findByRut(rut);
+    const usuario_existente = await UsuariosRepository.findByRutBasic(rut);
     if (usuario_existente) {
       throw new Error("El usuario ya existe en el sistema");
     }
-    // Verificar que el rol exista
     const rol = await RolesRepository.findById(rolId);
     if (!rol) {
       throw new Error("El rol especificado no existe");
     }
 
-    // Generar una contraseña temporal
-    const tempPassword = crypto.randomBytes(8).toString("hex"); // Genera una contraseña segura de 8 caracteres
-    // Encriptar la contraseña
+    const tempPassword = crypto.randomBytes(8).toString("hex"); 
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(tempPassword, saltRounds);
 
-    // Crear el usuario con la contraseña encriptada
     const usuario = await UsuariosRepository.create({
       rut,
       nombre,
@@ -49,9 +44,6 @@ class UsuarioService {
       id_sucursal,
     });
 
-    // Enviar la contraseña temporal por correo
-    //
-    // ATENCIÓN POR HACER EL SERVICIO DE ENVIAR CORREO
     await EmailService.sendPasswordEmail(email, tempPassword);
 
     return usuario;
@@ -69,28 +61,23 @@ class UsuarioService {
       id_sucursal,
     } = userData;
 
-    // Verificar si el usuario ya existe
     const usuario_existente = await UsuariosRepository.findByRut(rut);
     if (usuario_existente) {
       throw new Error("El usuario ya existe en el sistema");
     }
 
-    // Verificar si el rol especificado existe
     const rol = await RolesRepository.findById(rolId);
     if (!rol) {
       throw new Error("El rol especificado no existe");
     }
 
-    // Validar que la contraseña esté presente
     if (!password || password.length < 8) {
       throw new Error("La contraseña debe tener al menos 8 caracteres");
     }
 
-    // Encriptar la contraseña proporcionada
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // Crear el usuario con la contraseña encriptada
     const usuario = await UsuariosRepository.create({
       rut,
       nombre,
@@ -105,9 +92,6 @@ class UsuarioService {
     return usuario;
   }
 
-  /**
-   * Obtener todos los usuarios.
-   */
   async getAllUsuarios(filters = {}, options) {
     const allowedFields = ["rut"];
     const where = createFilter(filters, allowedFields);
@@ -178,7 +162,6 @@ class UsuarioService {
         };
       }
 
-      /*       const choferes = await UsuariosRepository.findAllByRolId(rolIdChofer); */
 
       return await UsuariosRepository.findAllByRolId(rolIdChofer, {
         whereExtra,
@@ -257,7 +240,6 @@ class UsuarioService {
   }
 
   /**
-   * Cambia la contraseña de un usuario después de validar la contraseña actual.
    * @param {string} rut - RUT del usuario.
    * @param {string} currentPassword - Contraseña actual del usuario.
    * @param {string} newPassword - Nueva contraseña.
@@ -266,7 +248,6 @@ class UsuarioService {
    */
   async changePassword(rut, currentPassword, newPassword, confirmPassword) {
     try {
-      // Validar que las contraseñas sean consistentes
       if (!newPassword || newPassword.length < 8) {
         throw new Error(
           "La nueva contraseña debe tener al menos 8 caracteres."
@@ -276,13 +257,11 @@ class UsuarioService {
         throw new Error("La confirmación de la contraseña no coincide.");
       }
 
-      // Obtener el usuario por su RUT
       const usuario = await UsuariosRepository.findByRut(rut);
       if (!usuario) {
         throw new Error("Usuario no encontrado.");
       }
 
-      // Verificar la contraseña actual
       const isPasswordValid = await bcrypt.compare(
         currentPassword,
         usuario.password
@@ -291,10 +270,8 @@ class UsuarioService {
         throw new Error("La contraseña actual es incorrecta.");
       }
 
-      // Encriptar la nueva contraseña
       const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-      // Actualizar la contraseña en la base de datos
       await UsuariosRepository.update(rut, { password: hashedNewPassword });
 
       return { message: "Contraseña actualizada exitosamente." };
@@ -305,7 +282,6 @@ class UsuarioService {
   }
 
   /**
-   * Verificar si una contraseña es válida.
    * @param {string} plainPassword - Contraseña sin encriptar.
    * @param {string} hashedPassword - Contraseña encriptada.
    * @returns {Promise<boolean>} - True si las contraseñas coinciden.
@@ -315,38 +291,31 @@ class UsuarioService {
   }
 
   async resetUserPassword(rut) {
-    // Buscar al usuario por su RUT
     const usuario = await UsuariosRepository.findByRut(rut);
 
     if (!usuario) {
       throw new Error("El usuario no existe.");
     }
 
-    // Generar una nueva contraseña temporal
     const newTempPassword = crypto.randomBytes(8).toString("hex");
 
-    // Encriptar la nueva contraseña
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newTempPassword, saltRounds);
 
-    // Actualizar la contraseña del usuario en la base de datos
     usuario.password = hashedPassword;
     await UsuariosRepository.update(usuario);
 
-    // Retornar la nueva contraseña temporal al administrador
     return { usuario, newTempPassword };
   }
 
   async updateUserById(rut, updateData) {
     try {
-      // Buscar al usuario por su RUT
       const usuario = await UsuariosRepository.findByRut(rut);
 
       if (!usuario) {
         throw new Error("El usuario no existe.");
       }
 
-      // Actualizar los datos del usuario
       const result = await UsuariosRepository.update(rut, updateData);
 
       if (result[0] === 0) {
@@ -355,7 +324,6 @@ class UsuarioService {
         );
       }
 
-      // Retornar el usuario actualizado
       return {
         message: "Usuario actualizado exitosamente.",
         usuario: result[1],

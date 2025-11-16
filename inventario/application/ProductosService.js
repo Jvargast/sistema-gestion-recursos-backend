@@ -577,7 +577,10 @@ WITH productos AS (
         'cantidad', inv.cantidad,
         'id_sucursal', inv.id_sucursal
       )
-    )::json                         AS inventario
+    )::json                         AS inventario,
+    COALESCE(p.es_retornable, FALSE) AS es_retornable,
+    COALESCE(p.es_para_venta, TRUE)  AS es_para_venta,
+    COALESCE(p.activo, TRUE)         AS activo
   FROM "Producto" p
   JOIN "Inventario" inv ON inv.id_producto = p.id_producto
   ${
@@ -604,7 +607,10 @@ WITH productos AS (
           NULL::numeric AS precio,
           NULL::text    AS descripcion,
           NULL::text    AS tipo,
-          NULL::json    AS inventario
+          NULL::json    AS inventario,
+          NULL::boolean AS es_retornable,
+          NULL::boolean AS es_para_venta,
+          NULL::boolean AS activo
         WHERE FALSE
       `
       : `
@@ -620,7 +626,10 @@ WITH productos AS (
               'cantidad', inv2.cantidad,
               'id_sucursal', inv2.id_sucursal
             )
-          )::json                           AS inventario
+          )::json                           AS inventario,
+          FALSE                             AS es_retornable, 
+          COALESCE(i.es_para_venta, TRUE)   AS es_para_venta,
+          COALESCE(i.activo, TRUE)          AS activo
         FROM "Insumo" i
         JOIN "Inventario" inv2 ON inv2.id_insumo = i.id_insumo
         WHERE inv2.cantidad > 0
@@ -662,6 +671,9 @@ LIMIT :limit OFFSET :offset;
       descripcion: r.descripcion,
       tipo: r.tipo,
       inventario: r.inventario,
+      es_retornable: Boolean(r.es_retornable),
+      es_para_venta: Boolean(r.es_para_venta),
+      activo: Boolean(r.activo),
     }));
 
     return {
