@@ -50,10 +50,6 @@ import EstadosVentasRoutes from "./ventas/infrastructure/routes/EstadoVentaRoute
 import PagosRoutes from "./ventas/infrastructure/routes/PagosRoutes.js";
 import DocumentosRoutes from "./ventas/infrastructure/routes/DocumentoRoutes.js";
 import cuentasPorCobrarRoutes from "./ventas/infrastructure/routes/CuentaPorCobrarRoutes.js";
-/* 
-import managementRoutes from "./management/infrastructure/routes/managementRoutes.js";
-import proveedoresRoutes from "./proveedores/infrastructure/routes/proveedoesrRoutes.js";
- */
 /* MÓDULO DE ENTREGAS */
 import CamionRoutes from "./Entregas/infrastructure/routes/CamionRoutes.js";
 import AgendaCargaRoutes from "./Entregas/infrastructure/routes/AgendaCargaRoutes.js";
@@ -75,6 +71,8 @@ import proveedoresRouter from "./costos/infrastructure/routes/ProveedorRoutes.js
 import CategoriaGastoRoutes from "./costos/infrastructure/routes/CategoriaGastoRoutes.js";
 import OrdenPagoRoutes from "./costos/infrastructure/routes/OrdenPagoRoutes.js";
 import GastoRoutes from "./costos/infrastructure/routes/GastoRoutes.js";
+/* REPORTE DIARIO */
+import ReporteDiarioRoutes from "./analisis/infrastructure/routes/ReporteDiarioRoutes.js"
 
 import SearchRoutes from "./busqueda/infrastructure/routes/SearchRoutes.js";
 
@@ -230,6 +228,9 @@ app.use("/api/costos/proveedores", proveedoresRouter);
 app.use("/api/costos/categorias-gasto", CategoriaGastoRoutes);
 app.use("/api/costos/ordenes-pago", OrdenPagoRoutes);
 app.use("/api/costos/gastos", GastoRoutes);
+
+/* REPORTE DIARIO */
+app.use("/api/reporte", ReporteDiarioRoutes);
 
 const PORT = process.env.PORT || 9000;
 
