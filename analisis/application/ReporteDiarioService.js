@@ -10,16 +10,17 @@ import PagosEstadisticas from "../domain/models/PagosEstadisticas.js";
 import VentasChoferEstadisticas from "../domain/models/VentasChoferEstadisticas.js";
 import EntregasEstadisticas from "../domain/models/EntregasEstadisticas.js";
 import Usuarios from "../../auth/domain/models/Usuarios.js";
+import Producto from "../../inventario/domain/models/Producto.js";
+import Insumo from "../../inventario/domain/models/Insumo.js";
 
 class ReporteDiarioService {
   /**
    * @param {Object} params
-   * @param {string} params.fecha 
+   * @param {string} params.fecha
    * @param {number|undefined} params.id_sucursal
    */
 
   async buildReporteDiario({ fecha, id_sucursal }) {
-    console.log(fecha)
     const idSucursalNum =
       typeof id_sucursal === "number"
         ? id_sucursal
@@ -82,6 +83,24 @@ class ReporteDiarioService {
     const ventasChoferArr = ventasChoferStats || [];
     const entregasArr = entregasStats || [];
 
+    const productosConNombre = await Promise.all(
+      productosArr.map(async (p) => {
+        let nombreItem = null;
+
+        if (p.id_producto) {
+          const prod = await Producto.findByPk(p.id_producto);
+          nombreItem = prod?.nombre_producto || null;
+        } else if (p.id_insumo) {
+          const ins = await Insumo.findByPk(p.id_insumo);
+          nombreItem = ins?.nombre_insumo || null;
+        }
+
+        return {
+          ...p,
+          nombre_item: nombreItem,
+        };
+      })
+    );
 
     const totalVentasMonto = ventasArr.reduce(
       (acc, v) => acc + Number(v.monto_total || 0),
@@ -107,11 +126,11 @@ class ReporteDiarioService {
       0
     );
 
-    const totalProductosVendidos = productosArr.reduce(
+    const totalProductosVendidos = productosConNombre.reduce(
       (acc, p) => acc + Number(p.cantidad_vendida || 0),
       0
     );
-    const totalProductosMonto = productosArr.reduce(
+    const totalProductosMonto = productosConNombre.reduce(
       (acc, p) => acc + Number(p.monto_total || 0),
       0
     );
@@ -167,7 +186,7 @@ class ReporteDiarioService {
       detalle: {
         ventasPorTipoEntrega: ventasArr,
         pedidos: pedidosArr,
-        productos: productosArr,
+        productos: productosConNombre,
         pagos: pagosArr,
         ventasPorChofer: ventasChoferArr,
         entregasPorChofer: entregasArr,
