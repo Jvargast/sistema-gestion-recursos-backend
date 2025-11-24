@@ -87,6 +87,11 @@ const Pedido = sequelize.define(
       type: DataTypes.ENUM("alta", "normal", "baja"),
       defaultValue: "normal",
     },
+    mostrar_en_tablero: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
   },
   {
     tableName: "Pedido",

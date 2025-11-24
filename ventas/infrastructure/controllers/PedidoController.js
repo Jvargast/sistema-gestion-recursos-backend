@@ -119,7 +119,6 @@ class PedidoController {
       const options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
-        /* fecha, */
       };
       const pedidos = await PedidoService.obtenerPedidosAsignados(
         id_chofer,
@@ -195,6 +194,7 @@ class PedidoController {
       const options = {
         page: parseInt(req.query.page, 10) || 1,
         limit: parseInt(req.query.limit, 10) || 10,
+        soloTablero: req.query.soloTablero,
       };
       delete filters.page;
       delete filters.limit;
@@ -361,6 +361,29 @@ class PedidoController {
       res
         .status(500)
         .json({ message: `Error al revertir pedido: ${error.message}` });
+    }
+  }
+
+  async toggleMostrarEnTablero(req, res) {
+    try {
+      const { id_pedido } = req.params;
+      const { mostrar_en_tablero } = req.body;
+
+      if (typeof mostrar_en_tablero !== "boolean") {
+        return res
+          .status(400)
+          .json({ error: "mostrar_en_tablero debe ser boolean" });
+      }
+
+      const updated = await PedidoService.toggleMostrarEnTablero(
+        id_pedido,
+        mostrar_en_tablero
+      );
+
+      return res.json(updated);
+    } catch (error) {
+      console.error("Error al actualizar mostrar_en_tablero:", error);
+      res.status(500).json({ error: "Error al actualizar el pedido" });
     }
   }
 }

@@ -78,6 +78,11 @@ router.patch(
   checkRoles(["chofer"]),
   PedidoController.confirmarPedido
 );
+router.patch(
+  "/:id_pedido/mostrar-en-tablero",
+  checkPermissions("ventas.pedido.editar"),
+  PedidoController.toggleMostrarEnTablero
+);
 router.put(
   "/:id_pedido/rechazar",
   checkPermissions("ventas.pedido.confirmar"),

@@ -47,12 +47,15 @@ const authenticate = async (req, res, next) => {
     }
     req.user = {
       id: user.rut,
+      rut: user.rut,
       nombre: user.nombre,
       apellido: user.apellido,
       id_sucursal: user.id_sucursal,
       nombre_sucursal: user.nombre_sucursal,
       email: user.email,
       rol: user.rol,
+      rolId: user.rolId,
+      activo: user.activo,
       permisos: user.permisos,
     };
 
