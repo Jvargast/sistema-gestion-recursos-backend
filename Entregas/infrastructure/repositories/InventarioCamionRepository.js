@@ -3,6 +3,7 @@ import Producto from "../../../inventario/domain/models/Producto.js";
 import Camion from "../../domain/models/Camion.js";
 import InventarioCamion from "../../domain/models/InventarioCamion.js";
 import { getEstadoCamion } from "../../../shared/utils/estadoCamion.js";
+import Insumo from "../../../inventario/domain/models/Insumo.js";
 
 class InventarioCamionRepository {
   async create(data) {
@@ -52,6 +53,11 @@ class InventarioCamionRepository {
           as: "producto",
           attributes: ["id_producto", "nombre_producto", "precio"],
         },
+        {
+          model: Insumo,
+          as: "insumo",
+          attributes: ["id_insumo", "nombre_insumo", "precio"]
+        }
       ],
     });
   }

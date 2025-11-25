@@ -466,14 +466,21 @@ class InventarioCamionService {
 
     let reservados_retornables = 0;
     let reservados_no_retornables = 0;
-    let disponibles = 0;
-    let retorno = 0;
+
+    let disponibles_retornables = 0;
+
+    let retorno_retornables = 0;
+    let retorno_no_retornables = 0;
 
     const lista = [];
 
     for (const item of inventario) {
-      const es_retornable = item?.producto?.es_retornable || false;
+      const es_retornable = item?.es_retornable || false;
       const cantidad = item.cantidad || 0;
+      const nombre_producto =
+        item.producto?.nombre_producto ??
+        item.insumo?.nombre_insumo ??
+        "Producto desconocido";
       let tipoVisual = "Otro";
 
       switch (item.estado) {
@@ -481,30 +488,43 @@ class InventarioCamionService {
           tipoVisual = es_retornable
             ? "ReservadoRetornable"
             : "ReservadoNoRetornable";
-          es_retornable
-            ? (reservados_retornables += cantidad)
-            : (reservados_no_retornables += cantidad);
+
+          if (es_retornable) {
+            reservados_retornables += cantidad;
+          } else {
+            reservados_no_retornables += cantidad;
+          }
           break;
+
         case "En Camión - Reservado - Entrega":
           tipoVisual = "ReservadoNoRetornable";
           reservados_no_retornables += cantidad;
           break;
+
         case "En Camión - Disponible":
           tipoVisual = "Disponible";
-          disponibles += cantidad;
+          if (es_retornable) {
+            disponibles_retornables += cantidad;
+          }
           break;
+
         case "En Camión - Retorno":
           tipoVisual = "Retorno";
-          retorno += cantidad;
+          if (es_retornable) {
+            retorno_retornables += cantidad;
+          } else {
+            retorno_no_retornables += cantidad;
+          }
           break;
+
         default:
           tipoVisual = "Otro";
       }
 
       lista.push({
         id_producto: item.id_producto,
-        nombre_producto:
-          item?.producto?.nombre_producto || "Producto desconocido",
+        id_insumo: item.id_insumo,
+        nombre_producto,
         cantidad,
         estado: item.estado,
         tipo: tipoVisual,
@@ -512,12 +532,13 @@ class InventarioCamionService {
       });
     }
 
-    const usados =
-      reservados_retornables +
-      reservados_no_retornables +
-      disponibles +
-      retorno;
-    const vacios = Math.max(camion.capacidad - usados, 0);
+    const disponibles = disponibles_retornables;
+    const retorno = retorno_retornables + retorno_no_retornables;
+
+    const usados_retornables =
+      reservados_retornables + disponibles_retornables + retorno_retornables;
+
+    const vacios = Math.max(camion.capacidad - usados_retornables, 0);
 
     return {
       id_camion,
@@ -528,6 +549,7 @@ class InventarioCamionService {
       retorno,
       vacios,
       lista,
+      usados_retornables,
     };
   }
 
