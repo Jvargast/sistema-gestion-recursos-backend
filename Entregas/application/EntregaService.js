@@ -113,7 +113,9 @@ class EntregaService {
 
       let ventaRegistrada = null;
       let pago_recibido = null;
+      let documento = null;
       let metodo = null;
+      let esFactura = tipo_documento === "factura";
 
       if (id_metodo_pago) {
         metodo = await MetodoPagoRepository.findById(id_metodo_pago, {
@@ -123,7 +125,6 @@ class EntregaService {
           pago_recibido = monto_total;
         }
       }
-      let esFactura = tipo_documento === "factura";
 
       if (!pedido.id_venta) {
         const data = {
@@ -179,6 +180,8 @@ class EntregaService {
 
         pedido.pagado = !esFactura;
         pedido.estado_pago = esFactura ? "Pendiente" : "Pagado";
+
+        console.log("TODO OK");
       }
 
       pedido.id_estado_pedido = estadoCompletada.id_estado_venta;
@@ -196,6 +199,7 @@ class EntregaService {
         },
         { transaction }
       );
+      console.log("Va normal");
 
       if (productos_entregados && Array.isArray(productos_entregados)) {
         for (const item of productos_entregados) {
@@ -236,12 +240,10 @@ class EntregaService {
             : await reserva.save({ transaction });
         }
       }
-
       const docId =
         ventaRegistrada?.documento?.id_documento ??
         documento?.[0]?.id_documento ??
         null;
-
       const nuevaEntrega = await EntregaRepository.create(
         {
           id_sucursal,
