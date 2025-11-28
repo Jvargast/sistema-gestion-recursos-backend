@@ -1,106 +1,63 @@
-# Sistema de Gestión de Recursos - Backend
+# ERP AguasValentino – Backend
 
-## Endpoints
+Backend del sistema ERP de AguasValentino. Provee APIs REST y WebSockets para gestionar clientes, ventas, inventario, logística y reporting.
 
-### GET /api/producto-retornable/pendientes
-Obtiene la lista de productos retornables en estado `pendiente_inspeccion`.
+## ⚙️ Stack tecnológico
 
-Cada registro puede estar asociado a un producto (`id_producto`) o a un insumo
-(`id_insumo`) dependiendo de lo que se haya retornado.
+- **Node.js** (v18/20)
+- **Express** como framework HTTP
+- **Sequelize** como ORM
+- **PostgreSQL** (RDS en producción)
+- **JWT** para autenticación
+- **Socket.IO** para eventos en tiempo real
+- **Docker + Docker Compose** para despliegue
 
-Sin parámetros.
+## 🏗️ Arquitectura general
 
-**Solicitud**
-```
-GET /api/producto-retornable/pendientes
-```
+- API REST bajo el prefijo: `/api`
+- Módulos principales:
+  - `auth` – login, permisos, manejo de sesiones
+  - `ventas` – creación de ventas, documentos, cobros
+  - `inventario` – productos, inventario de bodega y camión
+  - `logistica` – agenda de viajes, entregas, retornos
+  - `reportes` – estadísticas diarias y consolidadas
+- Integrado con el frontend React (S3 + CloudFront) mediante `VITE_API_URL`.
 
-**Respuesta exitosa**
-```json
-[
-  {
-    "id_producto_retornable": 1,
-    "estado": "pendiente_inspeccion",
-    "id_producto": 5,
-    "id_insumo": null
-  }
-]
-```
+## 🔐 Variables de entorno principales
 
-### GET /api/producto-retornable
-Lista los productos retornables. Se pueden enviar parámetros de consulta como `estado` para filtrar los resultados.
+El backend utiliza un archivo `.env` / `.env.prod` (no versionado). Variables típicas:
 
-**Solicitud**
-```
-GET /api/producto-retornable?estado=pendiente_inspeccion
-```
+```env
+NODE_ENV=production
+PORT=8080
 
-**Respuesta exitosa**
-```json
-[
-  {
-    "id_producto_retornable": 1,
-    "estado": "pendiente_inspeccion",
-    "id_producto": 5,
-    "id_insumo": null
-  }
-]
+DB_HOST=xxxxxxxx.xxxx.xxxxxxx.xxxx
+DB_PORT=xxxx
+DB_NAME=aguasvalentino
+DB_USER=xxxx
+DB_PASSWORD=xxxx
+
+JWT_SECRET=xxxxxxxxxxxx
+JWT_EXPIRES_IN=1d
+
+CORS_ORIGIN=https://erp.aguasvalentino.com
+COOKIE_DOMAIN=.aguasvalentino.com
 ```
 
-### POST /api/inventario-camion/vaciar/:id_camion
-Descarga el inventario de un camión. Requiere el permiso `entregas.inventariocamion.vaciar`.
+## 🧪 Scripts principales
 
-**Cuerpo de la solicitud**
-```json
-{
-  "descargarDisponibles": true,
-  "descargarRetorno": true
-}
-```
-`descargarDisponibles` y `descargarRetorno` son opcionales y controlan si se descargan los productos disponibles y los productos de retorno.
+```bash
+# Desarrollo
+npm run dev
 
-**Solicitud**
-```
-POST /api/inventario-camion/vaciar/10
+# Producción local
+npm run start
 ```
 
-**Respuesta exitosa**
-```json
-{
-  "message": "Camión vaciado correctamente"
-}
+## 🐳 Despliegue con Docker Compose
+
+```bash
+git pull origin master
+docker-compose build backend
+docker-compose up -d backend
 ```
-
-### POST /api/producto-retornable/inspeccionar/:id_camion
-Registra la inspección de los productos retornables de un camión. Requiere el permiso `inventario.productoretornable.editar`.
-
-**Cuerpo de la solicitud**
-```json
-{
-  "items": [
-    {
-      "id_producto": 5,
-      "cantidad": 1,
-      "estado": "reutilizable",
-      "tipo_defecto": null
-    }
-  ]
-}
-```
-Cada elemento del arreglo `items` indica el resultado de la inspección (`reutilizable` o `defectuoso`).
-
-**Solicitud**
-```
-POST /api/producto-retornable/inspeccionar/10
-```
-
-**Respuesta exitosa**
-```json
-{
-  "message": "Inspección completada"
-}
-```
-
-### POST /api/agenda-viajes/:id_agenda_viaje/finalizar
-Finaliza un viaje. Si el parámetro `descargarAuto` se envía como `true` en el cuerpo de la solicitud, el sistema descargará automáticamente el camión utilizando el endpoint anterior.
-
