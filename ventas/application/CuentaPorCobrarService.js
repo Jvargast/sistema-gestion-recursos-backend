@@ -12,6 +12,8 @@ import EstadoVentaRepository from "../infrastructure/repositories/EstadoVentaRep
 import PagoRepository from "../infrastructure/repositories/PagoRepository.js";
 import VentaRepository from "../infrastructure/repositories/VentaRepository.js";
 import PedidoRepository from "../infrastructure/repositories/PedidoRepository.js";
+import sequelize from "../../database/database.js";
+import { obtenerFechaActualChile } from "../../shared/utils/fechaUtils.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -221,74 +223,97 @@ class CuentaPorCobrarService {
     usuario,
     referencia,
   }) {
-    const cuenta = await CuentaPorCobrarRepository.findById(id_cxc);
-    if (!cuenta) throw new Error("Cuenta por cobrar no encontrada");
-
-    const montoPendiente = parseFloat(cuenta.saldo_pendiente);
-    const pago = parseFloat(monto);
-
-    if (pago <= 0) throw new Error("El monto debe ser mayor a cero.");
-    if (pago > montoPendiente)
-      throw new Error("El monto excede el saldo pendiente.");
-
-    cuenta.monto_pagado = parseFloat(
-      (parseFloat(cuenta.monto_pagado) + pago).toFixed(2)
-    );
-
-    cuenta.saldo_pendiente = parseFloat(
-      (parseFloat(cuenta.saldo_pendiente) - pago).toFixed(2)
-    );
-
-    const estaPagada = cuenta.saldo_pendiente <= 0;
-    cuenta.estado = estaPagada ? "pagado" : "pendiente";
-    cuenta.observaciones = observaciones;
-    await cuenta.save();
-
-    const venta = cuenta.venta;
-
-    const id_estado_pago = (
-      await EstadoPagoRepository.findByNombre(
-        estaPagada ? "Pagado" : "Pendiente"
-      )
-    ).id_estado_pago;
-
-    const id_estado_venta = estaPagada
-      ? (await EstadoVentaRepository.findByNombre("Pagada")).id_estado_venta
-      : venta.id_estado_venta;
-
-    const idSucursal = venta.id_sucursal;
-
-    await PagoRepository.create({
-      id_venta: cuenta.id_venta,
-      id_documento: cuenta.id_documento,
-      id_metodo_pago: metodo_pago,
-      id_estado_pago,
-      monto: pago,
-      fecha_pago: new Date(),
-      referencia: referencia || null,
-      id_sucursal: idSucursal,
-    });
-
-    await DocumentoRepository.update(cuenta.id_documento, {
-      id_estado_pago,
-    });
-
-    await VentaRepository.update(cuenta.id_venta, {
-      id_estado_venta,
-    });
-
-    const pedidoAsociado = await PedidoRepository.findByIdVenta(
-      cuenta.id_venta
-    );
-
-    if (pedidoAsociado) {
-      await PedidoRepository.update(pedidoAsociado.id_pedido, {
-        pagado: estaPagada,
-        estado_pago: estaPagada ? "Pagado" : "Pendiente",
+    return sequelize.transaction(async (t) => {
+      const cuenta = await CuentaPorCobrarRepository.findById(id_cxc, {
+        transaction: t,
       });
-    }
+      if (!cuenta) throw new Error("Cuenta por cobrar no encontrada");
 
-    return cuenta;
+      const fecha = obtenerFechaActualChile();
+
+      const montoPendiente = parseFloat(cuenta.saldo_pendiente);
+      const pago = parseFloat(monto);
+
+      if (pago <= 0) throw new Error("El monto debe ser mayor a cero.");
+      if (pago > montoPendiente)
+        throw new Error("El monto excede el saldo pendiente.");
+
+      cuenta.monto_pagado = parseFloat(
+        (parseFloat(cuenta.monto_pagado) + pago).toFixed(2)
+      );
+
+      cuenta.saldo_pendiente = parseFloat(
+        (parseFloat(cuenta.saldo_pendiente) - pago).toFixed(2)
+      );
+
+      const estaPagada = cuenta.saldo_pendiente <= 0;
+      cuenta.estado = estaPagada ? "pagado" : "pendiente";
+      cuenta.observaciones = observaciones;
+
+      await cuenta.save({ transaction: t });
+
+      const venta = cuenta.venta;
+
+      const estadoPago = await EstadoPagoRepository.findByNombre(
+        estaPagada ? "Pagado" : "Pendiente",
+        { transaction: t }
+      );
+      const id_estado_pago = estadoPago.id_estado_pago;
+
+      const id_estado_venta = estaPagada
+        ? (
+            await EstadoVentaRepository.findByNombre("Pagada", {
+              transaction: t,
+            })
+          ).id_estado_venta
+        : venta.id_estado_venta;
+
+      const idSucursal = venta.id_sucursal;
+
+      await PagoRepository.create(
+        {
+          id_venta: cuenta.id_venta,
+          id_documento: cuenta.id_documento,
+          id_metodo_pago: metodo_pago,
+          id_estado_pago,
+          monto: pago,
+          fecha_pago: fecha,
+          referencia: referencia || null,
+          id_sucursal: idSucursal,
+        },
+        { transaction: t }
+      );
+
+      await DocumentoRepository.update(
+        cuenta.id_documento,
+        { id_estado_pago },
+        { transaction: t }
+      );
+
+      await VentaRepository.update(
+        cuenta.id_venta,
+        { id_estado_venta },
+        { transaction: t }
+      );
+
+      const pedidoAsociado = await PedidoRepository.findByIdVenta(
+        cuenta.id_venta,
+        { transaction: t }
+      );
+
+      if (pedidoAsociado) {
+        await PedidoRepository.update(
+          pedidoAsociado.id_pedido,
+          {
+            pagado: estaPagada,
+            estado_pago: estaPagada ? "Pagado" : "Pendiente",
+          },
+          { transaction: t }
+        );
+      }
+
+      return cuenta;
+    });
   }
 
   async buscarCuentaPorCobrarPorVentaId(idVenta) {

@@ -1387,6 +1387,53 @@ class PedidoService {
   async obtenerMisPedidos(id_chofer, options = {}) {
     return await this.getPedidos({ id_chofer }, options);
   }
+
+  async cancelarPedido({ id_pedido, motivo, id_usuario }) {
+    const t = await sequelize.transaction();
+    try {
+      const pedido = await PedidoRepository.findById(id_pedido, {
+        transaction: t,
+      });
+      if (!pedido) throw new Error("El pedido no existe.");
+
+      const estadoActual = pedido.EstadoPedido?.nombre_estado;
+      if (estadoActual === "Cancelada") {
+        throw new Error("El pedido ya está cancelado.");
+      }
+      if (
+        ["En Entrega", "Completada", "Completada y Entregada"].includes(
+          estadoActual
+        )
+      ) {
+        throw new Error("No se puede cancelar un pedido ya entregado.");
+      }
+
+      const estadoCancelada = await EstadoVentaRepository.findByNombre(
+        "Cancelada"
+      );
+      await PedidoRepository.update(
+        id_pedido,
+        {
+          id_estado_pedido: estadoCancelada.id_estado_venta,
+          motivo_cancelacion: motivo || null,
+        },
+        { transaction: t }
+      );
+
+      if (pedido.id_venta) {
+        await VentaService.anularVenta(pedido.id_venta, id_usuario, {
+          transaction: t,
+          motivo: motivo || `Anulación por cancelación de pedido ${id_pedido}`,
+        });
+      }
+
+      await t.commit();
+      return await PedidoRepository.findById(id_pedido);
+    } catch (err) {
+      if (t.finished !== "commit") await t.rollback();
+      throw err;
+    }
+  }
 }
 
 export default new PedidoService();

@@ -98,5 +98,10 @@ router.delete(
   checkPermissions("ventas.pedido.eliminar"),
   PedidoController.eliminarPedido
 );
+router.post(
+  "/:id_pedido/cancelar",
+  checkPermissions("ventas.pedido.editar"), 
+  PedidoController.cancelarPedido
+);
 
 export default router;

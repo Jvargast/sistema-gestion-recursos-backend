@@ -57,7 +57,7 @@ const CuentaPorCobrar = sequelize.define(
     estado: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: "pendiente", // otros valores: "pagado", "vencido", "en mora"
+      defaultValue: "pendiente", 
     },
     observaciones: {
       type: DataTypes.STRING,

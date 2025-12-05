@@ -87,7 +87,7 @@ class AuthService {
       const user = await UsuariosRepository.findByRut(userId);
 
       if (!user) {
-        return false; // Usuario no encontrado
+        return false; 
       }
       const tokenIsValid = user.refreshTokens.includes(token);
 

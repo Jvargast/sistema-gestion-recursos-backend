@@ -386,6 +386,35 @@ class PedidoController {
       res.status(500).json({ error: "Error al actualizar el pedido" });
     }
   }
+
+  async cancelarPedido(req, res) {
+    try {
+      const { id_pedido } = req.params;
+      const { motivo } = req.body || {};
+
+      const usuario = req.user?.rut || req.user?.id || null;
+
+      const pedido = await PedidoService.cancelarPedido({
+        id_pedido,
+        motivo,
+        id_usuario: usuario,
+      });
+
+      if (!pedido) {
+        return res.status(404).json({ message: "Pedido no encontrado" });
+      }
+
+      return res.status(200).json({
+        message: "Pedido cancelado correctamente",
+        pedido,
+      });
+    } catch (error) {
+      console.error("Error al cancelar pedido:", error);
+      return res.status(500).json({
+        message: `Error al cancelar pedido: ${error.message}`,
+      });
+    }
+  }
 }
 
 export default new PedidoController();

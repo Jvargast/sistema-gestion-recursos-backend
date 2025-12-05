@@ -27,9 +27,6 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: "Usuario no encontrado" });
     }
 
-    const now = new Date();
-    await UsuariosRepository.updateLastLogin(user.rut, now);
-
     const currentTime = Math.floor(Date.now() / 1000);
     const timeToExpire = decoded.exp - currentTime;
 

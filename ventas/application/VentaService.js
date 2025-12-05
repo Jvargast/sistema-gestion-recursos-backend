@@ -75,7 +75,9 @@ class VentaService {
         ? await ClienteRepository.findById(venta.id_cliente)
         : null;
 
-      const vendedor = await UsuariosRepository.findByRutBasic(venta.id_vendedor);
+      const vendedor = await UsuariosRepository.findByRutBasic(
+        venta.id_vendedor
+      );
 
       const pedido =
         (await PedidoRepository.findByIdVenta?.(venta.id_venta)) ?? null;
@@ -496,7 +498,7 @@ class VentaService {
             fecha_emision: fechaActual,
             fecha_vencimiento: fechaVencimiento,
             estado: "pendiente",
-            id_sucursal: idSucursalVenta
+            id_sucursal: idSucursalVenta,
           },
           { transaction }
         );
@@ -751,6 +753,23 @@ class VentaService {
           { transaction }
         );
       }
+    }
+
+    const cxc =
+      await CuentaPorCobrarRepository.findFacturaByIdVenta(idVenta, {
+        transaction,
+      });
+
+    if (cxc) {
+      await CuentaPorCobrarRepository.update(
+        cxc.id_cxc,
+        {
+          estado: "anulado", 
+          saldo_pendiente: 0, 
+          observaciones: motivo, 
+        },
+        { transaction }
+      );
     }
 
     const movimientosCaja =

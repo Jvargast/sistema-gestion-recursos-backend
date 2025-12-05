@@ -64,11 +64,30 @@ class CuentaPorCobrarRepository {
       where: { id_venta: idVenta },
     });
   }
+
+  async findFacturaByIdVenta(idVenta, options = {}) {
+    return CuentaPorCobrar.findOne({
+      where: { id_venta: idVenta },
+      ...options,
+    });
+  }
   async findByIdDocumento(idDocumento) {
     return CuentaPorCobrar.findOne({
       where: { id_documento: idDocumento },
     });
   }
+
+  async update(id_cxc, values, options = {}) {
+    const [affectedRows] = await CuentaPorCobrar.update(values, {
+      where: { id_cxc },
+      ...options,
+    });
+
+    if (affectedRows === 0) return null;
+
+    return CuentaPorCobrar.findByPk(id_cxc, options);
+  }
+
   getModel() {
     return CuentaPorCobrar;
   }
