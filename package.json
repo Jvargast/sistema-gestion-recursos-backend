@@ -1,6 +1,6 @@
 {
   "name": "sistema-gestion-recursos",
-  "version": "2.5.2",
+  "version": "2.5.3",
   "description": "",
   "main": "index.js",
   "type": "module",
@@ -8,7 +8,9 @@
     "dev": "NODE_ENV=development nodemon index.js",
     "start": "NODE_ENV=production node index.js",
     "populate": "NODE_ENV=production node database/populate.js",
-    "test": "node --test"
+    "test": "node --test",
+    "reset:local": "NODE_ENV=development CONFIRM_RESET=YES node database/scripts/resetDbWithBackup.js",
+    "reset:prod": "NODE_ENV=production CONFIRM_RESET=YES node database/scripts/resetDbWithBackup.js"
   },
   "keywords": [],
   "author": "",

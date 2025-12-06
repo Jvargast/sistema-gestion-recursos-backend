@@ -14,3 +14,5 @@ build/
 uploads/
 tmp/
 backend.tar.gz
+*.dump
+backups/
