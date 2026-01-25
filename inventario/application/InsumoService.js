@@ -48,9 +48,9 @@ class InsumoService {
     idSucursal = null,
     multiplicador = 1,
   }) {
-    const formula = await this.formulaRepository.getModel().findByPk(
-      idFormula,
-      {
+    const formula = await this.formulaRepository
+      .getModel()
+      .findByPk(idFormula, {
         include: [
           {
             model: this.formulaDetalleRepository.getModel(),
@@ -64,15 +64,14 @@ class InsumoService {
             ],
           },
         ],
-      }
-    );
+      });
 
     if (!formula) {
       throw new Error("Fórmula no encontrada");
     }
 
     const detalles = (formula.FormulaProductoDetalles || []).filter(
-      (d) => d?.Insumo?.id_insumo
+      (d) => d?.Insumo?.id_insumo,
     );
 
     const ids = [...new Set(detalles.map((d) => d.Insumo.id_insumo))];
@@ -80,7 +79,7 @@ class InsumoService {
 
     const stockRows = await this.getStocksForInsumos({ ids, idSucursal });
     const stockMap = new Map(
-      stockRows.map((r) => [Number(r.id_insumo), Number(r.cantidad) || 0])
+      stockRows.map((r) => [Number(r.id_insumo), Number(r.cantidad) || 0]),
     );
 
     const data = detalles.map((d) => {
@@ -308,12 +307,13 @@ class InsumoService {
 
   async createInsumo(data) {
     const { ...insumoData } = data;
-
-    await TipoInsumoService.getTipoById(insumoData.id_tipo_insumo);
-
-    const insumo = await InsumoRepository.create(insumoData);
-
-    return await this.getInsumoById(insumo.id_insumo);
+    const tipo = await TipoInsumoService.getTipoById(insumoData.id_tipo_insumo);
+    const nuevoInsumo = await InsumoRepository.create(insumoData);
+    const insumoLimpio = nuevoInsumo.dataValues || nuevoInsumo;
+    return {
+      ...insumoLimpio,
+      TipoInsumo: tipo,
+    };
   }
 
   async updateInsumo(id, data, file) {
@@ -331,7 +331,7 @@ class InsumoService {
         const oldImagePath = path.join(
           __dirname,
           "../../public",
-          insumoExistente.image_url
+          insumoExistente.image_url,
         );
         if (fs.existsSync(oldImagePath)) {
           try {
@@ -369,12 +369,12 @@ class InsumoService {
     console.log(insumos);
     if (insumos.length !== ids.length) {
       const notFoundIds = ids.filter(
-        (id) => !insumos.some((insumo) => insumo.id_insumo === id)
+        (id) => !insumos.some((insumo) => insumo.id_insumo === id),
       );
       throw new Error(
         `Los siguientes insumos no fueron encontrados: ${notFoundIds.join(
-          ", "
-        )}`
+          ", ",
+        )}`,
       );
     }
 
