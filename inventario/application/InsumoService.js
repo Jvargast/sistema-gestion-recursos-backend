@@ -307,9 +307,16 @@ class InsumoService {
 
   async createInsumo(data) {
     const { ...insumoData } = data;
+    if (insumoData.codigo_barra === "") {
+      insumoData.codigo_barra = null;
+    }
+
     const tipo = await TipoInsumoService.getTipoById(insumoData.id_tipo_insumo);
+
     const nuevoInsumo = await InsumoRepository.create(insumoData);
+
     const insumoLimpio = nuevoInsumo.dataValues || nuevoInsumo;
+
     return {
       ...insumoLimpio,
       TipoInsumo: tipo,
