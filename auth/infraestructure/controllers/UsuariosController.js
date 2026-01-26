@@ -2,7 +2,6 @@ import UsuariosService from "../../application/UsuariosService.js";
 
 class UsuarioController {
   /**
-   * Crear un nuevo usuario.
    * @param {Request} req - Solicitud HTTP.
    * @param {Response} res - Respuesta HTTP.
    */
@@ -65,7 +64,6 @@ class UsuarioController {
   }
 
   /**
-   * Obtener todos los usuarios.
    * @param {Request} req - Solicitud HTTP.
    * @param {Response} res - Respuesta HTTP.
    */
@@ -121,7 +119,6 @@ class UsuarioController {
   }
 
   /**
-   * Obtener un usuario por su RUT.
    * @param {Request} req - Solicitud HTTP.
    * @param {Response} res - Respuesta HTTP.
    */
@@ -141,7 +138,6 @@ class UsuarioController {
   }
 
   /**
-   * Actualizar un usuario por su RUT.
    * @param {Request} req - Solicitud HTTP.
    * @param {Response} res - Respuesta HTTP.
    */
@@ -157,7 +153,6 @@ class UsuarioController {
   }
 
   /**
-   * Desactivar un usuario (marcar como inactivo).
    * @param {Request} req - Solicitud HTTP.
    * @param {Response} res - Respuesta HTTP.
    */
@@ -175,7 +170,6 @@ class UsuarioController {
   }
 
   /**
-   * Cambiar contraseña
    * @param {Request} req - Solicitud HTTP.
    * @param {Response} res - Respuesta HTTP.
    */
@@ -223,19 +217,14 @@ class UsuarioController {
   }
   async getOwnProfile(req, res) {
     try {
-      // Obtener el ID del usuario desde el token
-      const rut = req.user?.id; // Asegúrate de que `authenticate` pone el ID en `req.user`
+      const rut = req.user?.id;
       if (!rut) {
         return res.status(400).json({ message: "Usuario no autenticado." });
       }
-
-      // Buscar los datos del usuario en la base de datos
       const usuario = await UsuariosService.getUsuarioByRut(rut);
       if (!usuario) {
         return res.status(404).json({ message: "Usuario no encontrado." });
       }
-
-      // Retornar los datos del usuario
       return res
         .status(200)
         .json({ message: "Perfil obtenido con éxito.", data: usuario });

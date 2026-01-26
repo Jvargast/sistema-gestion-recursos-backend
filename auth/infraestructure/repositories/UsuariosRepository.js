@@ -11,7 +11,7 @@ import Caja from "../../../ventas/domain/models/Caja.js";
 class UsuarioRepository extends IUsuariosRepository {
   async findByRut(rut) {
     return await Usuario.findOne({
-      where: { rut, activo: true },
+      where: { rut },
       include: [
         {
           model: Roles,
