@@ -265,8 +265,10 @@ jobs:
 
             echo ">>> build backend ${BACKEND_VERSION}..."
             compose build --pull backend
-
+            
             echo ">>> deploy backend ${BACKEND_VERSION}..."
+            echo ">>> remove existing backend container if needed..."
+            docker rm -f aguasvalentino-backend 2>/dev/null || true
             compose up -d --no-deps --remove-orphans backend
 
             echo ">>> waiting backend healthcheck..."
