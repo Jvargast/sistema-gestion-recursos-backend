@@ -3,7 +3,9 @@ name: aguasvalentino-backend
 services:
   backend:
     image: aguasvalentino-backend:${BACKEND_VERSION:-local}
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: aguasvalentino-backend
     restart: unless-stopped
     init: true
@@ -22,12 +24,14 @@ services:
       test:
         [
           "CMD-SHELL",
-          "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || 8080) + '/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+          "node -e \"fetch('http://127.0.0.1:' + (process.env.PORT || 8080) +
+            '/').then(r => process.exit(r.ok ? 0 : 1)).catch(() =>
+            process.exit(1))\"",
         ]
       interval: 30s
       timeout: 5s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 60s
     logging:
       driver: json-file
       options:

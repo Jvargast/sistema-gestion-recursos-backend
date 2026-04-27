@@ -3,28 +3,33 @@ name: Deploy Backend to EC2
 on:
   push:
     branches: [ "master" ]
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "Dockerfile"
+      - "compose.yaml"
+      - "docker-compose.yml"
+      - ".github/workflows/deploy-backend.yml"
+
   workflow_dispatch:
     inputs:
       release_type:
         description: "Tipo de versionamiento para este lanzamiento"
-        required: false
-        default: "auto"
+        required: true
+        default: "patch"
         type: choice
         options:
-          - auto
           - patch
           - minor
           - major
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: backend-production
   cancel-in-progress: false
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
   validate:
@@ -32,10 +37,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
@@ -43,170 +48,95 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test
+        run: npm test --if-present
+
+      - name: Build app
+        run: npm run build --if-present
+
       - name: Build Docker image
         run: docker build -t aguasvalentino-backend:${{ github.sha }} .
 
   release:
     runs-on: ubuntu-latest
     needs: validate
+
+    permissions:
+      contents: write
+
     outputs:
       release_tag: ${{ steps.version.outputs.release_tag }}
-      release_type: ${{ steps.version.outputs.release_type }}
       release_version: ${{ steps.version.outputs.release_version }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
 
       - name: Determine release version
         id: version
         env:
-          RELEASE_TYPE_INPUT: ${{ inputs.release_type || 'auto' }}
+          RELEASE_TYPE_INPUT: ${{ inputs.release_type || 'patch' }}
         run: |
           set -euo pipefail
+
           git fetch --tags --force
 
-          node <<'NODE' >> "$GITHUB_OUTPUT"
-          const { execSync } = require("node:child_process");
-          const fs = require("node:fs");
+          latest_tag="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sort -V | tail -n 1)"
 
-          const releaseTypeInput = process.env.RELEASE_TYPE_INPUT || "auto";
-          const explicitReleaseType = ["major", "minor", "patch"].includes(releaseTypeInput);
+          if [ -z "$latest_tag" ]; then
+            current_version="0.0.0"
+          else
+            current_version="${latest_tag#v}"
+          fi
 
-          const exec = (command, fallback = "") => {
-            try {
-              return execSync(command, {
-                encoding: "utf8",
-                stdio: ["ignore", "pipe", "ignore"],
-              }).trim();
-            } catch (_error) {
-              return fallback;
-            }
-          };
+          IFS='.' read -r major minor patch <<< "$current_version"
 
-          const parseVersion = (value) => {
-            const match = String(value || "").match(/^v?(\d+)\.(\d+)\.(\d+)$/);
-            if (!match) return null;
-            return {
-              major: Number(match[1]),
-              minor: Number(match[2]),
-              patch: Number(match[3]),
-            };
-          };
+          case "$RELEASE_TYPE_INPUT" in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+            *)
+              echo "Invalid release type: $RELEASE_TYPE_INPUT"
+              exit 1
+              ;;
+          esac
 
-          const compareVersions = (a, b) =>
-            a.major - b.major || a.minor - b.minor || a.patch - b.patch;
+          release_version="${major}.${minor}.${patch}"
+          release_tag="v${release_version}"
 
-          const formatVersion = (version) =>
-            `${version.major}.${version.minor}.${version.patch}`;
-
-          const incrementVersion = (version, releaseType) => {
-            if (releaseType === "major") {
-              return { major: version.major + 1, minor: 0, patch: 0 };
-            }
-            if (releaseType === "minor") {
-              return { major: version.major, minor: version.minor + 1, patch: 0 };
-            }
-            return { major: version.major, minor: version.minor, patch: version.patch + 1 };
-          };
-
-          const tags = exec("git tag --list 'v[0-9]*.[0-9]*.[0-9]*'")
-            .split(/\r?\n/)
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-            .filter((tag) => parseVersion(tag))
-            .sort((a, b) => compareVersions(parseVersion(b), parseVersion(a)));
-
-          const headTags = exec("git tag --points-at HEAD --list 'v[0-9]*.[0-9]*.[0-9]*'")
-            .split(/\r?\n/)
-            .map((tag) => tag.trim())
-            .filter(Boolean)
-            .filter((tag) => parseVersion(tag))
-            .sort((a, b) => compareVersions(parseVersion(b), parseVersion(a)));
-
-          if (headTags.length > 0) {
-            const releaseTag = headTags[0];
-            const releaseVersion = formatVersion(parseVersion(releaseTag));
-            console.log("release_type=existing");
-            console.log(`release_version=${releaseVersion}`);
-            console.log(`release_tag=${releaseTag}`);
-            process.exit(0);
-          }
-
-          const latestTag = tags[0] || "";
-          const latestVersion = parseVersion(latestTag);
-          const packageVersion = parseVersion(
-            JSON.parse(fs.readFileSync("package.json", "utf8")).version
-          );
-
-          let releaseType = releaseTypeInput;
-          if (!explicitReleaseType) {
-            const range = latestTag ? `${latestTag}..HEAD` : "HEAD";
-            const messages = exec(`git log ${range} --format=%B`);
-
-            if (/BREAKING CHANGE|^[a-zA-Z]+(?:\([^)]+\))?!:/m.test(messages)) {
-              releaseType = "major";
-            } else if (/^(feat|feature)(?:\([^)]+\))?:/mi.test(messages) || /\bfeature\b/i.test(messages)) {
-              releaseType = "minor";
-            } else {
-              releaseType = "patch";
-            }
-          }
-
-          const baseVersion =
-            latestVersion && packageVersion
-              ? compareVersions(packageVersion, latestVersion) > 0
-                ? packageVersion
-                : latestVersion
-              : packageVersion || latestVersion || { major: 0, minor: 0, patch: 0 };
-
-          const packageTag = packageVersion ? `v${formatVersion(packageVersion)}` : null;
-          const packageVersionIsAhead =
-            !explicitReleaseType &&
-            packageVersion &&
-            (!latestVersion || compareVersions(packageVersion, latestVersion) > 0) &&
-            !tags.includes(packageTag);
-
-          const nextVersion = packageVersionIsAhead
-            ? packageVersion
-            : incrementVersion(baseVersion, releaseType);
-
-          const releaseVersion = formatVersion(nextVersion);
-          const releaseTag = `v${releaseVersion}`;
-
-          console.log(`release_type=${releaseType}`);
-          console.log(`release_version=${releaseVersion}`);
-          console.log(`release_tag=${releaseTag}`);
-          NODE
+          echo "release_version=${release_version}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
 
       - name: Create release tag
         env:
           RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
-          RELEASE_TYPE: ${{ steps.version.outputs.release_type }}
         run: |
           set -euo pipefail
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if git rev-parse --verify "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
-            tagged_sha="$(git rev-list -n 1 "${RELEASE_TAG}")"
-            if [ "${tagged_sha}" != "${GITHUB_SHA}" ]; then
-              echo "Tag ${RELEASE_TAG} already exists on ${tagged_sha}, not ${GITHUB_SHA}."
-              exit 1
-            fi
-            echo "Tag ${RELEASE_TAG} already exists for this commit."
-          else
-            git tag -a "${RELEASE_TAG}" "${GITHUB_SHA}" -m "Release ${RELEASE_TAG} (${RELEASE_TYPE})"
-            git push origin "${RELEASE_TAG}"
+          if git rev-parse "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Tag $RELEASE_TAG already exists."
+            exit 1
           fi
+
+          git tag -a "$RELEASE_TAG" "$GITHUB_SHA" -m "Release $RELEASE_TAG"
+          git push origin "$RELEASE_TAG"
 
   deploy:
     runs-on: ubuntu-latest
@@ -215,9 +145,6 @@ jobs:
       - release
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
       - name: Deploy over SSH to EC2
         uses: appleboy/ssh-action@v1.2.5
         with:
@@ -226,7 +153,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            set -eu
+            set -euo pipefail
 
             compose() {
               if docker compose version >/dev/null 2>&1; then
@@ -234,8 +161,8 @@ jobs:
               elif command -v docker-compose >/dev/null 2>&1; then
                 docker-compose "$@"
               else
-                echo "Docker Compose is required. Install Docker Compose v2 plugin or docker-compose."
-                  exit 1
+                echo "Docker Compose is required."
+                exit 1
               fi
             }
 
@@ -243,41 +170,56 @@ jobs:
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
 
-            cd ${{ secrets.PROJECT_PATH }}
+            cd "${{ secrets.PROJECT_PATH }}"
 
-            for compose_file in compose.yaml docker-compose.yml; do
-              if [ -f "${compose_file}" ] && ! git ls-files --error-unmatch "${compose_file}" >/dev/null 2>&1; then
-                echo ">>> backup untracked ${compose_file}..."
-                cp "${compose_file}" "${compose_file}.backup-$(date +%Y%m%d%H%M%S)"
-                rm "${compose_file}"
-              fi
-            done
-
-            echo ">>> fetch repository..."
-            git fetch origin master --tags
-            git reset --hard ${{ github.sha }}
+            echo ">>> docker version:"
+            docker version
 
             echo ">>> docker compose version:"
             compose version
+
+            echo ">>> docker buildx version:"
+            if ! docker buildx version >/dev/null 2>&1; then
+              echo "Docker Buildx is required because BuildKit is enabled."
+              echo "Install docker-buildx-plugin on the EC2 instance."
+              exit 1
+            fi
+            docker buildx version
+
+            echo ">>> docker buildx builder:"
+            docker buildx inspect >/dev/null 2>&1 || docker buildx create --use
+            docker buildx inspect --bootstrap
+
+            echo ">>> saving current backend image for rollback..."
+            previous_image="$(docker inspect --format='{{.Config.Image}}' aguasvalentino-backend 2>/dev/null || true)"
+            previous_version=""
+
+            if [ -n "$previous_image" ] && echo "$previous_image" | grep -q ':'; then
+              previous_version="${previous_image##*:}"
+            fi
+
+            echo ">>> fetch repository..."
+            git fetch origin master --tags
+            git reset --hard "${{ github.sha }}"
 
             echo ">>> docker disk usage before deploy:"
             docker system df
 
             echo ">>> build backend ${BACKEND_VERSION}..."
             compose build --pull backend
-            
+
             echo ">>> deploy backend ${BACKEND_VERSION}..."
-            echo ">>> remove existing backend container if needed..."
-            docker rm -f aguasvalentino-backend 2>/dev/null || true
-            compose up -d --no-deps --remove-orphans backend
+            compose up -d --no-deps backend
 
             echo ">>> waiting backend healthcheck..."
             attempt=0
-            while [ "${attempt}" -lt 30 ]; do
+            health_status="starting"
+
+            while [ "$attempt" -lt 30 ]; do
               health_status="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' aguasvalentino-backend 2>/dev/null || echo missing)"
               echo "health=${health_status}"
 
-              if [ "${health_status}" = "healthy" ]; then
+              if [ "$health_status" = "healthy" ]; then
                 break
               fi
 
@@ -285,9 +227,42 @@ jobs:
               sleep 5
             done
 
-            if [ "${health_status}" != "healthy" ]; then
+            if [ "$health_status" != "healthy" ]; then
               echo "Backend did not become healthy."
               docker logs --tail 120 aguasvalentino-backend || true
+
+              if [ -n "$previous_version" ]; then
+                echo ">>> rollback to previous version: $previous_version"
+
+                export BACKEND_VERSION="$previous_version"
+                compose up -d --no-deps backend
+
+                echo ">>> waiting rollback healthcheck..."
+                rollback_attempt=0
+                rollback_health="starting"
+
+                while [ "$rollback_attempt" -lt 30 ]; do
+                  rollback_health="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' aguasvalentino-backend 2>/dev/null || echo missing)"
+                  echo "rollback_health=${rollback_health}"
+
+                  if [ "$rollback_health" = "healthy" ]; then
+                    break
+                  fi
+
+                  rollback_attempt=$((rollback_attempt + 1))
+                  sleep 5
+                done
+
+                if [ "$rollback_health" != "healthy" ]; then
+                  echo "Rollback did not become healthy."
+                  docker logs --tail 120 aguasvalentino-backend || true
+                else
+                  echo "Rollback executed successfully."
+                fi
+              else
+                echo "No previous version available for rollback."
+              fi
+
               exit 1
             fi
 
@@ -297,18 +272,8 @@ jobs:
             echo ">>> cleanup stopped containers..."
             docker container prune -f --filter "until=24h"
 
-            echo ">>> cleanup old backend images..."
-            current_image_id="$(docker inspect --format='{{.Image}}' aguasvalentino-backend 2>/dev/null || true)"
-            docker image ls aguasvalentino-backend --format '{{.Repository}}:{{.Tag}}' | while read -r image_ref; do
-              image_id="$(docker image inspect --format='{{.Id}}' "${image_ref}" 2>/dev/null || true)"
-              if [ -n "${image_id}" ] && [ "${image_id}" != "${current_image_id}" ]; then
-                docker image rm "${image_ref}" >/dev/null 2>&1 || true
-              fi
-            done
-
-            echo ">>> cleanup unused docker layers and build cache..."
+            echo ">>> cleanup unused docker images..."
             docker image prune -f
-            docker builder prune -af
 
             echo ">>> docker disk usage after cleanup:"
             docker system df
