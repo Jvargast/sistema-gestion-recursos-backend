@@ -229,11 +229,14 @@ jobs:
             set -eu
 
             compose() {
-              if ! docker compose version >/dev/null 2>&1; then
-                echo "Docker Compose v2 plugin is required. Install/update Docker Engine with the compose plugin."
-                exit 1
+              if docker compose version >/dev/null 2>&1; then
+                docker compose "$@"
+              elif command -v docker-compose >/dev/null 2>&1; then
+                docker-compose "$@"
+              else
+                echo "Docker Compose is required. Install Docker Compose v2 plugin or docker-compose."
+                  exit 1
               fi
-              docker compose "$@"
             }
 
             export BACKEND_VERSION="${{ needs.release.outputs.release_tag }}"
@@ -255,7 +258,7 @@ jobs:
             git reset --hard ${{ github.sha }}
 
             echo ">>> docker compose version:"
-            docker compose version
+            compose version
 
             echo ">>> docker disk usage before deploy:"
             docker system df
