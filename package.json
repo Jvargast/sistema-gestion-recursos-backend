@@ -8,7 +8,9 @@
     "dev": "NODE_ENV=development nodemon index.js",
     "start": "NODE_ENV=production node index.js",
     "populate": "NODE_ENV=production node database/populate.js",
-    "test": "node --test",
+    "test": "npm run test:unit",
+    "test:unit": "NODE_ENV=test node --test test/unit/**/*.test.js",
+    "test:integration": "NODE_ENV=test node --test test/integration/**/*.test.js",
     "reset:local": "NODE_ENV=development CONFIRM_RESET=YES node database/scripts/resetDbWithBackup.js",
     "reset:prod": "NODE_ENV=production CONFIRM_RESET=YES node database/scripts/resetDbWithBackup.js"
   },

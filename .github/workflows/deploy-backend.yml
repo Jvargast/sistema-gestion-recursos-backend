@@ -53,6 +53,9 @@ jobs:
 
       - name: Test
         run: npm test --if-present
+        env:
+          NODE_ENV: test
+          CI: true
 
       - name: Build app
         run: npm run build --if-present
