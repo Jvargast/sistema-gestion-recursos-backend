@@ -4,13 +4,13 @@ Backend del sistema ERP de AguasValentino. Provee APIs REST y WebSockets para ge
 
 ## ⚙️ Stack tecnológico
 
-- **Node.js** (v18/20)
+- **Node.js** (v24+)
 - **Express** como framework HTTP
 - **Sequelize** como ORM
 - **PostgreSQL** (RDS en producción)
 - **JWT** para autenticación
 - **Socket.IO** para eventos en tiempo real
-- **Docker + Docker Compose** para despliegue
+- **Docker + Docker Compose v2** para despliegue
 
 ## 🏗️ Arquitectura general
 
@@ -58,6 +58,17 @@ npm run start
 
 ```bash
 git pull origin master
-docker-compose build backend
-docker-compose up -d backend
+BACKEND_VERSION=vX.Y.Z docker compose build --pull backend
+BACKEND_VERSION=vX.Y.Z docker compose up -d --no-deps --remove-orphans backend
 ```
+
+## 🚀 CI/CD y versionamiento
+
+El despliegue productivo se ejecuta desde `.github/workflows/deploy-backend.yml` al hacer push a `master` o manualmente con `workflow_dispatch`.
+
+- Usa Node.js 24 en GitHub Actions y `node:24-alpine` en Docker.
+- Valida instalación con `npm ci` y build de Docker antes de desplegar.
+- Crea un tag semver `vX.Y.Z` por lanzamiento.
+- En modo automático, `feat:` / `feature:` genera minor, `BREAKING CHANGE` genera major y el resto genera patch.
+- Despliega en EC2 con `docker compose` v2 y `compose.yaml`.
+- Limpia contenedores detenidos, imágenes antiguas del backend, capas dangling y build cache no usado después de confirmar healthcheck.

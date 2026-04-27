@@ -1,5 +1,8 @@
+name: aguasvalentino-backend
+
 services:
   backend:
+    image: aguasvalentino-backend:${BACKEND_VERSION:-local}
     build: .
     container_name: aguasvalentino-backend
     restart: unless-stopped
@@ -9,6 +12,10 @@ services:
     environment:
       NODE_ENV: production
       TZ: America/Santiago
+      APP_VERSION: ${BACKEND_VERSION:-local}
+    labels:
+      org.opencontainers.image.title: aguasvalentino-backend
+      org.opencontainers.image.version: ${BACKEND_VERSION:-local}
     ports:
       - "8080:8080"
     healthcheck:

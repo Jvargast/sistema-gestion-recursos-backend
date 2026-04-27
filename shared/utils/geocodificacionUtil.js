@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 async function obtenerCoordenadasDesdeDireccion(direccion) {
   try {
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
