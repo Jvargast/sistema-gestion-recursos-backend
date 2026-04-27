@@ -1,4 +1,5 @@
 import Queue from "bull";
+import VentasEstadisticasService from "../VentasEstadisticasService.js";
 
 const estadisticasQueue = new Queue("calcularEstadisticas", {
   redis: {
@@ -10,11 +11,10 @@ const estadisticasQueue = new Queue("calcularEstadisticas", {
 estadisticasQueue.process(async (job) => {
   const { year } = job.data;
   console.log(`Procesando estadísticas para el año ${year}`);
-  const VentasEstadisticasService = require("../services/VentasEstadisticasService.js");
   return await VentasEstadisticasService.calcularEstadisticasPorAno(year);
 });
 
-estadisticasQueue.on("completed", (job, result) => {
+estadisticasQueue.on("completed", (job) => {
   console.log(`Estadísticas para el año ${job.data.year} calculadas con éxito.`);
 });
 

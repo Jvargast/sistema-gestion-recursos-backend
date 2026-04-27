@@ -203,6 +203,9 @@ class UsuarioRepository extends IUsuariosRepository {
         "email",
         "rolId",
         "id_sucursal",
+        "activo",
+        "tipo_cuenta",
+        "fecha_expiracion",
       ],
       include: [
         {

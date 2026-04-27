@@ -39,10 +39,9 @@ class PermisosService {
   }
 
   async findAllPermisos(filters = {}, options) {
-    const allowedFields = ["id"];
-    const where = createFilter(filters, allowedFields);
+    const where = createFilter(filters, { intFields: ["id"] });
     if (options.search) {
-      where[Op.or] = [{ nombre: { [Op.like]: `%${options.search}%` } }];
+      where[Op.or] = [{ nombre: { [Op.iLike]: `%${options.search}%` } }];
     }
     const include = [
       {

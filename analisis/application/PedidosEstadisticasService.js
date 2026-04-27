@@ -6,6 +6,7 @@ import {
   convertirALaUtc,
   convertirFechaLocal,
 } from "../../shared/utils/fechaUtils.js";
+import { estadosInvalidosPedido } from "../../shared/utils/estadoUtils.js";
 
 class PedidosEstadisticasService {
   async generarEstadisticasPorDia(fecha) {
@@ -27,6 +28,9 @@ class PedidosEstadisticasService {
       where: {
         fecha_pedido: {
           [Op.between]: [inicioDia, finDia],
+        },
+        id_estado_pedido: {
+          [Op.notIn]: estadosInvalidosPedido,
         },
       },
       attributes: [
@@ -53,13 +57,6 @@ class PedidosEstadisticasService {
         const monto = parseFloat(p.monto_total);
         const idSucursal = p.id_sucursal ? Number(p.id_sucursal) : null;
 
-        const yaExiste = await PedidosEstadisticasRepository.findByClaveDiaria({
-          fecha: fechaStr,
-          estado_pago: estadoPago,
-          id_estado_pedido: estadoPedidoId,
-          id_sucursal: idSucursal,
-        });
-
         const data = {
           fecha: fechaChile.format("YYYY-MM-DD"),
           mes,
@@ -76,14 +73,13 @@ class PedidosEstadisticasService {
           monto_total: monto,
         };
 
-        if (yaExiste) {
-          return await PedidosEstadisticasRepository.updateById(
-            yaExiste.id,
-            data
-          );
-        } else {
-          return await PedidosEstadisticasRepository.create(data);
-        }
+        return await PedidosEstadisticasRepository.saveByKey({
+          fecha: fechaStr,
+          estado_pago: estadoPago,
+          id_estado_pedido: estadoPedidoId,
+          id_sucursal: idSucursal,
+          data,
+        });
       })
     );
 
@@ -114,19 +110,33 @@ class PedidosEstadisticasService {
 
     let total = 0;
     const detalles = [];
+    const estadoIds = [
+      ...new Set(
+        registros
+          .map((registro) => Number(registro.id_estado_pedido))
+          .filter(Number.isFinite)
+      ),
+    ];
+    const estados = await Promise.all(
+      estadoIds.map((id) => EstadoVentaRepository.findById(id))
+    );
+    const estadoMap = new Map(
+      estados
+        .filter(Boolean)
+        .map((estado) => [estado.id_estado_venta, estado.nombre_estado])
+    );
 
     for (const r of registros) {
       const cantidad = parseInt(r.total_pedidos || 0);
       total += cantidad;
 
-      const estado = await EstadoVentaRepository.findById(r.id_estado_pedido);
-
       detalles.push({
-        estado_pedido: estado.nombre_estado,
+        estado_pedido:
+          estadoMap.get(Number(r.id_estado_pedido)) || "Estado desconocido",
         estado_pago: r.estado_pago,
         cantidad,
         pedidos_pagados: r.pedidos_pagados,
-        monto_total: parseFloat(r.monto_total),
+        monto_total: parseFloat(r.monto_total || 0),
       });
     }
 

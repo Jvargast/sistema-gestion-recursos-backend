@@ -8,8 +8,88 @@ import {
   convertirALaUtc,
   convertirFechaLocal,
 } from "../../shared/utils/fechaUtils.js";
+import { getWhereEstadoVentaValido } from "../../shared/utils/estadoUtils.js";
 
 class ProductoEstadisticasService {
+  buildVentaInclude(inicioDia, finDia) {
+    return [
+      {
+        model: Venta,
+        as: "venta",
+        where: {
+          fecha: { [Op.between]: [inicioDia, finDia] },
+          ...getWhereEstadoVentaValido(),
+        },
+        attributes: [],
+      },
+    ];
+  }
+
+  async loadItemNameMaps(registros) {
+    const productoIds = [
+      ...new Set(
+        registros
+          .map((registro) => registro.id_producto)
+          .filter((id) => id != null)
+          .map(Number)
+      ),
+    ];
+    const insumoIds = [
+      ...new Set(
+        registros
+          .map((registro) => registro.id_insumo)
+          .filter((id) => id != null)
+          .map(Number)
+      ),
+    ];
+
+    const [productos, insumos] = await Promise.all([
+      productoIds.length
+        ? Producto.findAll({
+            where: { id_producto: { [Op.in]: productoIds } },
+            attributes: ["id_producto", "nombre_producto"],
+            raw: true,
+          })
+        : [],
+      insumoIds.length
+        ? Insumo.findAll({
+            where: { id_insumo: { [Op.in]: insumoIds } },
+            attributes: ["id_insumo", "nombre_insumo"],
+            raw: true,
+          })
+        : [],
+    ]);
+
+    return {
+      productoMap: new Map(
+        productos.map((producto) => [
+          Number(producto.id_producto),
+          producto.nombre_producto,
+        ])
+      ),
+      insumoMap: new Map(
+        insumos.map((insumo) => [Number(insumo.id_insumo), insumo.nombre_insumo])
+      ),
+    };
+  }
+
+  resolveItemName(registro, maps) {
+    if (registro.id_producto != null) {
+      return (
+        maps.productoMap.get(Number(registro.id_producto)) ||
+        "Producto Desconocido"
+      );
+    }
+
+    if (registro.id_insumo != null) {
+      return (
+        maps.insumoMap.get(Number(registro.id_insumo)) || "Insumo Desconocido"
+      );
+    }
+
+    return "Desconocido";
+  }
+
   async generarEstadisticasPorDia(fechaUtcIso) {
     const fechaChile = convertirFechaLocal(fechaUtcIso);
 
@@ -20,14 +100,7 @@ class ProductoEstadisticasService {
     const anio = fechaChile.year();
 
     const detallesProductos = await DetalleVenta.findAll({
-      include: [
-        {
-          model: Venta,
-          as: "venta",
-          where: { fecha: { [Op.between]: [inicioDia, finDia] } },
-          attributes: [], // no duplicar columnas
-        },
-      ],
+      include: this.buildVentaInclude(inicioDia, finDia),
       where: { id_producto: { [Op.ne]: null }, id_insumo: null },
       attributes: [
         [col("venta.id_sucursal"), "id_sucursal"],
@@ -40,14 +113,7 @@ class ProductoEstadisticasService {
     });
 
     const detallesInsumos = await DetalleVenta.findAll({
-      include: [
-        {
-          model: Venta,
-          as: "venta",
-          where: { fecha: { [Op.between]: [inicioDia, finDia] } },
-          attributes: [],
-        },
-      ],
+      include: this.buildVentaInclude(inicioDia, finDia),
       where: { id_insumo: { [Op.ne]: null } },
       attributes: [
         [col("venta.id_sucursal"), "id_sucursal"],
@@ -64,13 +130,6 @@ class ProductoEstadisticasService {
     for (const d of detallesProductos) {
       const sucId = d.id_sucursal != null ? Number(d.id_sucursal) : null;
 
-      const existente =
-        await ProductosEstadisticasRepository.findByFechaYProducto(
-          fechaStr,
-          d.id_producto,
-          { id_sucursal: sucId }
-        );
-
       const data = {
         id_producto: d.id_producto,
         id_insumo: null,
@@ -83,21 +142,18 @@ class ProductoEstadisticasService {
       };
 
       registros.push(
-        existente
-          ? await ProductosEstadisticasRepository.updateById(existente.id, data)
-          : await ProductosEstadisticasRepository.create(data)
+        await ProductosEstadisticasRepository.saveByKey({
+          fecha: fechaStr,
+          id_producto: d.id_producto,
+          id_insumo: null,
+          id_sucursal: sucId,
+          data,
+        })
       );
     }
 
     for (const d of detallesInsumos) {
       const sucId = d.id_sucursal != null ? Number(d.id_sucursal) : null;
-
-      const existente =
-        await ProductosEstadisticasRepository.findByFechaYInsumo(
-          fechaStr,
-          d.id_insumo,
-          { id_sucursal: sucId }
-        );
 
       const data = {
         id_producto: null,
@@ -111,9 +167,13 @@ class ProductoEstadisticasService {
       };
 
       registros.push(
-        existente
-          ? await ProductosEstadisticasRepository.updateById(existente.id, data)
-          : await ProductosEstadisticasRepository.create(data)
+        await ProductosEstadisticasRepository.saveByKey({
+          fecha: fechaStr,
+          id_producto: null,
+          id_insumo: d.id_insumo,
+          id_sucursal: sucId,
+          data,
+        })
       );
     }
 
@@ -161,22 +221,13 @@ class ProductoEstadisticasService {
     let productoInfo = {
       id_producto: productoTop.id_producto,
       id_insumo: productoTop.id_insumo,
-      cantidad: productoTop.cantidad_vendida,
-      monto_total: productoTop.monto_total,
+      cantidad: Number(productoTop.cantidad_vendida) || 0,
+      monto_total: Number(productoTop.monto_total) || 0,
       nombre: "Sin nombre",
     };
 
-    if (productoTop.id_producto) {
-      const producto = await Producto.findByPk(productoTop.id_producto);
-      if (producto) {
-        productoInfo.nombre = producto.nombre_producto;
-      }
-    } else if (productoTop.id_insumo) {
-      const insumo = await Insumo.findByPk(productoTop.id_insumo);
-      if (insumo) {
-        productoInfo.nombre = insumo.nombre_insumo;
-      }
-    }
+    const maps = await this.loadItemNameMaps([productoTop]);
+    productoInfo.nombre = this.resolveItemName(productoTop, maps);
 
     return {
       fecha,
@@ -193,23 +244,16 @@ class ProductoEstadisticasService {
     if (!registros || registros.length === 0) {
       return [];
     }
+    const maps = await this.loadItemNameMaps(registros);
     const productosAgrupados = {};
 
     for (const reg of registros) {
-      let nombre = "Desconocido";
-
-      if (reg.id_producto) {
-        const producto = await Producto.findByPk(reg.id_producto);
-        nombre = producto?.nombre_producto || "Producto Desconocido";
-      } else if (reg.id_insumo) {
-        const insumo = await Insumo.findByPk(reg.id_insumo);
-        nombre = insumo?.nombre_insumo || "Insumo Desconocido";
-      }
+      const nombre = this.resolveItemName(reg, maps);
 
       if (!productosAgrupados[nombre]) {
         productosAgrupados[nombre] = 0;
       }
-      productosAgrupados[nombre] += reg.cantidad_vendida;
+      productosAgrupados[nombre] += Number(reg.cantidad_vendida || 0);
     }
 
     return Object.entries(productosAgrupados).map(([name, value]) => ({

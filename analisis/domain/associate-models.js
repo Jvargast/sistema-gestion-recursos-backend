@@ -1,4 +1,5 @@
 import Usuarios from "../../auth/domain/models/Usuarios.js";
+import Insumo from "../../inventario/domain/models/Insumo.js";
 import Producto from "../../inventario/domain/models/Producto.js";
 import EntregasEstadisticas from "./models/EntregasEstadisticas.js";
 import ProductosEstadisticas from "./models/ProductoEstadisticas.js";
@@ -16,6 +17,18 @@ function loadAnalysisAssociations() {
   ProductosEstadisticas.belongsTo(Producto, {
     foreignKey: "id_producto",
     as: "producto",
+    onDelete: "SET NULL",
+  });
+
+  Insumo.hasMany(ProductosEstadisticas, {
+    foreignKey: "id_insumo",
+    as: "estadisticasInsumo",
+    onDelete: "SET NULL",
+  });
+
+  ProductosEstadisticas.belongsTo(Insumo, {
+    foreignKey: "id_insumo",
+    as: "insumo",
     onDelete: "SET NULL",
   });
 

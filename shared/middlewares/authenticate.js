@@ -1,11 +1,13 @@
 import jwt from "jsonwebtoken";
-import AuthService from "../../auth/application/AuthService.js"; // Servicio para manejar la lógica relacionada con autenticación
-import UsuariosRepository from "../../auth/infraestructure/repositories/UsuariosRepository.js";
+import AuthService from "../../auth/application/AuthService.js";
 import { getCookieSettings } from "../utils/cookieUtil.js";
 
 const authenticate = async (req, res, next) => {
   try {
-    const token = req.cookies?.authToken;
+    const bearerToken = req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.slice(7)
+      : null;
+    const token = req.cookies?.authToken || bearerToken;
     if (!token) {
       return res.status(401).json({ error: "Token no encontrado" });
     }
@@ -15,7 +17,7 @@ const authenticate = async (req, res, next) => {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
       if (error.name === "TokenExpiredError") {
-        res.clearCookie("authToken");
+        res.clearCookie("authToken", getCookieSettings());
         return res.status(401).json({ error: "Token expirado" });
       }
       return res.status(401).json({ error: "Token inválido" });

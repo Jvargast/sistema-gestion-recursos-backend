@@ -8,6 +8,9 @@ class PedidosEstadisticasController {
   async generar(req, res) {
     try {
       const { fecha } = req.body;
+      if (!fecha) {
+        return res.status(400).json({ error: "Se requiere una fecha válida" });
+      }
       const data = await PedidosEstadisticasService.generarEstadisticasPorDia(
         fecha
       );

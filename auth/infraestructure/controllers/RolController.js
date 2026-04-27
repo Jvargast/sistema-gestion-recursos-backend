@@ -24,7 +24,8 @@ class RolController {
    */
   async updateRole(req, res) {
     const { id } = req.params;
-    const { nombre, descripcion, permisos } = req.body.updatedRole;
+    const payload = req.body.updatedRole || req.body;
+    const { nombre, descripcion, permisos } = payload;
 
     try {
       const updatedRol = await RolesService.updateRol(id, {
@@ -60,7 +61,7 @@ class RolController {
       const filters = req.query;
       let options = {
         page: parseInt(req.query.page, 10) || 1,
-        limit: parseInt(req.query.limit, 20) || 20,
+        limit: parseInt(req.query.limit, 10) || 20,
         search: req.query.search,
       };
       delete filters.limit;

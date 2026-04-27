@@ -8,9 +8,9 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get("/", checkPermissions("auth.empresa.ver"), EmpresaController.getAllEmpresas);
-router.get("/:id" ,checkPermissions("auth.empresa.ver"), EmpresaController.getEmpresaById);
 router.get("/buscar",checkPermissions("auth.empresa.ver"), EmpresaController.getEmpresaByNombre);
 router.get("/usuario/:rutUsuario",checkPermissions("auth.empresa.ver"), EmpresaController.getEmpresaByUsuario);
+router.get("/:id" ,checkPermissions("auth.empresa.ver"), EmpresaController.getEmpresaById);
 router.put("/:id", checkPermissions("auth.empresa.editar"), EmpresaController.updateEmpresa);
 
 export default router;

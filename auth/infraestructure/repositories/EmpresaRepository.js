@@ -1,4 +1,7 @@
+import { Op } from "sequelize";
 import Empresa from "../../domain/models/Empresa.js";
+import Sucursal from "../../domain/models/Sucursal.js";
+import Usuarios from "../../domain/models/Usuarios.js";
 
 class EmpresaRepository {
   async getAllEmpresas() {

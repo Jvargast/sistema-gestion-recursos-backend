@@ -11,65 +11,98 @@ import UserPreferences from "./models/UserPreferences.js";
 import Caja from "../../ventas/domain/models/Caja.js";
 
 function loadAuthAssociations() {
-  // Relación: Un Usuario pertenece a un Rol
+
   Usuarios.belongsTo(Roles, {
     foreignKey: "rolId",
     as: "rol",
-    onDelete: "SET NULL", // Si se elimina el rol, el campo 'rolId' se establece como NULL
+    onDelete: "SET NULL",
     onUpdate: "CASCADE",
   });
   Roles.hasMany(Usuarios, {
     foreignKey: "rolId",
     as: "usuarios",
-    onDelete: "CASCADE", // Si se elimina un rol, elimina los usuarios asociados
+    onDelete: "CASCADE", 
     onUpdate: "CASCADE",
   });
 
-  // Relación: Un Rol tiene muchos RolesPermisos
+
   Roles.hasMany(RolesPermisos, {
     foreignKey: "rolId",
     as: "rolesPermisos",
-    onDelete: "CASCADE", // Si se elimina un rol, elimina las asociaciones en RolesPermisos
+    onDelete: "CASCADE", 
     onUpdate: "CASCADE",
   });
   RolesPermisos.belongsTo(Roles, {
     foreignKey: "rolId",
     as: "rol",
-    onDelete: "CASCADE", // Si se elimina un rol, elimina la relación
+    onDelete: "CASCADE", 
     onUpdate: "CASCADE",
   });
 
-  // Relación: Un RolesPermisos tiene muchos Permisos
+ 
   RolesPermisos.belongsTo(Permisos, {
     foreignKey: "permisoId",
     as: "permiso",
-    onDelete: "CASCADE", // Si se elimina un permiso, elimina la relación
+    onDelete: "CASCADE", 
     onUpdate: "CASCADE",
   });
   Permisos.hasMany(RolesPermisos, {
     foreignKey: "permisoId",
     as: "rolesPermisos",
-    onDelete: "CASCADE", // Si se elimina un permiso, elimina las asociaciones en RolesPermisos
+    onDelete: "CASCADE",
     onUpdate: "CASCADE",
   });
 
-  Usuarios.belongsTo(Empresa, { foreignKey: "id_empresa" });
-  Empresa.hasMany(Usuarios, { foreignKey: "id_empresa" });
+  Usuarios.belongsTo(Empresa, {
+    foreignKey: "id_empresa",
+    as: "Empresa",
+    onDelete: "SET NULL",
+    onUpdate: "CASCADE",
+  });
+  Empresa.hasMany(Usuarios, {
+    foreignKey: "id_empresa",
+    as: "usuarios",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  });
 
-  Usuarios.belongsTo(Sucursal, { foreignKey: "id_sucursal" });
-  Sucursal.hasMany(Usuarios, { foreignKey: "id_sucursal" });
+  Usuarios.belongsTo(Sucursal, {
+    foreignKey: "id_sucursal",
+    as: "Sucursal",
+    onDelete: "SET NULL",
+    onUpdate: "CASCADE",
+  });
+  Sucursal.hasMany(Usuarios, {
+    foreignKey: "id_sucursal",
+    as: "usuarios",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  });
+
+  Sucursal.belongsTo(Empresa, {
+    foreignKey: "id_empresa",
+    as: "empresa",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  });
+  Empresa.hasMany(Sucursal, {
+    foreignKey: "id_empresa",
+    as: "sucursales",
+    onDelete: "CASCADE",
+    onUpdate: "CASCADE",
+  });
   AuditLogs.belongsTo(Usuarios, {
     foreignKey: "userId",
     as: "usuario",
-    onDelete: "SET NULL", // Si se elimina un usuario, el log permanece con userId NULL
+    onDelete: "SET NULL", 
     onUpdate: "CASCADE",
   });
 
-  // Opcional: Un Usuario puede tener muchos AuditLogs
+  
   Usuarios.hasMany(AuditLogs, {
     foreignKey: "userId",
     as: "auditLogs",
-    onDelete: "CASCADE", // Si se elimina un usuario, se eliminan sus logs
+    onDelete: "CASCADE",
     onUpdate: "CASCADE",
   });
 

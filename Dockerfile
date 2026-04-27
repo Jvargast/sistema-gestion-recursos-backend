@@ -1,20 +1,22 @@
-FROM node:18-alpine
+FROM node:22-alpine AS deps
 
-# Establece el directorio de trabajo en el contenedor
 WORKDIR /app
 
-# Copia los archivos de package.json y package-lock.json
 COPY package*.json ./
 
-# Instala las dependencias
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
-# Copia el resto del código de la aplicación
-COPY . .
+FROM node:22-alpine AS runtime
 
-# Expone el puerto en el que la aplicación se ejecuta
-EXPOSE 8080
+WORKDIR /app
 
 ENV NODE_ENV=production
-# Comando para ejecutar la aplicación
-CMD ["npm", "start"]
+
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node . .
+
+EXPOSE 8080
+
+USER node
+
+CMD ["node", "index.js"]

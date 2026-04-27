@@ -4,13 +4,30 @@ import VentasEstadisticasRepository from "../infrastructure/repositories/VentasE
 import sequelize from "../../database/database.js";
 import EstadoVentaRepository from "../../ventas/infrastructure/repositories/EstadoVentaRepository.js";
 import { getWhereEstadoVentaValido } from "../../shared/utils/estadoUtils.js";
-import dayjs from "dayjs";
 import {
   convertirALaUtc,
   convertirFechaLocal,
 } from "../../shared/utils/fechaUtils.js";
 
 class VentasEstadisticasService {
+  getMonthRange(anio, mes) {
+    const year = Number(anio);
+    const month = Number(mes);
+
+    if (!Number.isInteger(year) || !Number.isInteger(month)) {
+      throw new Error("Mes o anio invalido para calcular estadísticas");
+    }
+
+    if (month < 1 || month > 12) {
+      throw new Error("El mes debe estar entre 1 y 12");
+    }
+
+    return {
+      inicioMes: new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0)),
+      finMes: new Date(Date.UTC(year, month, 0, 23, 59, 59, 999)),
+    };
+  }
+
   async generarEstadisticasPorDia(fechaUtcIso) {
     const fechaChile = convertirFechaLocal(fechaUtcIso);
     const inicioDiaUtc = convertirALaUtc(fechaChile.startOf("day")).toDate();
@@ -61,12 +78,10 @@ class VentasEstadisticasService {
           monto_total: parseFloat(v.monto_total) || 0,
         };
 
-        const existente = await VentasEstadisticasRepository.findByKey(
-          whereKey
+        return await VentasEstadisticasRepository.saveByKey(
+          whereKey,
+          payload
         );
-        return existente
-          ? VentasEstadisticasRepository.updateById(existente.id, payload)
-          : VentasEstadisticasRepository.create({ ...whereKey, ...payload });
       })
     );
 
@@ -121,8 +136,8 @@ class VentasEstadisticasService {
         detalles,
       };
     } catch (error) {
-      console.log(error);
-      return error;
+      console.error("Error al obtener KPI de ventas:", error.message);
+      throw error;
     }
   }
   async obtenerResumenSemanal({ id_sucursal } = {}) {
@@ -139,9 +154,9 @@ class VentasEstadisticasService {
       where: {
         fecha: {
           [Op.between]: [inicioSemana, finSemana],
-          ...(id_sucursal ? { id_sucursal } : {}),
         },
         ...getWhereEstadoVentaValido(),
+        ...(id_sucursal ? { id_sucursal } : {}),
       },
       attributes: [
         [sequelize.fn("DATE", sequelize.col("fecha")), "dia"],
@@ -155,16 +170,14 @@ class VentasEstadisticasService {
     return registros;
   }
   async calcularDatosMensuales(anio, mes, { id_sucursal } = {}) {
+    const { inicioMes, finMes } = this.getMonthRange(anio, mes);
     const ventas = await Venta.findAll({
       where: {
         fecha: {
-          [Op.between]: [
-            new Date(`${anio}-${mes}-01`),
-            new Date(`${anio}-${mes}-31`),
-          ],
-          ...getWhereEstadoVentaValido(),
-          ...(id_sucursal ? { id_sucursal } : {}),
+          [Op.between]: [inicioMes, finMes],
         },
+        ...getWhereEstadoVentaValido(),
+        ...(id_sucursal ? { id_sucursal } : {}),
       },
       attributes: [
         [fn("DATE", col("fecha")), "dia"],
@@ -213,7 +226,6 @@ class VentasEstadisticasService {
       raw: true,
     });
 
-    console.log(resultados);
     return resultados;
   }
   async monitorearVentasRecientes() {

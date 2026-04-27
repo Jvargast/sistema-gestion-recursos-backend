@@ -1,4 +1,5 @@
 import { col, fn, Op, where } from "sequelize";
+import sequelize from "../../../database/database.js";
 import VentasEstadisticas from "../../domain/models/VentasEstadisticas.js";
 
 class VentasEstadisticasRepository {
@@ -10,6 +11,37 @@ class VentasEstadisticasRepository {
 
   async create(data) {
     return await VentasEstadisticas.create(data);
+  }
+
+  async saveByKey(key, data) {
+    return await sequelize.transaction(async (transaction) => {
+      const existentes = await VentasEstadisticas.findAll({
+        where: key,
+        order: [["id", "ASC"]],
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (existentes.length === 0) {
+        return await VentasEstadisticas.create(
+          { ...key, ...data },
+          { transaction }
+        );
+      }
+
+      const [principal, ...duplicados] = existentes;
+
+      await principal.update(data, { transaction });
+
+      if (duplicados.length > 0) {
+        await VentasEstadisticas.destroy({
+          where: { id: duplicados.map((registro) => registro.id) },
+          transaction,
+        });
+      }
+
+      return await principal.reload({ transaction });
+    });
   }
 
   async deleteByFecha(fecha) {

@@ -212,7 +212,8 @@ class UsuarioController {
       });
     } catch (error) {
       console.error("Error al actualizar el perfil:", error);
-      return res.status(500).json({ message: "Error interno del servidor." });
+      const status = error.message === "El usuario no existe." ? 404 : 400;
+      return res.status(status).json({ message: error.message });
     }
   }
   async getOwnProfile(req, res) {
@@ -259,8 +260,8 @@ class UsuarioController {
     } catch (error) {
       console.error(error);
       return res
-        .status(500)
-        .json({ error: "Error al actualizar la contraseña." });
+        .status(400)
+        .json({ error: error.message || "Error al actualizar la contraseña." });
     }
   }
 }

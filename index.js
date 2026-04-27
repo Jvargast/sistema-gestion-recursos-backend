@@ -1,5 +1,4 @@
 import express from "express";
-import bodyParser from "body-parser";
 import initializeDatabase from "./database/db-init.js";
 import cors from "cors";
 import morgan from "morgan";
@@ -75,6 +74,13 @@ import GastoRoutes from "./costos/infrastructure/routes/GastoRoutes.js";
 import ReporteDiarioRoutes from "./analisis/infrastructure/routes/ReporteDiarioRoutes.js"
 
 import SearchRoutes from "./busqueda/infrastructure/routes/SearchRoutes.js";
+import authenticate from "./shared/middlewares/authenticate.js";
+import {
+  authLoginLimiter,
+  authRefreshLimiter,
+  productImageUploadLimiter,
+  searchLimiter,
+} from "./shared/security/rateLimitPolicies.js";
 
 /* Configuración */
 const env = process.env.NODE_ENV || "development";
@@ -135,6 +141,7 @@ app.use(cors(corsOptions));
 const server = createServer(app);
 const io = new Server(server, {
   cors: corsOptions,
+  maxHttpBufferSize: Number(process.env.SOCKET_IO_MAX_HTTP_BUFFER_SIZE || 1_000_000),
 });
 WebSocketServer.setupWebSocket(io);
 
@@ -158,13 +165,14 @@ app.use(
 
 // 📝 Logging
 app.use(morgan(env === "production" ? "combined" : "dev"));
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 /* MÓDULO AUTH */
 app.get("/", (req, res) => {
   res.status(200).send("Backend operativo 🚀");
 });
+app.use("/api/auth/login", authLoginLimiter);
+app.use("/api/auth/refresh-token", authRefreshLimiter);
 app.use("/api/usuarios", UsuariosRoutes);
 app.use("/api/auth", AuthRoutes);
 app.use("/api/empresas", EmpresaRoutes);
@@ -188,7 +196,12 @@ app.use("/api/formulas", FormulaProductoRoutes);
 /**
  * Para carga de fotos
  */
-app.use("/api/productos/imagenes", ProductoImageRoutes);
+app.use(
+  "/api/productos/imagenes",
+  authenticate,
+  productImageUploadLimiter,
+  ProductoImageRoutes
+);
 
 /* MÓDULO VENTAS */
 app.use("/api/clientes", ClienteRoutes);
@@ -217,7 +230,7 @@ app.use("/api/agenda-viajes", AgendaViajesRoutes);
 app.use("/api/ventas-chofer", VentaChoferRoutes);
 
 /* MÓDULO SEARCH*/
-app.use("/api/search", SearchRoutes);
+app.use("/api/search", searchLimiter, SearchRoutes);
 
 /* MÓDULO DE PRODUCCIÓN */
 app.use("/api/produccion", ProduccionRoutes);

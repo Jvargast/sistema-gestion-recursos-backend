@@ -4,8 +4,12 @@ import PedidosEstadisticasController from "../controllers/PedidosEstadisticasCon
 
 const router = Router();
 
-router.post("/pedidos/generar",/*  authenticate, */ PedidosEstadisticasController.generar);
-router.get("/pedidos/mes", /* authenticate, */ PedidosEstadisticasController.obtenerPorMes);
-router.get("/pedidos/kpi-hoy", /* authenticate, */ PedidosEstadisticasController.obtenerKpiDelDia);
+router.post("/pedidos/generar", authenticate, PedidosEstadisticasController.generar);
+router.get("/pedidos/mes", authenticate, PedidosEstadisticasController.obtenerPorMes);
+router.get(
+  "/pedidos/kpi-hoy",
+  authenticate,
+  PedidosEstadisticasController.obtenerKpiDelDia
+);
 
 export default router;

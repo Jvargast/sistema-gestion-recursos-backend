@@ -1,7 +1,4 @@
-import VentasEstadisticasService from "./VentasEstadisticasService.js";
-import PedidosEstadisticasService from "./PedidosEstadisticasService.js";
-import ProductoEstadisticasService from "./ProductoEstadisticasService.js";
-
+import { Op } from "sequelize";
 import VentasEstadisticasRepository from "../infrastructure/repositories/VentasEstaditiscasRepository.js";
 import PedidosEstadisticasRepository from "../infrastructure/repositories/PedidosEstadisticasRepository.js";
 import ProductosEstadisticasRepository from "../infrastructure/repositories/ProductosEstadisticasRepository.js";
@@ -14,6 +11,66 @@ import Producto from "../../inventario/domain/models/Producto.js";
 import Insumo from "../../inventario/domain/models/Insumo.js";
 
 class ReporteDiarioService {
+  async loadItemNameMaps(registros) {
+    const productoIds = [
+      ...new Set(
+        registros
+          .map((registro) => registro.id_producto)
+          .filter((id) => id != null)
+          .map(Number)
+      ),
+    ];
+    const insumoIds = [
+      ...new Set(
+        registros
+          .map((registro) => registro.id_insumo)
+          .filter((id) => id != null)
+          .map(Number)
+      ),
+    ];
+
+    const [productos, insumos] = await Promise.all([
+      productoIds.length
+        ? Producto.findAll({
+            where: { id_producto: { [Op.in]: productoIds } },
+            attributes: ["id_producto", "nombre_producto"],
+            raw: true,
+          })
+        : [],
+      insumoIds.length
+        ? Insumo.findAll({
+            where: { id_insumo: { [Op.in]: insumoIds } },
+            attributes: ["id_insumo", "nombre_insumo"],
+            raw: true,
+          })
+        : [],
+    ]);
+
+    return {
+      productoMap: new Map(
+        productos.map((producto) => [
+          Number(producto.id_producto),
+          producto.nombre_producto,
+        ])
+      ),
+      insumoMap: new Map(
+        insumos.map((insumo) => [Number(insumo.id_insumo), insumo.nombre_insumo])
+      ),
+    };
+  }
+
+  resolveItemName(registro, maps) {
+    if (registro.id_producto != null) {
+      return maps.productoMap.get(Number(registro.id_producto)) || null;
+    }
+
+    if (registro.id_insumo != null) {
+      return maps.insumoMap.get(Number(registro.id_insumo)) || null;
+    }
+
+    return null;
+  }
+
   /**
    * @param {Object} params
    * @param {string} params.fecha
@@ -29,12 +86,6 @@ class ReporteDiarioService {
         : undefined;
 
     const filtroSucursal = idSucursalNum ? { id_sucursal: idSucursalNum } : {};
-
-    await Promise.all([
-      VentasEstadisticasService.generarEstadisticasPorDia(fecha),
-      PedidosEstadisticasService.generarEstadisticasPorDia(fecha),
-      ProductoEstadisticasService.generarEstadisticasPorDia(fecha),
-    ]);
 
     const [
       ventasStats,
@@ -82,25 +133,12 @@ class ReporteDiarioService {
     const pagosArr = pagosStats || [];
     const ventasChoferArr = ventasChoferStats || [];
     const entregasArr = entregasStats || [];
+    const itemNameMaps = await this.loadItemNameMaps(productosArr);
 
-    const productosConNombre = await Promise.all(
-      productosArr.map(async (p) => {
-        let nombreItem = null;
-
-        if (p.id_producto) {
-          const prod = await Producto.findByPk(p.id_producto);
-          nombreItem = prod?.nombre_producto || null;
-        } else if (p.id_insumo) {
-          const ins = await Insumo.findByPk(p.id_insumo);
-          nombreItem = ins?.nombre_insumo || null;
-        }
-
-        return {
-          ...p,
-          nombre_item: nombreItem,
-        };
-      })
-    );
+    const productosConNombre = productosArr.map((p) => ({
+      ...p,
+      nombre_item: this.resolveItemName(p, itemNameMaps),
+    }));
 
     const totalVentasMonto = ventasArr.reduce(
       (acc, v) => acc + Number(v.monto_total || 0),
