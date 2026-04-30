@@ -9,7 +9,7 @@ import IUsuariosRepository from "../../domain/repositories/IUsuariosRepository.j
 import Caja from "../../../ventas/domain/models/Caja.js";
 
 class UsuarioRepository extends IUsuariosRepository {
-  async findByRut(rut) {
+  async findByRut(rut, options = {}) {
     return await Usuario.findOne({
       where: { rut },
       include: [
@@ -32,10 +32,11 @@ class UsuarioRepository extends IUsuariosRepository {
           attributes: ["id_sucursal", "nombre"],
         },
       ],
+      ...options,
     });
   }
 
-  async findByRutBasic(rut) {
+  async findByRutBasic(rut, options = {}) {
     return await Usuario.findOne({
       where: { rut, activo: true },
       attributes: ["rut", "nombre", "apellido", "email", "id_sucursal", "activo"],
@@ -46,6 +47,7 @@ class UsuarioRepository extends IUsuariosRepository {
           attributes: ["id_sucursal", "nombre"],
         },
       ],
+      ...options,
     });
   }
 

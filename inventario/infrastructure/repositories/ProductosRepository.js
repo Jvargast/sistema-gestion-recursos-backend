@@ -7,7 +7,7 @@ import Sucursal from "../../../auth/domain/models/Sucursal.js";
 import Insumo from "../../domain/models/Insumo.js";
 
 class ProductoRepository extends IProductoRepository {
-  async findById(id) {
+  async findById(id, options = {}) {
     return await Producto.findByPk(id, {
       include: [
         { model: CategoriaProducto, as: "categoria" },
@@ -36,6 +36,7 @@ class ProductoRepository extends IProductoRepository {
           ],
         },
       ],
+      ...options,
     });
   }
 

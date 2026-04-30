@@ -6,8 +6,8 @@ import { getEstadoCamion } from "../../../shared/utils/estadoCamion.js";
 import Insumo from "../../../inventario/domain/models/Insumo.js";
 
 class InventarioCamionRepository {
-  async create(data) {
-    return await InventarioCamion.create(data);
+  async create(data, options = {}) {
+    return await InventarioCamion.create(data, options);
   }
 
   async findOneProduct(id_camion, id_producto) {
@@ -39,7 +39,7 @@ class InventarioCamionRepository {
     return await InventarioCamion.findAll(condition);
   }
 
-  async findByCamionId(idCamion) {
+  async findByCamionId(idCamion, options = {}) {
     return await InventarioCamion.findAll({
       where: {
         id_camion: idCamion,
@@ -59,16 +59,18 @@ class InventarioCamionRepository {
           attributes: ["id_insumo", "nombre_insumo", "precio"]
         }
       ],
+      ...options,
     });
   }
 
-  async findByProductoAndEstado(id_producto, estado, id_camion) {
+  async findByProductoAndEstado(id_producto, estado, id_camion, options = {}) {
     return await InventarioCamion.findOne({
       where: {
         id_producto,
         estado,
         id_camion,
       },
+      ...options,
     });
   }
   async findAllByCamionAndEstado(id_camion, estado) {
@@ -90,10 +92,10 @@ class InventarioCamionRepository {
     return inventario;
   }
 
-  async updateCantidad(id_camion, id_producto, cantidad) {
+  async updateCantidad(id_camion, id_producto, cantidad, options = {}) {
     return await InventarioCamion.update(
       { cantidad },
-      { where: { id_camion, id_producto } }
+      { where: { id_camion, id_producto }, ...options }
     );
   }
 
@@ -172,21 +174,24 @@ class InventarioCamionRepository {
     }
   }
 
-  async findByCamionAndInsumo(id_camion, id_insumo, estado) {
+  async findByCamionAndInsumo(id_camion, id_insumo, estado, options = {}) {
     return await InventarioCamion.findOne({
       where: { id_camion, id_insumo, estado },
+      ...options,
     });
   }
 
-  async deleteProductInCamion(id_camion, id_producto, estado) {
+  async deleteProductInCamion(id_camion, id_producto, estado, options = {}) {
     return await InventarioCamion.destroy({
       where: { id_camion, id_producto, estado },
+      ...options,
     });
   }
 
-  async deleteInsumoInCamion(id_camion, id_insumo, estado) {
+  async deleteInsumoInCamion(id_camion, id_insumo, estado, options = {}) {
     return await InventarioCamion.destroy({
       where: { id_camion, id_insumo, estado },
+      ...options,
     });
   }
 

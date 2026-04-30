@@ -3,11 +3,11 @@ import Camion from "../../domain/models/Camion.js";
 import InventarioCamion from "../../domain/models/InventarioCamion.js";
 
 class CamionRepository {
-  async create(data) {
-    return await Camion.create(data);
+  async create(data, options = {}) {
+    return await Camion.create(data, options);
   }
 
-  async findById(id) {
+  async findById(id, options = {}) {
     return await Camion.findByPk(id, {
       include: [
         {
@@ -21,6 +21,7 @@ class CamionRepository {
           attributes: ["nombre"],
         },
       ],
+      ...options,
     });
   }
 
@@ -48,12 +49,12 @@ class CamionRepository {
     });
   }
 
-  async update(id, data) {
-    const camion = await Camion.findByPk(id);
+  async update(id, data, options = {}) {
+    const camion = await Camion.findByPk(id, options);
     if (!camion) {
       throw new Error("Camion not found");
     }
-    return await camion.update(data);
+    return await camion.update(data, options);
   }
 
   async delete(id) {

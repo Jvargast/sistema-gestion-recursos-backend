@@ -15,21 +15,20 @@ class ClienteService {
     return cliente;
   }
 
-  async getAllClientes(filters = {}, options) {
-    const allowedFields = [
-      "id_cliente",
-      "rut",
-      "razon_social",
-      "tipo_cliente",
-      "nombre",
-      "apellido",
-      "direccion",
-      "telefono",
-      "email",
-      "activo",
-      "creado_por",
-    ];
-    const where = createFilter(filters, allowedFields);
+  async getAllClientes(filters = {}, options = {}) {
+    const { id_sucursal, ...clienteFilters } = filters ?? {};
+    const where = createFilter(clienteFilters, {
+      intFields: ["id_cliente"],
+      textFields: [
+        "rut",
+        "razon_social",
+        "nombre",
+        "apellido",
+        "direccion",
+        "telefono",
+        "email",
+      ],
+    });
 
     if (options.search) {
       where[Op.or] = [
@@ -50,20 +49,39 @@ class ClienteService {
       where.creado_por = String(filters.creado_por);
     }
 
+    if (typeof filters.tipo_cliente !== "undefined" && filters.tipo_cliente !== "") {
+      where.tipo_cliente = String(filters.tipo_cliente);
+    }
+
+    const idSucursalRaw =
+      typeof id_sucursal === "string" ? id_sucursal.trim() : id_sucursal;
+    const idSucursal =
+      idSucursalRaw !== undefined && idSucursalRaw !== ""
+        ? Number(idSucursalRaw)
+        : null;
+    if (idSucursal !== null && !Number.isFinite(idSucursal)) {
+      throw new Error("id_sucursal inválido.");
+    }
+
     const include = [
       {
         model: SucursalRepository.getModel(),
         as: "Sucursales",
-        attributes: ["id_sucursal", "nombre"],
+        attributes: ["id_sucursal", "nombre", "direccion", "telefono"],
         through: { attributes: [] },
-        ...(filters.id_sucursal
-          ? {
-              where: { id_sucursal: Number(filters.id_sucursal) },
-              required: true,
-            }
-          : { required: false }),
+        required: false,
       },
     ];
+
+    if (idSucursal !== null) {
+      include.push({
+        model: ClienteSucursalRepository.getModel(),
+        as: "ClienteSucursales",
+        attributes: [],
+        where: { id_sucursal: idSucursal },
+        required: true,
+      });
+    }
 
     const result = await paginate(ClienteRepository.getModel(), options, {
       where,

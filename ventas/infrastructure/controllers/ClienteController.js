@@ -45,8 +45,8 @@ class ClienteController {
   async updateCliente(req, res) {
     try {
       const { id } = req.params;
-      console.log("REQ", req.body);
-      const updated = await ClienteService.updateCliente(id, req.body.formData);
+      const payload = req.body?.formData ?? req.body;
+      const updated = await ClienteService.updateCliente(id, payload);
       res
         .status(200)
         .json({ message: "Cliente actualizado correctamente", updated });

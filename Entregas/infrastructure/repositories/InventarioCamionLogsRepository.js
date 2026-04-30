@@ -1,8 +1,8 @@
 import InventarioCamionLogs from "../../domain/models/InventarioCamionLogs.js";
 
 class InventarioCamionLogsRepository {
-  async create(data) {
-    return await InventarioCamionLogs.create(data);
+  async create(data, options = {}) {
+    return await InventarioCamionLogs.create(data, options);
   }
 }
 

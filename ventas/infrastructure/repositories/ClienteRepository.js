@@ -1,25 +1,75 @@
 import SucursalRepository from "../../../auth/infraestructure/repositories/SucursalRepository.js";
 import Cliente from "../../domain/models/Cliente.js";
+import ClienteSucursal from "../../domain/models/ClienteSucursal.js";
 import { Op } from "sequelize";
+
+const SUCURSAL_ATTRIBUTES = ["id_sucursal", "nombre", "direccion", "telefono"];
+
+function flattenSucursalIds(value) {
+  if (value === undefined || value === null || value === "") return [];
+  if (typeof value === "string" && value.trim() === "") return [];
+  if (Array.isArray(value)) return value.flatMap(flattenSucursalIds);
+  if (typeof value === "string" && value.includes(",")) {
+    return value.split(",").flatMap(flattenSucursalIds);
+  }
+  if (typeof value === "object") {
+    const id = value.id_sucursal ?? value.id ?? value.value;
+    return id === undefined ? [id] : flattenSucursalIds(id);
+  }
+  return [typeof value === "string" ? value.trim() : value];
+}
+
+function normalizeSucursalIds(...values) {
+  const ids = values.flatMap(flattenSucursalIds).map(Number);
+
+  if (ids.some((id) => !Number.isFinite(id))) {
+    throw new Error("id_sucursal inválido.");
+  }
+
+  return [...new Set(ids)];
+}
+
+function wasProvided(value) {
+  return value !== undefined && value !== null;
+}
 
 class ClienteRepository {
   async findWithFilter(where) {
     return await Cliente.findAll({ where });
   }
 
-  async findById(id_cliente, { id_sucursal } = {}) {
+  async findById(id_cliente, { id_sucursal, transaction } = {}) {
+    const idSucursalRaw =
+      typeof id_sucursal === "string" ? id_sucursal.trim() : id_sucursal;
+    const idSucursal =
+      idSucursalRaw !== undefined && idSucursalRaw !== ""
+        ? Number(idSucursalRaw)
+        : null;
+
+    if (idSucursal !== null) {
+      if (!Number.isFinite(idSucursal)) {
+        throw new Error("id_sucursal inválido.");
+      }
+
+      const relation = await ClienteSucursal.findOne({
+        where: { id_cliente, id_sucursal: idSucursal },
+        attributes: ["id_cliente"],
+        transaction,
+      });
+
+      if (!relation) return null;
+    }
+
     return await Cliente.findByPk(id_cliente, {
       include: [
         {
           model: SucursalRepository.getModel(),
           as: "Sucursales",
-          attributes: ["id_sucursal", "nombre", "direccion", "telefono"],
+          attributes: SUCURSAL_ATTRIBUTES,
           through: { attributes: [] },
-          ...(id_sucursal
-            ? { where: { id_sucursal: Number(id_sucursal) }, required: false }
-            : {}),
         },
       ],
+      transaction,
     });
   }
 
@@ -31,8 +81,8 @@ class ClienteRepository {
     return await Cliente.findAll();
   }
 
-  async create(data) {
-    return await Cliente.create(data);
+  async create(data, options = {}) {
+    return await Cliente.create(data, options);
   }
 
   async update(id_cliente, data) {
@@ -45,7 +95,15 @@ class ClienteRepository {
     const cliente = await Cliente.findByPk(id, { transaction });
     if (!cliente) throw new Error(`Cliente con ID ${id} no encontrado.`);
 
-    const { sucursalesIds, ...campos } = data ?? {};
+    const {
+      sucursalesIds,
+      sucursalIds,
+      sucursales_ids,
+      sucursales,
+      Sucursales,
+      id_sucursal,
+      ...campos
+    } = data ?? {};
 
     const BLOCKED = new Set(["id_cliente", "fecha_registro", "creado_por"]);
 
@@ -59,14 +117,38 @@ class ClienteRepository {
 
     await cliente.save({ transaction });
 
-    if (Array.isArray(sucursalesIds)) {
-      const ids = sucursalesIds.map(Number).filter(Number.isFinite);
-      const sucursales = ids.length
-        ? await SucursalRepository.getModel().findAll({
-            where: { id_sucursal: { [Op.in]: ids } },
-            transaction,
-          })
-        : [];
+    const hasSucursalList = [
+      sucursalesIds,
+      sucursalIds,
+      sucursales_ids,
+      sucursales,
+      Sucursales,
+    ].some(wasProvided);
+
+    if (hasSucursalList) {
+      const ids = normalizeSucursalIds(
+        sucursalesIds,
+        sucursalIds,
+        sucursales_ids,
+        sucursales,
+        Sucursales
+      );
+      const sucursales = await this.getSucursalesByIds(ids, transaction);
+      await cliente.setSucursales(sucursales, { transaction });
+    } else if (
+      wasProvided(id_sucursal) &&
+      id_sucursal !== null &&
+      id_sucursal !== ""
+    ) {
+      const currentSucursales = await cliente.getSucursales({
+        attributes: ["id_sucursal"],
+        transaction,
+      });
+      const ids = normalizeSucursalIds(
+        currentSucursales.map((sucursal) => sucursal.id_sucursal),
+        id_sucursal
+      );
+      const sucursales = await this.getSucursalesByIds(ids, transaction);
       await cliente.setSucursales(sucursales, { transaction });
     }
 
@@ -75,7 +157,7 @@ class ClienteRepository {
         {
           model: SucursalRepository.getModel(),
           as: "Sucursales",
-          attributes: ["id_sucursal", "nombre"],
+          attributes: SUCURSAL_ATTRIBUTES,
           through: { attributes: [] },
         },
       ],
@@ -83,6 +165,25 @@ class ClienteRepository {
     });
 
     return updated;
+  }
+
+  async getSucursalesByIds(ids, transaction) {
+    if (!ids.length) return [];
+
+    const sucursales = await SucursalRepository.getModel().findAll({
+      where: { id_sucursal: { [Op.in]: ids } },
+      transaction,
+    });
+    const foundIds = new Set(
+      sucursales.map((sucursal) => Number(sucursal.id_sucursal))
+    );
+    const missingIds = ids.filter((id) => !foundIds.has(id));
+
+    if (missingIds.length) {
+      throw new Error(`Sucursales no encontradas: ${missingIds.join(", ")}.`);
+    }
+
+    return sucursales;
   }
 
   async deactivate(id) {

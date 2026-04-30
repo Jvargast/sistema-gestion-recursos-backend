@@ -14,6 +14,7 @@ import Documento from "./models/Documento.js";
 import EstadoPago from "./models/EstadoPago.js";
 import EstadoVenta from "./models/EstadoVenta.js";
 import HistorialCaja from "./models/HistorialCaja.js";
+import ClienteSucursal from "./models/ClienteSucursal.js";
 import LogCotizacion from "./models/LogCotizacion.js";
 import LogVenta from "./models/LogVenta.js";
 import MetodoPago from "./models/MetodoPago.js";
@@ -273,14 +274,32 @@ function loadPOSAssociations() {
   // Relación: Cliente -> Sucursal
   // Modelo (Sequelize)
   Cliente.belongsToMany(Sucursal, {
-    through: "ClienteSucursal",
+    through: ClienteSucursal,
     as: "Sucursales",
     foreignKey: "id_cliente",
+    otherKey: "id_sucursal",
   });
   Sucursal.belongsToMany(Cliente, {
-    through: "ClienteSucursal",
+    through: ClienteSucursal,
     as: "Clientes",
     foreignKey: "id_sucursal",
+    otherKey: "id_cliente",
+  });
+  Cliente.hasMany(ClienteSucursal, {
+    foreignKey: "id_cliente",
+    as: "ClienteSucursales",
+  });
+  ClienteSucursal.belongsTo(Cliente, {
+    foreignKey: "id_cliente",
+    as: "cliente",
+  });
+  Sucursal.hasMany(ClienteSucursal, {
+    foreignKey: "id_sucursal",
+    as: "ClienteSucursales",
+  });
+  ClienteSucursal.belongsTo(Sucursal, {
+    foreignKey: "id_sucursal",
+    as: "sucursal",
   });
   Pago.belongsTo(Sucursal, { foreignKey: "id_sucursal", as: "Sucursal" });
   CuentaPorCobrar.belongsTo(Sucursal, {

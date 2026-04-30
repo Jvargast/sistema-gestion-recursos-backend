@@ -4,15 +4,16 @@ import AgendaCargaDetalle from "../../domain/models/AgendaCargaDetalle.js";
 import Camion from "../../domain/models/Camion.js";
 
 class AgendaCargaRepository {
-  async create(data) {
-    return await AgendaCarga.create(data);
+  async create(data, options = {}) {
+    return await AgendaCarga.create(data, options);
   }
 
-  async findOneByCamion(id_camion) {
+  async findOneByCamion(id_camion, options = {}) {
     return await AgendaCarga.findOne({
       where: {
         id_camion,
       },
+      ...options,
     });
   }
 
@@ -20,11 +21,11 @@ class AgendaCargaRepository {
     return await AgendaCarga.findOne(conditions);
   }
 
-  async findByPk(id_agenda_carga) {
-    return await AgendaCarga.findByPk(id_agenda_carga);
+  async findByPk(id_agenda_carga, options = {}) {
+    return await AgendaCarga.findByPk(id_agenda_carga, options);
   }
 
-  async findById(id) {
+  async findById(id, options = {}) {
     return await AgendaCarga.findByPk(id, {
       include: [
         {
@@ -42,6 +43,7 @@ class AgendaCargaRepository {
           as: "detallesCarga",
         },
       ],
+      ...options,
     });
   }
 
@@ -49,22 +51,22 @@ class AgendaCargaRepository {
     return await AgendaCarga.findAll(data);
   }
 
-  async update(id, data) {
-    const agenda = await AgendaCarga.findByPk(id);
+  async update(id, data, options = {}) {
+    const agenda = await AgendaCarga.findByPk(id, options);
     if (!agenda) {
       throw new Error("Agenda not found");
     }
-    return await agenda.update(data);
+    return await agenda.update(data, options);
   }
 
-  async delete(id) {
-    const agenda = await AgendaCarga.findByPk(id);
+  async delete(id, options = {}) {
+    const agenda = await AgendaCarga.findByPk(id, options);
     if (!agenda) {
       throw new Error("Agenda not found");
     }
-    return await agenda.destroy();
+    return await agenda.destroy(options);
   }
-  async findByChoferAndEstado(rut, estado) {
+  async findByChoferAndEstado(rut, estado, options = {}) {
     return await AgendaCarga.findOne({
       where: {
         id_usuario_chofer: rut,
@@ -73,20 +75,22 @@ class AgendaCargaRepository {
       include: [
         {
           model: Camion,
-          as: "camion", 
+          as: "camion",
           attributes: ["id_camion", "placa", "estado"],
         },
       ],
+      ...options,
     });
   }
 
-  async findByCamionAndEstado(id_camion, estado) {
+  async findByCamionAndEstado(id_camion, estado, options = {}) {
     try {
       const agenda = await AgendaCarga.findOne({
         where: {
           id_camion,
           estado,
         },
+        ...options,
       });
 
       return agenda;

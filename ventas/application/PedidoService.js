@@ -387,46 +387,101 @@ class PedidoService {
     }
   }
   // Asignar de Pendiente -> Pendiente de Confirmación
+  // Reasignar mientras siga Pendiente de Confirmación.
   async asignarPedido(id_pedido, id_chofer) {
+    const transaction = await sequelize.transaction();
+    let pedidoActualizado;
+    let idChoferPrevio = null;
+    let esReasignacion = false;
+
     try {
-      const pedido = await PedidoRepository.findById(id_pedido);
+      const pedido = await PedidoRepository.getModel().findByPk(id_pedido, {
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
       if (!pedido) throw new Error("Pedido no encontrado.");
 
-      const chofer = await UsuariosRepository.findByRutBasic(id_chofer);
+      const chofer = await UsuariosRepository.findByRutBasic(id_chofer, {
+        transaction,
+      });
       if (!chofer) throw new Error("Chofer no encontrado.");
 
-      // Estado actual debe ser "Pendiente" para asignar correctamente
       const estadoPendiente = await EstadoVentaRepository.findByNombre(
-        "Pendiente"
+        "Pendiente",
+        { transaction }
       );
       if (!estadoPendiente) throw new Error("Estado Pendiente no configurado.");
-      if (pedido.id_estado_pedido !== estadoPendiente.id_estado_venta) {
-        throw new Error(
-          "El pedido debe estar en estado 'Pendiente' para poder asignarse."
-        );
-      }
-
       const estadoPendienteConfirmacion =
-        await EstadoVentaRepository.findByNombre("Pendiente de Confirmación");
+        await EstadoVentaRepository.findByNombre("Pendiente de Confirmación", {
+          transaction,
+        });
       if (!estadoPendienteConfirmacion)
         throw new Error("Estado 'Pendiente de Confirmación' no configurado.");
 
-      await PedidoRepository.update(id_pedido, {
-        id_chofer,
-        id_estado_pedido: estadoPendienteConfirmacion.id_estado_venta,
-      });
+      const estadoActual = pedido.id_estado_pedido;
+      const puedeAsignar = estadoActual === estadoPendiente.id_estado_venta;
+      const puedeReasignar =
+        estadoActual === estadoPendienteConfirmacion.id_estado_venta;
 
-      await NotificacionService.enviarNotificacion({
-        id_usuario: id_chofer,
-        mensaje: `📦 Pedido #${id_pedido}\nDirección: ${pedido.direccion_entrega}\nPrioridad: ${pedido.prioridad}`,
-        tipo: "pedido_asignado",
-      });
-      WebSocketServer.emitToUser(id_chofer, {
-        type: "actualizar_mis_pedidos",
-      });
+      if (!puedeAsignar && !puedeReasignar) {
+        throw new Error(
+          "Solo puedes asignar pedidos en estado 'Pendiente' o reasignar pedidos en estado 'Pendiente de Confirmación'."
+        );
+      }
 
-      return PedidoRepository.findById(id_pedido);
+      idChoferPrevio = pedido.id_chofer;
+      esReasignacion =
+        puedeReasignar &&
+        idChoferPrevio &&
+        String(idChoferPrevio) !== String(id_chofer);
+
+      if (puedeReasignar && String(idChoferPrevio || "") === String(id_chofer)) {
+        throw new Error("El pedido ya está asignado a este chofer.");
+      }
+
+      pedidoActualizado = await PedidoRepository.update(
+        id_pedido,
+        {
+          id_chofer,
+          id_estado_pedido: estadoPendienteConfirmacion.id_estado_venta,
+        },
+        { transaction }
+      );
+
+      await transaction.commit();
+      pedidoActualizado = await PedidoRepository.findById(id_pedido);
+
+      try {
+        await NotificacionService.enviarNotificacion({
+          id_usuario: id_chofer,
+          mensaje: `📦 Pedido #${id_pedido}\nDirección: ${pedido.direccion_entrega}\nPrioridad: ${pedido.prioridad}`,
+          tipo: "pedido_asignado",
+          datos_adicionales: {
+            id_pedido,
+            reasignado: esReasignacion,
+            id_chofer_anterior: idChoferPrevio,
+          },
+        });
+        WebSocketServer.emitToUser(id_chofer, {
+          type: "actualizar_mis_pedidos",
+        });
+        if (idChoferPrevio && String(idChoferPrevio) !== String(id_chofer)) {
+          WebSocketServer.emitToUser(idChoferPrevio, {
+            type: "actualizar_mis_pedidos",
+          });
+        }
+      } catch (notificationError) {
+        console.error(
+          "Error al notificar asignación de pedido:",
+          notificationError
+        );
+      }
+
+      return pedidoActualizado;
     } catch (error) {
+      if (transaction.finished !== "commit") {
+        await transaction.rollback();
+      }
       throw new Error(`Error al asignar pedido: ${error.message}`);
     }
   }

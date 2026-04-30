@@ -4,7 +4,7 @@ import Inventario from "../../domain/models/Inventario.js";
 import TipoInsumo from "../../domain/models/TipoInsumo.js";
 
 class InsumoRepository {
-  async findById(id) {
+  async findById(id, options = {}) {
     return await Insumo.findByPk(id, {
       include: [
         { model: TipoInsumo, as: "tipo_insumo" },
@@ -20,6 +20,7 @@ class InsumoRepository {
           ],
         },
       ],
+      ...options,
     });
   }
 
@@ -68,6 +69,13 @@ class InsumoRepository {
   async findByIds(ids) {
     return await Insumo.findAll({
       where: { id_insumo: ids },
+    });
+  }
+
+  async countByTipoInsumo(id_tipo_insumo, options = {}) {
+    return await Insumo.count({
+      where: { id_tipo_insumo },
+      ...options,
     });
   }
 

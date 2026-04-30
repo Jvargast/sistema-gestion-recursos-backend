@@ -8,7 +8,7 @@ import MetodoPago from "../../domain/models/MetodoPago.js";
 import Pedido from "../../domain/models/Pedido.js";
 
 class PedidoRepository {
-  async findById(id_pedido) {
+  async findById(id_pedido, options = {}) {
     return await Pedido.findByPk(id_pedido, {
       include: [
         { model: Cliente, as: "Cliente", attributes: ["nombre", "apellido", "rut", "razon_social", "direccion", "tipo_cliente", "email"] },
@@ -52,12 +52,14 @@ class PedidoRepository {
           ],
         },
       ],
+      ...options,
     });
   }
 
-  async findByIdVenta(idVenta) {
+  async findByIdVenta(idVenta, options = {}) {
     return await Pedido.findOne({
       where: { id_venta: idVenta },
+      ...options,
     });
   }
 
@@ -78,24 +80,26 @@ class PedidoRepository {
     });
   }
 
-  async findAllByChoferAndEstado(id_chofer, id_estado_pedido) {
+  async findAllByChoferAndEstado(id_chofer, id_estado_pedido, options = {}) {
     return await Pedido.findAll({
       where: {
         id_chofer,
         id_estado_pedido,
       },
+      ...options,
     });
   }
 
-  async create(data) {
-    return await Pedido.create(data);
+  async create(data, options = {}) {
+    return await Pedido.create(data, options);
   }
 
-  async update(id, updates) {
+  async update(id, updates, options = {}) {
     const [updated] = await Pedido.update(updates, {
       where: { id_pedido: id },
+      ...options,
     });
-    return updated > 0 ? await Pedido.findByPk(id) : null;
+    return updated > 0 ? await Pedido.findByPk(id, options) : null;
   }
 
   async updateFromVenta(id, updates, options = {}) {
@@ -103,7 +107,7 @@ class PedidoRepository {
       where: { id_pedido: id },
       ...options,
     });
-    return updated > 0 ? await Pedido.findByPk(id) : null;
+    return updated > 0 ? await Pedido.findByPk(id, options) : null;
   }
 
   async delete(id) {

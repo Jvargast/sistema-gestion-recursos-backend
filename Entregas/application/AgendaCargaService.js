@@ -30,6 +30,91 @@ import RolRepository from "../../auth/infraestructure/repositories/RolRepository
 import SucursalRepository from "../../auth/infraestructure/repositories/SucursalRepository.js";
 
 class AgendaCargaService {
+  normalizarProductosAdicionales(productos) {
+    if (productos == null) return [];
+    if (!Array.isArray(productos)) {
+      throw new Error("Los productos adicionales deben enviarse como un arreglo.");
+    }
+    return productos;
+  }
+
+  normalizarCantidad(cantidad, contexto) {
+    const qty = Number(cantidad);
+    if (!Number.isFinite(qty) || qty <= 0) {
+      throw new Error(`Cantidad inválida para ${contexto}.`);
+    }
+    return qty;
+  }
+
+  agregarRequerimiento(mapa, id, cantidad, contexto) {
+    const idNumerico = Number(id);
+    if (!Number.isInteger(idNumerico) || idNumerico <= 0) {
+      throw new Error(`ID inválido para ${contexto}.`);
+    }
+
+    const qty = this.normalizarCantidad(cantidad, contexto);
+    mapa.set(idNumerico, (mapa.get(idNumerico) || 0) + qty);
+  }
+
+  async validarStockRequerido({
+    productosRequeridos,
+    insumosRequeridos,
+    id_sucursal,
+    transaction,
+  }) {
+    const faltantes = [];
+
+    for (const [id_producto, cantidad] of productosRequeridos.entries()) {
+      let inventario = null;
+      try {
+        inventario = await InventarioService.getInventarioByProductoId(
+          id_producto,
+          id_sucursal,
+          { transaction, lock: "UPDATE" }
+        );
+      } catch (error) {
+        if (!error.message.includes("Inventario no encontrado")) {
+          throw error;
+        }
+      }
+
+      const disponible = Number(inventario?.cantidad || 0);
+      if (Math.floor(disponible) < Math.floor(cantidad)) {
+        faltantes.push(
+          `producto ${id_producto}: disponible ${disponible}, requerido ${cantidad}`
+        );
+      }
+    }
+
+    for (const [id_insumo, cantidad] of insumosRequeridos.entries()) {
+      let inventario = null;
+      try {
+        inventario = await InventarioService.getInventarioByInsumoId(
+          id_insumo,
+          id_sucursal,
+          { transaction, lock: "UPDATE" }
+        );
+      } catch (error) {
+        if (!error.message.includes("Inventario no encontrado")) {
+          throw error;
+        }
+      }
+
+      const disponible = Number(inventario?.cantidad || 0);
+      if (Math.floor(disponible) < Math.floor(cantidad)) {
+        faltantes.push(
+          `insumo ${id_insumo}: disponible ${disponible}, requerido ${cantidad}`
+        );
+      }
+    }
+
+    if (faltantes.length) {
+      throw new Error(
+        `Stock insuficiente para crear la agenda: ${faltantes.join("; ")}.`
+      );
+    }
+  }
+
   // Pedido de Confirmado -> En Preparación
   async createAgenda(
     id_usuario_chofer,
@@ -52,6 +137,14 @@ class AgendaCargaService {
           "Faltan datos obligatorios para crear la agenda de carga."
         );
       }
+      const productosAdicionales =
+        this.normalizarProductosAdicionales(productos);
+
+      const idSucursalNumerica = Number(id_sucursal);
+      if (!Number.isInteger(idSucursalNumerica) || idSucursalNumerica <= 0) {
+        throw new Error("Debe indicar la sucursal para crear la agenda.");
+      }
+
       const chofer = await UsuariosRepository.findByRutBasic(id_usuario_chofer, {
         transaction: t,
       });
@@ -61,11 +154,11 @@ class AgendaCargaService {
       const camion = await CamionRepository.findById(id_camion, {
         transaction: t,
       });
-      if (Number(camion.id_sucursal) !== Number(id_sucursal)) {
-        throw new Error("El camión no pertenece a la sucursal seleccionada.");
-      }
       if (!camion || camion.estado !== "Disponible") {
         throw new Error("El camión seleccionado no está disponible.");
+      }
+      if (Number(camion.id_sucursal) !== idSucursalNumerica) {
+        throw new Error("El camión no pertenece a la sucursal seleccionada.");
       }
       if (camion.id_chofer_asignado !== id_usuario_chofer) {
         throw new Error("El chofer no está asignado a este camión.");
@@ -92,13 +185,123 @@ class AgendaCargaService {
           { transaction: t }
         );
 
-      const hayAdicionales = Array.isArray(productos) && productos.length > 0;
+      const hayAdicionales = productosAdicionales.length > 0;
 
       if (!pedidosConfirmados.length && !hayAdicionales) {
         throw new Error(
           "Debe existir al menos un pedido confirmado o productos adicionales."
         );
       }
+
+      const detallesPorPedido = new Map();
+      const productosRequeridos = new Map();
+      const insumosRequeridos = new Map();
+
+      for (const pedido of pedidosConfirmados) {
+        const detallesPedido = await DetallePedidoRepository.findByPedidoId(
+          pedido.id_pedido,
+          { transaction: t }
+        );
+        detallesPorPedido.set(pedido.id_pedido, detallesPedido);
+
+        for (const item of detallesPedido) {
+          if (item.id_producto) {
+            const productoInfo = await ProductosRepository.findById(
+              item.id_producto,
+              { transaction: t }
+            );
+            if (!productoInfo) {
+              throw new Error(`Producto ID ${item.id_producto} no existe.`);
+            }
+            this.agregarRequerimiento(
+              productosRequeridos,
+              item.id_producto,
+              item.cantidad,
+              `producto ${productoInfo.nombre_producto || item.id_producto}`
+            );
+          } else if (item.id_insumo) {
+            const insumoInfo = await InsumoRepository.findById(item.id_insumo, {
+              transaction: t,
+            });
+            if (!insumoInfo) {
+              throw new Error(`Insumo ID ${item.id_insumo} no existe.`);
+            }
+            this.agregarRequerimiento(
+              insumosRequeridos,
+              item.id_insumo,
+              item.cantidad,
+              `insumo ${insumoInfo.nombre_insumo || item.id_insumo}`
+            );
+          } else {
+            throw new Error(
+              `Detalle de pedido ${pedido.id_pedido} sin producto ni insumo.`
+            );
+          }
+        }
+      }
+
+      for (const adicional of productosAdicionales) {
+        if (!adicional || typeof adicional !== "object") {
+          throw new Error("Cada adicional debe ser un objeto válido.");
+        }
+
+        const tieneProducto =
+          adicional.id_producto != null && adicional.id_producto !== "";
+        const tieneInsumo =
+          adicional.id_insumo != null && adicional.id_insumo !== "";
+
+        if (tieneProducto === tieneInsumo) {
+          throw new Error(
+            "Cada adicional debe indicar solo un id_producto o un id_insumo."
+          );
+        }
+
+        if (tieneProducto) {
+          const productoInfo = await ProductosRepository.findById(
+            adicional.id_producto,
+            { transaction: t }
+          );
+          if (!productoInfo) {
+            throw new Error(
+              `Producto adicional con ID ${adicional.id_producto} no encontrado.`
+            );
+          }
+          this.agregarRequerimiento(
+            productosRequeridos,
+            adicional.id_producto,
+            adicional.cantidad,
+            `producto adicional ${
+              productoInfo.nombre_producto || adicional.id_producto
+            }`
+          );
+        } else {
+          const insumoInfo = await InsumoRepository.findById(adicional.id_insumo, {
+            transaction: t,
+          });
+          if (!insumoInfo) {
+            throw new Error(
+              `Insumo adicional con ID ${adicional.id_insumo} no encontrado.`
+            );
+          }
+          this.agregarRequerimiento(
+            insumosRequeridos,
+            adicional.id_insumo,
+            adicional.cantidad,
+            `insumo adicional ${insumoInfo.nombre_insumo || adicional.id_insumo}`
+          );
+        }
+      }
+
+      if (!productosRequeridos.size && !insumosRequeridos.size) {
+        throw new Error("La agenda no tiene productos o insumos para cargar.");
+      }
+
+      await this.validarStockRequerido({
+        productosRequeridos,
+        insumosRequeridos,
+        id_sucursal: idSucursalNumerica,
+        transaction: t,
+      });
 
       const fecha = obtenerFechaActualChileUTC();
 
@@ -111,7 +314,7 @@ class AgendaCargaService {
           estado: "Pendiente",
           notas,
           fecha_hora: fecha,
-          id_sucursal,
+          id_sucursal: idSucursalNumerica,
         },
         { transaction: t }
       );
@@ -151,10 +354,7 @@ class AgendaCargaService {
       const detallesCarga = [];
 
       for (const pedido of pedidosConfirmados) {
-        const detallesPedido = await DetallePedidoRepository.findByPedidoId(
-          pedido.id_pedido,
-          { transaction: t }
-        );
+        const detallesPedido = detallesPorPedido.get(pedido.id_pedido) || [];
         for (const item of detallesPedido) {
           const esProducto = item.id_producto !== null;
           let productoInfo,
@@ -176,7 +376,7 @@ class AgendaCargaService {
             }
             await InventarioService.decrementarStock(
               item.id_producto,
-              id_sucursal,
+              idSucursalNumerica,
               item.cantidad,
               { transaction: t }
             );
@@ -189,7 +389,7 @@ class AgendaCargaService {
                 tipo: "Reservado",
                 es_retornable,
               },
-              t
+              { transaction: t }
             );
             if (es_retornable) espacioDisponible -= item.cantidad;
             unidad_medida = productoInfo.unidad_medida || "unidad";
@@ -204,7 +404,7 @@ class AgendaCargaService {
             }
             await InventarioService.decrementarStockInsumo(
               item.id_insumo,
-              id_sucursal,
+              idSucursalNumerica,
               item.cantidad,
               { transaction: t }
             );
@@ -244,7 +444,7 @@ class AgendaCargaService {
         );
       }
 
-      for (const adicional of productos) {
+      for (const adicional of productosAdicionales) {
         const esProducto = adicional.id_producto ? true : false;
         let es_retornable = false;
         let unidad_medida = "unidad";
@@ -264,7 +464,7 @@ class AgendaCargaService {
 
           await InventarioService.decrementarStock(
             adicional.id_producto,
-            id_sucursal,
+            idSucursalNumerica,
             adicional.cantidad,
             { transaction: t }
           );
@@ -303,7 +503,7 @@ class AgendaCargaService {
           }
           await InventarioService.decrementarStockInsumo(
             adicional.id_insumo,
-            id_sucursal,
+            idSucursalNumerica,
             adicional.cantidad,
             { transaction: t }
           );
@@ -508,7 +708,8 @@ class AgendaCargaService {
       const pedidosEnPreparacion =
         await PedidoRepository.findAllByChoferAndEstado(
           id_chofer,
-          estadoEnPreparacion.id_estado_venta
+          estadoEnPreparacion.id_estado_venta,
+          { transaction }
         );
 
       const estadoEnEntrega = await EstadoVentaRepository.findByNombre(

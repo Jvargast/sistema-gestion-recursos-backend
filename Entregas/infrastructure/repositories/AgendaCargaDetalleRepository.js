@@ -5,8 +5,8 @@ import AgendaCargaDetalle from "../../domain/models/AgendaCargaDetalle.js";
 import Camion from "../../domain/models/Camion.js";
 
 class AgendaCargaDetalleRepository {
-  async create(detalleData) {
-    return await AgendaCargaDetalle.create(detalleData);
+  async create(detalleData, options = {}) {
+    return await AgendaCargaDetalle.create(detalleData, options);
   }
 
   async findByAgendaAndPedido(id_agenda_carga, id_pedido, options = {}) {
@@ -15,15 +15,15 @@ class AgendaCargaDetalleRepository {
         id_agenda_carga,
         id_pedido,
       },
-       ...options,
+      ...options,
     });
   }
 
-  async bulkCreate(detalles) {
-    return await AgendaCargaDetalle.bulkCreate(detalles);
+  async bulkCreate(detalles, options = {}) {
+    return await AgendaCargaDetalle.bulkCreate(detalles, options);
   }
 
-  async findByAgendaId(id_agenda_carga) {
+  async findByAgendaId(id_agenda_carga, options = {}) {
     return await AgendaCargaDetalle.findAll({
       where: { id_agenda_carga },
       include: [
@@ -54,29 +54,36 @@ class AgendaCargaDetalleRepository {
         },
       ],
       order: [["id_agenda_carga_detalle", "ASC"]],
+      ...options,
     });
   }
 
-  async update(id, data) {
+  async update(id, data, options = {}) {
     return await AgendaCargaDetalle.update(data, {
       where: { id_agenda_carga_detalle: id },
+      ...options,
     });
   }
 
-  async updateEstadoByAgendaId(id_agenda_carga, estado) {
+  async updateEstadoByAgendaId(id_agenda_carga, estado, options = {}) {
     return await AgendaCargaDetalle.update(estado, {
       where: { id_agenda_carga },
+      ...options,
     });
   }
 
-  async delete(id) {
+  async delete(id, options = {}) {
     return await AgendaCargaDetalle.destroy({
       where: { id_agenda_carga_detalle: id },
+      ...options,
     });
   }
 
-  async deleteByAgendaId(id_agenda_carga) {
-    return await AgendaCargaDetalle.destroy({ where: { id_agenda_carga } });
+  async deleteByAgendaId(id_agenda_carga, options = {}) {
+    return await AgendaCargaDetalle.destroy({
+      where: { id_agenda_carga },
+      ...options,
+    });
   }
 
   getModel() {

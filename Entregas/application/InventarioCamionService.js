@@ -808,19 +808,20 @@ class InventarioCamionService {
     estado,
     transaction
   ) {
+    const tx = transaction?.transaction || transaction;
     try {
       const productoEnCamion =
         await InventarioCamionRepository.findByProductoAndEstado(
           id_producto,
           estado,
           id_camion,
-          { transaction }
+          { transaction: tx }
         );
 
       if (!productoEnCamion) {
         const allProductos = await InventarioCamionRepository.findAll({
           where: { id_camion, id_producto },
-          transaction,
+          transaction: tx,
         });
         console.error(
           `🔴 No se encontró productoEnCamion (id_producto: ${id_producto}, estado: ${estado}). Todos los registros de ese producto en camión:`,
@@ -858,7 +859,7 @@ class InventarioCamionService {
           id_camion,
           id_producto,
           estado,
-          { transaction }
+          { transaction: tx }
         );
       } else {
         if (typeof productoEnCamion.save !== "function") {
@@ -879,13 +880,13 @@ class InventarioCamionService {
           )
         );
         console.log("transaction:", {
-          id: transaction?.id,
-          finished: transaction?.finished,
-          name: transaction?.name,
-          isSequelizeObj: !!transaction?.sequelize,
+          id: tx?.id,
+          finished: tx?.finished,
+          name: tx?.name,
+          isSequelizeObj: !!tx?.sequelize,
         });
 
-        await productoEnCamion.save({ transaction });
+        await productoEnCamion.save({ transaction: tx });
       }
 
       await InventarioCamionLogsRepository.create(
@@ -897,7 +898,7 @@ class InventarioCamionService {
           estado: "Regresado",
           fecha: new Date(),
         },
-        { transaction }
+        { transaction: tx }
       );
     } catch (error) {
       console.error("Error en retirarProductoDelCamion:", error);
@@ -1030,7 +1031,13 @@ class InventarioCamionService {
     },
     options = {}
   ) {
-    const { transaction } = options;
+    const transaction =
+      options?.transaction || (options?.sequelize ? options : undefined);
+    const cantidadNumerica = Number(cantidad);
+
+    if (!Number.isFinite(cantidadNumerica) || cantidadNumerica <= 0) {
+      throw new Error("Cantidad inválida para inventario de camión.");
+    }
 
     try {
       let itemEnCamion = null;
@@ -1052,7 +1059,8 @@ class InventarioCamionService {
       }
 
       if (itemEnCamion) {
-        itemEnCamion.cantidad += cantidad;
+        itemEnCamion.cantidad =
+          Number(itemEnCamion.cantidad || 0) + cantidadNumerica;
         itemEnCamion.fecha_actualizacion = new Date();
         await itemEnCamion.save({ transaction });
         return itemEnCamion;
@@ -1062,7 +1070,7 @@ class InventarioCamionService {
             id_camion,
             id_producto,
             id_insumo,
-            cantidad,
+            cantidad: cantidadNumerica,
             estado,
             tipo,
             es_retornable,
