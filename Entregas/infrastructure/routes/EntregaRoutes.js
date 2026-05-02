@@ -9,7 +9,7 @@ const router = express.Router();
 router.use(authenticate);
 
 router.post('/', checkPermissions("entregas.entrega.crear"), checkRoles(["chofer"]), EntregasController.createEntrega);
-router.get('/por-agenda/', checkPermissions("entregas.entrega.misentregas"), EntregasController.getEntregasByAgendaId);
+router.get('/por-agenda/', checkPermissions("entregas.entrega.ver"), EntregasController.getEntregasByAgendaId);
 router.get('/choferes/disponibles', checkPermissions("entregas.entrega.disponibles") ,ChoferController.getChoferesDisponibles);
 router.get('/:id', checkPermissions("entregas.entrega.ver") ,EntregasController.getEntregaById);
 router.get('/', checkPermissions("entregas.entrega.ver"), EntregasController.getAll);
