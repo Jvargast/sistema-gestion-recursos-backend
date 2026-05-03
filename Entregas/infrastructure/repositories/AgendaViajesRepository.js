@@ -89,9 +89,19 @@ class AgendaViajesRepository {
     return viaje ? viaje.toJSON() : null;
   }
 
-  async findByAgendaViajeId(id_agenda_viaje) {
+  async findByAgendaViajeId(id_agenda_viaje, options = {}) {
+    const { include, ...queryOptions } = options;
+
     return await AgendaViajes.findOne({
       where: { id_agenda_viaje },
+      include: include ?? [
+        {
+          model: Usuarios,
+          as: "chofer",
+          attributes: ["rut", "nombre", "apellido"],
+        },
+      ],
+      ...queryOptions,
     });
   }
 
