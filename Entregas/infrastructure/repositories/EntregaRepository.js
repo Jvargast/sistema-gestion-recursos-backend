@@ -3,8 +3,8 @@ import Cliente from "../../../ventas/domain/models/Cliente.js";
 import Entrega from "../../domain/models/Entrega.js";
 
 class EntregaRepository {
-  async create(data) {
-    return await Entrega.create(data);
+  async create(data, options = {}) {
+    return await Entrega.create(data, options);
   }
 
   async findById(id) {

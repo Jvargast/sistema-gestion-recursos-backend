@@ -28,6 +28,17 @@ import RolRepository from "../../auth/infraestructure/repositories/RolRepository
 import InventarioCamionRepository from "../../Entregas/infrastructure/repositories/InventarioCamionRepository.js";
 
 class PedidoService {
+  calcularTotalHistoricoPedido(detalles = [], totalPedido = null) {
+    if (totalPedido !== null && totalPedido !== undefined) {
+      return Number(totalPedido) || 0;
+    }
+
+    return detalles.reduce(
+      (acc, item) => acc + (Number(item.subtotal) || 0),
+      0
+    );
+  }
+
   // Se crea en Pendiente
   async createPedido(data) {
     const transaction = await sequelize.transaction();
@@ -1152,37 +1163,30 @@ class PedidoService {
 
     const detalles = await DetallePedidoRepository.findByPedidoId(id_pedido);
     const items = [];
-    let total = 0;
 
     for (const item of detalles) {
+      const precioUnitario = Number(item.precio_unitario) || 0;
+      const subtotal =
+        item.subtotal !== null && item.subtotal !== undefined
+          ? Number(item.subtotal)
+          : precioUnitario * (Number(item.cantidad) || 0);
+
       if (item.id_producto) {
-        const producto = await ProductosRepository.findById(item.id_producto);
-        if (!producto) continue;
-
-        const subtotal = producto.precio * item.cantidad;
-        total += subtotal;
-
         items.push({
-          id_producto: producto.id_producto,
-          nombre: producto.nombre_producto,
+          id_producto: item.id_producto,
+          nombre: item.Producto?.nombre_producto || "Producto desconocido",
           cantidad: item.cantidad,
-          precio_unitario: producto.precio,
+          precio_unitario: precioUnitario,
           subtotal,
-          es_retornable: producto.es_retornable,
+          es_retornable: Boolean(item.Producto?.es_retornable),
           id_insumo: null,
         });
       } else if (item.id_insumo) {
-        const insumo = await InsumoRepository.findById(item.id_insumo);
-        if (!insumo) continue;
-
-        const subtotal = insumo.precio * item.cantidad;
-        total += subtotal;
-
         items.push({
-          id_insumo: insumo.id_insumo,
-          nombre: insumo.nombre_insumo,
+          id_insumo: item.id_insumo,
+          nombre: item.Insumo?.nombre_insumo || "Insumo desconocido",
           cantidad: item.cantidad,
-          precio_unitario: insumo.precio,
+          precio_unitario: precioUnitario,
           subtotal,
           es_retornable: false,
           id_producto: null,
@@ -1193,7 +1197,7 @@ class PedidoService {
     return {
       id_pedido,
       detalle: items,
-      monto_total: total,
+      monto_total: this.calcularTotalHistoricoPedido(detalles, pedido.total),
       pagado: pedido.pagado,
     };
   }
@@ -1371,7 +1375,7 @@ class PedidoService {
             id_producto: detalle.Producto.id_producto,
             nombre_producto: detalle.Producto.nombre_producto,
             cantidad: detalle.cantidad,
-            precio_unitario: detalle.Producto.precio,
+            precio_unitario: detalle.precio_unitario,
             subtotal: detalle.subtotal,
             es_retornable: detalle.Producto.es_retornable,
           };
@@ -1380,7 +1384,7 @@ class PedidoService {
             id_insumo: detalle.Insumo.id_insumo,
             nombre_insumo: detalle.Insumo.nombre_insumo,
             cantidad: detalle.cantidad,
-            precio_unitario: detalle.Insumo.precio,
+            precio_unitario: detalle.precio_unitario,
             subtotal: detalle.subtotal,
           };
         } else {

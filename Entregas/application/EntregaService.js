@@ -22,6 +22,40 @@ import InventarioCamionRepository from "../infrastructure/repositories/Inventari
 import ProductoRetornableCamionRepository from "../infrastructure/repositories/ProductoRetornableCamionRepository.js";
 
 class EntregaService {
+  calcularTotalHistoricoPedido(detalles = [], totalPedido = null) {
+    if (totalPedido !== null && totalPedido !== undefined) {
+      return Number(totalPedido) || 0;
+    }
+
+    return detalles.reduce(
+      (acc, item) => acc + (Number(item.subtotal) || 0),
+      0
+    );
+  }
+
+  mapDetallesPedidoParaVenta(detalles = []) {
+    return detalles.flatMap((detalle) => {
+      const base = {
+        cantidad: Number(detalle.cantidad) || 0,
+        precio_unitario: Number(detalle.precio_unitario) || 0,
+      };
+
+      if (detalle.id_producto) {
+        return {
+          ...base,
+          id_producto: detalle.id_producto,
+        };
+      }
+
+      if (!detalle.id_insumo) return [];
+
+      return {
+        ...base,
+        id_producto: `insumo_${detalle.id_insumo}`,
+      };
+    });
+  }
+
   // Pedido de En Entrega -> Completada
   async processDelivery(payload) {
     console.log(payload);
@@ -32,7 +66,6 @@ class EntregaService {
       productos_entregados,
       insumo_entregados,
       botellones_retorno,
-      monto_total,
       id_metodo_pago,
       payment_reference,
       tipo_documento = "boleta",
@@ -75,6 +108,11 @@ class EntregaService {
       const detalles = await DetallePedidoRepository.findByPedidoId(id_pedido, {
         transaction,
       });
+      const montoTotalPedido = this.calcularTotalHistoricoPedido(
+        detalles,
+        pedido.total
+      );
+      const productosVenta = this.mapDetallesPedidoParaVenta(detalles);
 
       const cajaChofer = await CajaRepository.findCajaEstadoByUsuario(
         id_chofer,
@@ -122,7 +160,7 @@ class EntregaService {
           transaction,
         });
         if (metodo && metodo.nombre.toLowerCase() === "efectivo") {
-          pago_recibido = monto_total;
+          pago_recibido = montoTotalPedido;
         }
       }
 
@@ -133,7 +171,7 @@ class EntregaService {
           id_caja: cajaChofer.id_caja,
           tipo_entrega: "despacho_a_domicilio",
           direccion_entrega: pedido.direccion_entrega,
-          productos: detalles,
+          productos: productosVenta,
           productos_retornables: [],
           id_metodo_pago,
           notas,
@@ -254,7 +292,7 @@ class EntregaService {
           insumo_entregados: insumo_entregados || null,
           botellones_retorno: botellones_retorno || null,
           es_entrega_directa: false,
-          monto_total,
+          monto_total: montoTotalPedido,
           estado_entrega: "completada",
           fecha_hora: fecha,
           id_documento: docId,
