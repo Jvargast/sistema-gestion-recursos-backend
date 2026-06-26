@@ -5,7 +5,7 @@ import Pago from "../../domain/models/Pago.js";
 import Venta from "../../domain/models/Venta.js";
 
 class PagoRepository {
-  async findById(id) {
+  async findById(id, options = {}) {
     try {
       return await Pago.findByPk(id, {
         include: [
@@ -14,6 +14,7 @@ class PagoRepository {
           { model: Venta, as: "venta" },
           { model: EstadoPago, as: "estadoPago" },
         ],
+        ...options,
       });
     } catch (error) {
       console.error("Error en PagoRepository.findById:", error.message);
@@ -27,7 +28,7 @@ class PagoRepository {
     });
   }
 
-  async findAllByVentaId(id_venta) {
+  async findAllByVentaId(id_venta, options = {}) {
     return await Pago.findAll({
       where: { id_venta },
       include: [
@@ -36,6 +37,7 @@ class PagoRepository {
         { model: Documento, as: "documento" },
       ],
       order: [["fecha_pago", "DESC"]],
+      ...options,
     });
   }
 
@@ -54,19 +56,20 @@ class PagoRepository {
     });
   }
 
-  async create(data) {
-    return await Pago.create(data);
+  async create(data, options = {}) {
+    return await Pago.create(data, options);
   }
 
-  async update(id, updates) {
+  async update(id, updates, options = {}) {
     const [updated] = await Pago.update(updates, {
       where: { id_pago: id },
+      ...options,
     });
-    return updated > 0 ? await this.findById(id) : null;
+    return updated > 0 ? await this.findById(id, options) : null;
   }
 
-  async delete(id) {
-    return await Pago.destroy({ where: { id_pago: id } });
+  async delete(id, options = {}) {
+    return await Pago.destroy({ where: { id_pago: id }, ...options });
   }
 
   getModel() {

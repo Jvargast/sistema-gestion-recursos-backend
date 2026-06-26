@@ -5,7 +5,7 @@ import EstadoPago from "../../domain/models/EstadoPago.js";
 import Venta from "../../domain/models/Venta.js";
 
 class DocumentoRepository {
-  async findById(id) {
+  async findById(id, options = {}) {
     try {
       return await Documento.findByPk(id, {
         include: [
@@ -14,6 +14,7 @@ class DocumentoRepository {
           { model: Usuarios, as: "creador" },
           { model: EstadoPago, as: "estadoPago"}
         ],
+        ...options,
       });
     } catch (error) {
       console.error("Error en DocumentoRepository.findById:", error.message);
@@ -54,24 +55,25 @@ class DocumentoRepository {
     });
   }
 
-  async create(data) {
+  async create(data, options = {}) {
     try {
-      return await Documento.create(data);
+      return await Documento.create(data, options);
     } catch (error) {
       console.log("Error en documento repositorio: ", error.message)
       throw error
     }
   }
 
-  async update(id, updates) {
+  async update(id, updates, options = {}) {
     const [updated] = await Documento.update(updates, {
       where: { id_documento: id },
+      ...options,
     });
-    return updated > 0 ? await this.findById(id) : null;
+    return updated > 0 ? await this.findById(id, options) : null;
   }
 
-  async delete(id) {
-    return await Documento.destroy({ where: { id_documento: id } });
+  async delete(id, options = {}) {
+    return await Documento.destroy({ where: { id_documento: id }, ...options });
   }
 
   getModel() {

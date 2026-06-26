@@ -5,8 +5,8 @@ import ProductoRetornableCamion from "../../domain/models/ProductoRetornableCami
 
 
 class ProductoRetornableCamionRepository {
-  async create(data) {
-    return await ProductoRetornableCamion.create(data);
+  async create(data, options = {}) {
+    return await ProductoRetornableCamion.create(data, options);
   }
 
   async findById(id) {
@@ -40,19 +40,19 @@ class ProductoRetornableCamionRepository {
     });
   }
 
-  async updateEstado(id, nuevoEstado, tipo_defecto = null) {
+  async updateEstado(id, nuevoEstado, tipo_defecto = null, options = {}) {
     return await ProductoRetornableCamion.update(
       { estado: nuevoEstado, tipo_defecto },
-      { where: { id_producto_retornable_camion: id } }
+      { where: { id_producto_retornable_camion: id }, ...options }
     );
   }
 
-  async delete(id) {
-    const retornable = await ProductoRetornableCamion.findByPk(id);
+  async delete(id, options = {}) {
+    const retornable = await ProductoRetornableCamion.findByPk(id, options);
     if (!retornable) {
       throw new Error("ProductoRetornableCamion no encontrado");
     }
-    return await retornable.destroy();
+    return await retornable.destroy(options);
   }
 
   getModel() {

@@ -73,12 +73,13 @@ class InventarioCamionRepository {
       ...options,
     });
   }
-  async findAllByCamionAndEstado(id_camion, estado) {
+  async findAllByCamionAndEstado(id_camion, estado, options = {}) {
     return InventarioCamion.findAll({
       where: {
         id_camion,
         estado,
       },
+      ...options,
     });
   }
 
@@ -117,13 +118,19 @@ class InventarioCamionRepository {
     return await inventario.destroy();
   }
 
-  async findByCamionProductoAndEstado(id_camion, id_producto, estado) {
+  async findByCamionProductoAndEstado(
+    id_camion,
+    id_producto,
+    estado,
+    options = {}
+  ) {
     return await InventarioCamion.findOne({
       where: {
         id_camion,
         id_producto,
         estado,
       },
+      ...options,
     });
   }
 

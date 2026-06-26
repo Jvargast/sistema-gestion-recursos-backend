@@ -84,19 +84,23 @@ class EntregaService {
 
       const pedido = await PedidoRepository.findById(id_pedido, {
         transaction,
+        lock: transaction.LOCK.UPDATE,
       });
       if (!pedido) {
         throw new Error("Pedido no encontrado");
       }
 
       const estadoActual = await EstadoVentaRepository.findById(
-        pedido.id_estado_pedido
+        pedido.id_estado_pedido,
+        { transaction }
       );
       const estadoEnEntrega = await EstadoVentaRepository.findByNombre(
-        "En Entrega"
+        "En Entrega",
+        { transaction }
       );
       const estadoCompletada = await EstadoVentaRepository.findByNombre(
-        "Completada"
+        "Completada",
+        { transaction }
       );
 
       if (!estadoEnEntrega || !estadoCompletada)
@@ -241,18 +245,28 @@ class EntregaService {
 
       if (productos_entregados && Array.isArray(productos_entregados)) {
         for (const item of productos_entregados) {
+          const idProducto = Number(item.id_producto);
+          const cantidad = Math.max(0, Number(item.cantidad) || 0);
+          const esRetornable =
+            item.es_retornable === true ||
+            item.es_retornable === 1 ||
+            item.es_retornable === "true" ||
+            item.es_retornable === "1";
+
+          if (!idProducto || !cantidad) continue;
+
           const reserva = await InventarioCamionRepository.findParaEntrega(
             agendaViaje.id_camion,
-            item.id_producto,
-            item.es_retornable || false,
+            idProducto,
+            esRetornable,
             transaction
           );
-          if (!reserva || reserva.cantidad < item.cantidad)
+          if (!reserva || Number(reserva.cantidad) < cantidad)
             throw new Error(
-              `Inventario insuficiente en camión para producto ${item.id_producto}`
+              `Inventario insuficiente en camión para producto ${idProducto}`
             );
 
-          reserva.cantidad -= item.cantidad;
+          reserva.cantidad = Number(reserva.cantidad || 0) - cantidad;
           reserva.cantidad === 0
             ? await reserva.destroy({ transaction })
             : await reserva.save({ transaction });
@@ -260,19 +274,24 @@ class EntregaService {
       }
       if (insumo_entregados && Array.isArray(insumo_entregados)) {
         for (const item of insumo_entregados) {
+          const idInsumo = Number(item.id_insumo);
+          const cantidad = Math.max(0, Number(item.cantidad) || 0);
+
+          if (!idInsumo || !cantidad) continue;
+
           const reserva =
             await InventarioCamionRepository.findByCamionAndInsumo(
               agendaViaje.id_camion,
-              item.id_insumo,
+              idInsumo,
               "En Camión - Reservado - Entrega",
               { transaction }
             );
-          if (!reserva || reserva.cantidad < item.cantidad)
+          if (!reserva || Number(reserva.cantidad) < cantidad)
             throw new Error(
-              `Inventario insuficiente en camión para insumo: ${item.id_insumo}`
+              `Inventario insuficiente en camión para insumo: ${idInsumo}`
             );
 
-          reserva.cantidad -= item.cantidad;
+          reserva.cantidad = Number(reserva.cantidad || 0) - cantidad;
           reserva.cantidad === 0
             ? await reserva.destroy({ transaction })
             : await reserva.save({ transaction });
@@ -309,15 +328,19 @@ class EntregaService {
         Array.isArray(botellones_retorno.items)
       ) {
         for (const item of botellones_retorno.items) {
+          const idProducto = Number(item.id_producto);
           const cantidad = Math.max(0, Number(item.cantidad) || 0);
           if (!cantidad) continue;
+          if (!idProducto) {
+            throw new Error("Producto retornable inválido en la entrega.");
+          }
 
           await ProductoRetornableCamionRepository.create(
             {
               id_camion: agendaViaje.id_camion,
               id_entrega: nuevaEntrega.id_entrega,
-              id_producto: Number(item.id_producto),
-              cantidad: Number(item.cantidad) || 0,
+              id_producto: idProducto,
+              cantidad,
               estado: "pendiente_inspeccion",
               tipo_defecto: null,
               fecha_registro: fecha,
@@ -328,7 +351,7 @@ class EntregaService {
           const registro =
             await InventarioCamionRepository.findByCamionProductoAndEstado(
               agendaViaje.id_camion,
-              item.id_producto,
+              idProducto,
               "En Camión - Retorno",
               { transaction }
             );
@@ -336,8 +359,8 @@ class EntregaService {
             await InventarioCamionRepository.create(
               {
                 id_camion: agendaViaje.id_camion,
-                id_producto: item.id_producto,
-                cantidad: item.cantidad,
+                id_producto: idProducto,
+                cantidad,
                 estado: "En Camión - Retorno",
                 tipo: "Retorno",
                 es_retornable: true,
@@ -345,7 +368,7 @@ class EntregaService {
               { transaction }
             );
           } else {
-            registro.cantidad += Number(item.cantidad) || 0;
+            registro.cantidad = Number(registro.cantidad || 0) + cantidad;
             await registro.save({ transaction });
           }
         }

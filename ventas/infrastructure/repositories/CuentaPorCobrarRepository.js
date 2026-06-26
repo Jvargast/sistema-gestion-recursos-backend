@@ -6,8 +6,8 @@ import Documento from "../../domain/models/Documento.js";
 import Venta from "../../domain/models/Venta.js";
 
 class CuentaPorCobrarRepository {
-  async create(data) {
-    return await CuentaPorCobrar.create(data);
+  async create(data, options = {}) {
+    return await CuentaPorCobrar.create(data, options);
   }
   async getAllWithDocumentos() {
     return await CuentaPorCobrar.findAll({
@@ -59,9 +59,10 @@ class CuentaPorCobrarRepository {
       ],
     });
   }
-  async findByIdVenta(idVenta) {
+  async findByIdVenta(idVenta, options = {}) {
     return CuentaPorCobrar.findOne({
       where: { id_venta: idVenta },
+      ...options,
     });
   }
 
@@ -71,9 +72,10 @@ class CuentaPorCobrarRepository {
       ...options,
     });
   }
-  async findByIdDocumento(idDocumento) {
+  async findByIdDocumento(idDocumento, options = {}) {
     return CuentaPorCobrar.findOne({
       where: { id_documento: idDocumento },
+      ...options,
     });
   }
 

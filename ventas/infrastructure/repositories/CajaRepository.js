@@ -5,9 +5,10 @@ import Usuarios from "../../../auth/domain/models/Usuarios.js";
 import Roles from "../../../auth/domain/models/Roles.js";
 
 class CajaRepository {
-  async findById(id) {
+  async findById(id, options = {}) {
     return await Caja.findByPk(id, {
       include: [{ model: Sucursal, as: "sucursal" }],
+      ...options,
     });
   }
 
@@ -32,7 +33,7 @@ class CajaRepository {
     });
   }
 
-  async findAbiertasByUsuarioYSucursal(rut, id_sucursal) {
+  async findAbiertasByUsuarioYSucursal(rut, id_sucursal, options = {}) {
     return await Caja.findAll({
       where: {
         estado: "abierta",
@@ -41,15 +42,17 @@ class CajaRepository {
       },
       include: [{ model: Sucursal, as: "sucursal" }],
       order: [["fecha_apertura", "DESC"]],
+      ...options,
     });
   }
 
-  async findCajaEstadoByUsuario(rut, estado) {
+  async findCajaEstadoByUsuario(rut, estado, options = {}) {
     return await Caja.findOne({
       where: {
         [Op.or]: [{ usuario_apertura: rut }, { usuario_asignado: rut }],
         estado: estado,
       },
+      ...options,
     });
   }
 
@@ -87,16 +90,17 @@ class CajaRepository {
     });
   }
 
-  async create(data) {
-    return await Caja.create(data);
+  async create(data, options = {}) {
+    return await Caja.create(data, options);
   }
 
-  async update(id, data) {
+  async update(id, data, options = {}) {
     console.log("Intentando actualizar caja con ID:", id);
     console.log("Datos proporcionados para actualizar:", data);
 
     const [affectedRows] = await Caja.update(data, {
       where: { id_caja: id },
+      ...options,
     });
 
     if (affectedRows === 0) {
@@ -108,8 +112,8 @@ class CajaRepository {
     return affectedRows;
   }
 
-  async delete(id) {
-    return await Caja.destroy({ where: { id_caja: id } });
+  async delete(id, options = {}) {
+    return await Caja.destroy({ where: { id_caja: id }, ...options });
   }
 
   getModel() {

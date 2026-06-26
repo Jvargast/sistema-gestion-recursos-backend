@@ -4,12 +4,13 @@ import Insumo from "../../domain/models/Insumo.js";
 import { Op } from "sequelize";
 
 class ProductoRetornableRepository {
-  async findById(id) {
+  async findById(id, options = {}) {
     return await ProductoRetornable.findByPk(id, {
       include: [
         { model: Producto, as: "Producto" },
         { model: Insumo, as: "Insumo" },
       ],
+      ...options,
     });
   }
 
@@ -47,18 +48,19 @@ class ProductoRetornableRepository {
     });
   }
 
-  async create(data) {
+  async create(data, options = {}) {
     try {
-      return await ProductoRetornable.create(data);
+      return await ProductoRetornable.create(data, options);
     } catch (error) {
       console.log("Error en el repositorio: ", error.message);
       throw error;
     }
   }
 
-  async update(id, data) {
+  async update(id, data, options = {}) {
     return await ProductoRetornable.update(data, {
       where: { id_producto_retornable: id },
+      ...options,
     });
   }
 
@@ -76,19 +78,21 @@ class ProductoRetornableRepository {
     });
   }
 
-  async delete(id) {
+  async delete(id, options = {}) {
     return await ProductoRetornable.destroy({
       where: { id_producto_retornable: id },
+      ...options,
     });
   }
 
-  async findByEstado(estado) {
+  async findByEstado(estado, options = {}) {
     return await ProductoRetornable.findAll({
       where: { estado },
       include: [
         { model: Producto, as: "Producto" },
         { model: Insumo, as: "Insumo" },
       ],
+      ...options,
     });
   }
 

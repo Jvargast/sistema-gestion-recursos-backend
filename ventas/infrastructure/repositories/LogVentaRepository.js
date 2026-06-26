@@ -3,13 +3,14 @@ import LogVenta from "../../domain/models/LogVenta.js";
 import Venta from "../../domain/models/Venta.js";
 
 class LogVentaRepository {
-    async findById(id) {
+    async findById(id, options = {}) {
       try {
         return await LogVenta.findByPk(id, {
           include: [
             { model: Venta, as: "venta" },
             { model: Usuarios, as: "usuario" },
           ],
+          ...options,
         });
       } catch (error) {
         console.error("Error en LogVentaRepository.findById:", error.message);
@@ -32,8 +33,8 @@ class LogVentaRepository {
       });
     }
   
-    async create(data) {
-      return await LogVenta.create(data);
+    async create(data, options = {}) {
+      return await LogVenta.create(data, options);
     }
   
     getModel() {

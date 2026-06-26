@@ -35,19 +35,23 @@ class MovimientoCajaRepository {
     });
   }
 
-  async create(data) {
-    return await MovimientoCaja.create(data);
+  async create(data, options = {}) {
+    return await MovimientoCaja.create(data, options);
   }
 
-  async update(id, updates) {
+  async update(id, updates, options = {}) {
     const [updated] = await MovimientoCaja.update(updates, {
       where: { id_movimiento: id },
+      ...options,
     });
-    return updated > 0 ? await MovimientoCaja.findByPk(id) : null;
+    return updated > 0 ? await MovimientoCaja.findByPk(id, options) : null;
   }
 
-  async delete(id) {
-    return await MovimientoCaja.destroy({ where: { id_movimiento: id } });
+  async delete(id, options = {}) {
+    return await MovimientoCaja.destroy({
+      where: { id_movimiento: id },
+      ...options,
+    });
   }
 
   getModel() {

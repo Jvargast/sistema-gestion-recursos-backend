@@ -8,9 +8,10 @@ class PedidoController {
       const pedido = await PedidoService.createPedido(data);
       res.status(201).json({ message: "Pedido creado exitosamente", pedido });
     } catch (error) {
-      res
-        .status(500)
-        .json({ message: `Error al crear pedido: ${error.message}` });
+      const message = error.message?.startsWith("Error al crear pedido")
+        ? error.message
+        : `Error al crear pedido: ${error.message}`;
+      res.status(400).json({ message });
     }
   }
 

@@ -1,20 +1,20 @@
 import MetodoPago from "../../domain/models/MetodoPago.js";
 
 class MetodoPagoRepository {
-  async findById(id) {
-    return await MetodoPago.findByPk(id);
+  async findById(id, options = {}) {
+    return await MetodoPago.findByPk(id, options);
   }
 
-  async findAll() {
-    return await MetodoPago.findAll();
+  async findAll(options = {}) {
+    return await MetodoPago.findAll(options);
   }
 
-  async findAllWithConditions(conditions) {
-    return await MetodoPago.findAll({ where: conditions });
+  async findAllWithConditions(conditions, options = {}) {
+    return await MetodoPago.findAll({ where: conditions, ...options });
   }
 
-  async findByNombre(nombre) {
-    return await MetodoPago.findOne({ where: { nombre: nombre } });
+  async findByNombre(nombre, options = {}) {
+    return await MetodoPago.findOne({ where: { nombre: nombre }, ...options });
   }
 
   getModel() {

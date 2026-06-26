@@ -61,15 +61,17 @@ class MovimientoCajaService {
       },
     };
   }
-  async registrarMovimiento({
-    id_caja,
-    tipo_movimiento,
-    monto,
-    descripcion,
-    id_venta,
-    id_metodo_pago,
+  async registrarMovimiento(
+    {
+      id_caja,
+      tipo_movimiento,
+      monto,
+      descripcion,
+      id_venta,
+      id_metodo_pago,
+    },
     options = {}
-  }) {
+  ) {
     // Validar tipo de movimiento
     if (!["ingreso", "egreso"].includes(tipo_movimiento)) {
       throw new Error(
@@ -83,7 +85,7 @@ class MovimientoCajaService {
     }
 
     // Obtener la caja
-    const caja = await CajaRepository.findById(id_caja);
+    const caja = await CajaRepository.findById(id_caja, options);
     if (!caja) {
       throw new Error(`Caja con ID ${id_caja} no encontrada.`);
     }
@@ -101,19 +103,22 @@ class MovimientoCajaService {
     }
 
     // Registrar movimiento
-    const movimiento = await MovimientoCajaRepository.create({
-      id_caja,
-      tipo_movimiento,
-      monto,
-      descripcion,
-      fecha_movimiento: new Date(),
-      id_venta,
-      id_metodo_pago,
-      saldo_caja: nuevoSaldo,
-    });
+    const movimiento = await MovimientoCajaRepository.create(
+      {
+        id_caja,
+        tipo_movimiento,
+        monto,
+        descripcion,
+        fecha_movimiento: new Date(),
+        id_venta,
+        id_metodo_pago,
+        saldo_caja: nuevoSaldo,
+      },
+      options
+    );
 
     // Actualizar saldo final en la caja
-    await CajaRepository.update(id_caja, { saldo_final: nuevoSaldo });
+    await CajaRepository.update(id_caja, { saldo_final: nuevoSaldo }, options);
 
     return movimiento;
   }

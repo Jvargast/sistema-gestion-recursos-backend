@@ -39,9 +39,115 @@ class PedidoService {
     );
   }
 
+  async validarStockSucursalParaPedido(productos = [], id_sucursal, options = {}) {
+    if (!id_sucursal) {
+      throw new Error("Debe especificar una sucursal para validar stock.");
+    }
+    if (!Array.isArray(productos) || productos.length === 0) {
+      throw new Error("Debe agregar al menos un producto o insumo al pedido.");
+    }
+
+    const productosSolicitados = new Map();
+    const insumosSolicitados = new Map();
+
+    for (const item of productos) {
+      const cantidad = Number(item.cantidad) || 0;
+      if (cantidad <= 0) {
+        throw new Error("La cantidad de cada ítem del pedido debe ser mayor a 0.");
+      }
+
+      const idProductoRaw = item.id_producto;
+      const esInsumoPorProducto =
+        typeof idProductoRaw === "string" && idProductoRaw.startsWith("insumo_");
+
+      if (item.tipo === "insumo" || item.id_insumo || esInsumoPorProducto) {
+        const idInsumo = Number(
+          item.id_insumo ??
+            (esInsumoPorProducto
+              ? String(idProductoRaw).replace("insumo_", "")
+              : null)
+        );
+
+        if (!idInsumo) throw new Error("Insumo inválido en el pedido.");
+        insumosSolicitados.set(
+          idInsumo,
+          (insumosSolicitados.get(idInsumo) || 0) + cantidad
+        );
+        continue;
+      }
+
+      const idProducto = Number(idProductoRaw);
+      if (!idProducto) throw new Error("Producto inválido en el pedido.");
+      productosSolicitados.set(
+        idProducto,
+        (productosSolicitados.get(idProducto) || 0) + cantidad
+      );
+    }
+
+    for (const [idProducto, cantidadSolicitada] of productosSolicitados) {
+      const producto = await ProductosRepository.findById(idProducto, options);
+      if (!producto) {
+        throw new Error(`Producto no encontrado ID ${idProducto}`);
+      }
+
+      let disponible = 0;
+      try {
+        const inventario = await InventarioService.getInventarioByProductoId(
+          idProducto,
+          id_sucursal,
+          { ...options, lock: "UPDATE" }
+        );
+        disponible = Number(inventario?.cantidad) || 0;
+      } catch (error) {
+        if (!error.message?.includes("Inventario no encontrado")) throw error;
+        disponible = 0;
+      }
+
+      if (disponible < cantidadSolicitada) {
+        throw new Error(
+          `Stock insuficiente en sucursal para producto: ${producto.nombre_producto}. Disponible: ${disponible}, solicitado: ${cantidadSolicitada}.`
+        );
+      }
+    }
+
+    for (const [idInsumo, cantidadSolicitada] of insumosSolicitados) {
+      const insumo = await InsumoRepository.findById(idInsumo, options);
+      if (!insumo || !insumo.es_para_venta) {
+        throw new Error(`Insumo ${idInsumo} no válido o no vendible.`);
+      }
+
+      let disponible = 0;
+      try {
+        const inventario = await InventarioService.getInventarioByInsumoId(
+          idInsumo,
+          id_sucursal,
+          { ...options, lock: "UPDATE" }
+        );
+        disponible = Number(inventario?.cantidad) || 0;
+      } catch (error) {
+        if (!error.message?.includes("Inventario no encontrado")) throw error;
+        disponible = 0;
+      }
+
+      if (disponible < cantidadSolicitada) {
+        throw new Error(
+          `Stock insuficiente en sucursal para insumo: ${insumo.nombre_insumo}. Disponible: ${disponible}, solicitado: ${cantidadSolicitada}.`
+        );
+      }
+    }
+  }
+
   // Se crea en Pendiente
-  async createPedido(data) {
-    const transaction = await sequelize.transaction();
+  async createPedido(data, options = {}) {
+    const externalTransaction =
+      options?.transaction ??
+      (typeof options?.commit === "function" &&
+      typeof options?.rollback === "function"
+        ? options
+        : null);
+    const transaction = externalTransaction || (await sequelize.transaction());
+    const ownsTransaction = !externalTransaction;
+
     try {
       const {
         id_cliente,
@@ -62,34 +168,70 @@ class PedidoService {
         id_caja,
       } = data;
 
-      let cliente = await ClienteRepository.findById(id_cliente);
+      let cliente = await ClienteRepository.findById(id_cliente, {
+        transaction,
+      });
       if (!cliente) throw new Error("El cliente no existe.");
 
-      const creador = await UsuariosRepository.findByRutBasic(id_creador);
+      const creador = await UsuariosRepository.findByRutBasic(id_creador, {
+        transaction,
+      });
       if (!creador) throw new Error("Usuario creador no encontrado.");
 
       let metodoPago = null;
       if (metodo_pago) {
-        metodoPago = await MetodoPagoRepository.findById(metodo_pago);
+        metodoPago = await MetodoPagoRepository.findById(metodo_pago, {
+          transaction,
+        });
         if (!metodoPago) throw new Error("Método de pago inválido.");
       }
 
       const estadoInicial = await EstadoVentaRepository.findByNombre(
-        "Pendiente"
+        "Pendiente",
+        { transaction }
       );
       if (!estadoInicial) throw new Error("Estado inicial no configurado.");
 
       // Sucursal y caja
 
-      let effectiveSucursalId = id_sucursal ?? null;
-      if (!effectiveSucursalId && id_venta) {
-        const ventaOrigen = await VentaRepository.findById(id_venta);
+      let effectiveSucursalId =
+        id_sucursal != null ? Number(id_sucursal) : null;
+      if (id_venta) {
+        const ventaOrigen = await VentaRepository.findById(id_venta, {
+          transaction,
+        });
         if (!ventaOrigen) throw new Error("La venta asociada no existe.");
-        effectiveSucursalId = ventaOrigen.id_sucursal;
+        effectiveSucursalId = Number(ventaOrigen.id_sucursal);
       }
+
+      const sucursalCreador =
+        creador.id_sucursal != null ? Number(creador.id_sucursal) : null;
+      if (!effectiveSucursalId && sucursalCreador) {
+        effectiveSucursalId = sucursalCreador;
+      }
+
       if (!effectiveSucursalId) {
         throw new Error("Debe especificar una sucursal para el pedido.");
       }
+
+      if (
+        sucursalCreador &&
+        Number(effectiveSucursalId) !== sucursalCreador
+      ) {
+        const creadorConRol = await UsuariosRepository.findByRut(id_creador, {
+          transaction,
+        });
+        const rolCreador = creadorConRol?.rol?.nombre?.toLowerCase();
+        if (rolCreador !== "administrador") {
+          throw new Error(
+            "No puedes crear pedidos para una sucursal distinta a la asignada."
+          );
+        }
+      }
+
+      await this.validarStockSucursalParaPedido(productos, effectiveSucursalId, {
+        transaction,
+      });
 
       const fecha_pedido = obtenerFechaActualChile();
 
@@ -179,7 +321,9 @@ class PedidoService {
       const vieneDesdeVenta = Boolean(data.id_venta);
 
       if (vieneDesdeVenta) {
-        const ventaOrigen = await VentaRepository.findById(id_venta);
+        const ventaOrigen = await VentaRepository.findById(id_venta, {
+          transaction,
+        });
         if (!ventaOrigen) throw new Error("La venta asociada no existe.");
 
         if (ventaOrigen.id_sucursal !== effectiveSucursalId) {
@@ -199,15 +343,22 @@ class PedidoService {
           },
           { transaction }
         );
-        await transaction.commit();
-        return await PedidoRepository.findById(nuevoPedido.id_pedido);
+        if (ownsTransaction) {
+          await transaction.commit();
+        }
+        return await PedidoRepository.findById(
+          nuevoPedido.id_pedido,
+          ownsTransaction ? {} : { transaction }
+        );
       }
 
       if (ventaPagada || requiereFactura) {
         let cajaElegida = null;
 
         if (id_caja) {
-          cajaElegida = await CajaRepository.findById(id_caja);
+          cajaElegida = await CajaRepository.findById(id_caja, {
+            transaction,
+          });
           const valida =
             cajaElegida &&
             cajaElegida.estado === "abierta" &&
@@ -222,7 +373,8 @@ class PedidoService {
         } else {
           const abiertas = await CajaRepository.findAbiertasByUsuarioYSucursal(
             id_creador,
-            effectiveSucursalId
+            effectiveSucursalId,
+            { transaction }
           );
           if (abiertas.length === 0) {
             throw new Error(
@@ -256,7 +408,7 @@ class PedidoService {
             id_pedido_asociado: nuevoPedido.id_pedido,
           },
           id_creador,
-          transaction
+          { transaction }
         );
 
         await PedidoRepository.update(
@@ -271,10 +423,15 @@ class PedidoService {
         );
       }
 
-      await transaction.commit();
-      return await PedidoRepository.findById(nuevoPedido.id_pedido);
+      if (ownsTransaction) {
+        await transaction.commit();
+      }
+      return await PedidoRepository.findById(
+        nuevoPedido.id_pedido,
+        ownsTransaction ? {} : { transaction }
+      );
     } catch (error) {
-      if (transaction.finished !== "commit") {
+      if (ownsTransaction && !transaction.finished) {
         await transaction.rollback();
       }
       throw new Error(`Error al crear pedido: ${error.message}`);
@@ -370,7 +527,8 @@ class PedidoService {
           referencia,
           id_pedido_asociado: pedido.id_pedido,
         },
-        id_usuario_creador
+        id_usuario_creador,
+        { transaction }
       );
 
       await PedidoRepository.update(
@@ -596,12 +754,8 @@ class PedidoService {
             !disponibleEnCamion ||
             disponibleEnCamion.cantidad < item.cantidad
           ) {
-            nuevoEstado = await EstadoVentaRepository.findByNombre(
-              "Pendiente Asignación",
-              { transaction }
-            );
             throw new Error(
-              `Stock insuficiente para producto ${producto.nombre_producto}`
+              `Stock insuficiente en camión para producto: ${producto.nombre_producto}`
             );
           }
 
@@ -1362,41 +1516,54 @@ class PedidoService {
       return [];
     }
 
-    return pedidos.map((pedido) => ({
-      id_pedido: pedido.id_pedido,
-      cliente: {
-        id_cliente: pedido.Cliente?.id_cliente || null,
-        nombre: pedido.Cliente?.nombre || "Sin nombre",
-        direccion: pedido.Cliente?.direccion || "Sin dirección",
-      },
-      productos: pedido.DetallesPedido.map((detalle) => {
+    return pedidos.map((pedido) => {
+      const productos = pedido.DetallesPedido.map((detalle) => {
+        const cantidad = Number(detalle.cantidad) || 0;
+        const precioUnitario = Number(detalle.precio_unitario) || 0;
+        const subtotal = Number(detalle.subtotal) || cantidad * precioUnitario;
+
         if (detalle.Producto) {
           return {
             id_producto: detalle.Producto.id_producto,
             nombre_producto: detalle.Producto.nombre_producto,
-            cantidad: detalle.cantidad,
-            precio_unitario: detalle.precio_unitario,
-            subtotal: detalle.subtotal,
+            cantidad,
+            precio_unitario: precioUnitario,
+            subtotal,
             es_retornable: detalle.Producto.es_retornable,
           };
         } else if (detalle.Insumo) {
           return {
             id_insumo: detalle.Insumo.id_insumo,
             nombre_insumo: detalle.Insumo.nombre_insumo,
-            cantidad: detalle.cantidad,
-            precio_unitario: detalle.precio_unitario,
-            subtotal: detalle.subtotal,
+            cantidad,
+            precio_unitario: precioUnitario,
+            subtotal,
           };
         } else {
           return {
-            cantidad: detalle.cantidad,
-            subtotal: detalle.subtotal,
+            cantidad,
+            precio_unitario: precioUnitario,
+            subtotal,
             nombre_producto: "Ítem desconocido",
           };
         }
-      }),
-      fecha_pedido: pedido.fecha_pedido,
-    }));
+      });
+
+      return {
+        id_pedido: pedido.id_pedido,
+        cliente: {
+          id_cliente: pedido.Cliente?.id_cliente || null,
+          nombre: pedido.Cliente?.nombre || "Sin nombre",
+          direccion: pedido.Cliente?.direccion || "Sin dirección",
+        },
+        productos,
+        total: this.calcularTotalHistoricoPedido(
+          pedido.DetallesPedido,
+          pedido.total
+        ),
+        fecha_pedido: pedido.fecha_pedido,
+      };
+    });
   }
 
   async obtenerHistorialPedidos(id_chofer, fecha, options = {}) {

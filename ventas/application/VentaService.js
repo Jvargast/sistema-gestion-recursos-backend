@@ -149,7 +149,7 @@ class VentaService {
     return result;
   }
 
-  async createVenta(data, id_usuario_creador) {
+  async createVenta(data, id_usuario_creador, options = {}) {
     const {
       id_cliente,
       id_vendedor,
@@ -171,7 +171,15 @@ class VentaService {
 
     console.log(data);
 
-    const transaction = await sequelize.transaction();
+    const externalTransaction =
+      options?.transaction ??
+      (typeof options?.commit === "function" &&
+      typeof options?.rollback === "function"
+        ? options
+        : null);
+    const transaction = externalTransaction || (await sequelize.transaction());
+    const ownsTransaction = !externalTransaction;
+
     try {
       // 1. Validaciones iniciales
       const fechaActual = obtenerFechaActualChile();
@@ -639,7 +647,10 @@ class VentaService {
 
       console.log("fecha", fechaActual);
       // 9. Respuesta final
-      await transaction.commit();
+      if (ownsTransaction) {
+        await transaction.commit();
+      }
+
       return {
         venta,
         productos: detalles,
@@ -651,7 +662,9 @@ class VentaService {
             : "Venta realizada con éxito. Sin vuelto.",
       };
     } catch (error) {
-      await transaction.rollback();
+      if (ownsTransaction && !transaction.finished) {
+        await transaction.rollback();
+      }
       throw error;
     }
   }

@@ -7,7 +7,7 @@ import Documento from "../../domain/models/Documento.js";
 import Venta from "../../domain/models/Venta.js";
 
 class VentaRepository {
-  async findById(id) {
+  async findById(id, options = {}) {
     try {
       return await Venta.findByPk(id, {
         include: [
@@ -17,6 +17,7 @@ class VentaRepository {
           { model: Caja, as: "caja" },
           { model: Sucursal, as: "sucursal" },
         ],
+        ...options,
       });
     } catch (error) {
       console.error("Error en VentaRepository.findById:", error.message);
@@ -47,15 +48,16 @@ class VentaRepository {
     });
   }
 
-  async create(data) {
-    return await Venta.create(data);
+  async create(data, options = {}) {
+    return await Venta.create(data, options);
   }
 
-  async update(id, updates) {
+  async update(id, updates, options = {}) {
     const [updated] = await Venta.update(updates, {
       where: { id_venta: id },
+      ...options,
     });
-    return updated > 0 ? await this.findById(id) : null;
+    return updated > 0 ? await this.findById(id, options) : null;
   }
 
   async updateDesdeAnulacion(id, updates, options = {}) {
@@ -66,8 +68,8 @@ class VentaRepository {
     return updated > 0 ? await this.findById(id, options) : null;
   }
 
-  async delete(id) {
-    return await Venta.destroy({ where: { id_venta: id } });
+  async delete(id, options = {}) {
+    return await Venta.destroy({ where: { id_venta: id }, ...options });
   }
 
   getModel() {
