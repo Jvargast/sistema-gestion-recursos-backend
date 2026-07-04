@@ -422,7 +422,13 @@ class ProductoService {
     const rows = await ProductosRepository.getModel().findAll({
       where,
       include,
-      attributes: ["id_producto", "nombre_producto", "precio", "descripcion"],
+      attributes: [
+        "id_producto",
+        "nombre_producto",
+        "precio",
+        "descripcion",
+        "image_url",
+      ],
       order: [["id_producto", "ASC"]],
       subQuery: false,
       raw: true,
@@ -434,6 +440,7 @@ class ProductoService {
       nombre_producto: p.nombre_producto,
       precio: p.precio,
       descripcion: p.descripcion,
+      image_url: p.image_url,
       tipo: "producto",
       inventario: Array.isArray(p.inventario) ? p.inventario : [p.inventario],
     }));
@@ -464,7 +471,13 @@ class ProductoService {
     const insumos = await InsumoRepository.getModel().findAll({
       where: whereInsumo,
       include,
-      attributes: ["id_insumo", "nombre_insumo", "precio", "descripcion"],
+      attributes: [
+        "id_insumo",
+        "nombre_insumo",
+        "precio",
+        "descripcion",
+        "image_url",
+      ],
       order: [["id_insumo", "ASC"]],
       subQuery: false,
       raw: true,
@@ -476,6 +489,7 @@ class ProductoService {
       nombre_producto: i.nombre_insumo,
       precio: i.precio,
       descripcion: i.descripcion,
+      image_url: i.image_url,
       tipo: "insumo",
       inventario: Array.isArray(i.inventario) ? i.inventario : [i.inventario],
     }));
@@ -571,6 +585,7 @@ WITH productos AS (
     p.nombre_producto               AS nombre,
     p.precio                        AS precio,
     p.descripcion                   AS descripcion,
+    p.image_url                     AS image_url,
     'producto'::text                AS tipo,
     json_build_array(
       json_build_object(
@@ -606,6 +621,7 @@ WITH productos AS (
           NULL::text    AS nombre,
           NULL::numeric AS precio,
           NULL::text    AS descripcion,
+          NULL::text    AS image_url,
           NULL::text    AS tipo,
           NULL::json    AS inventario,
           NULL::boolean AS es_retornable,
@@ -620,6 +636,7 @@ WITH productos AS (
           i.nombre_insumo                   AS nombre,
           i.precio                          AS precio,
           i.descripcion                     AS descripcion,
+          i.image_url                       AS image_url,
           'insumo'::text                    AS tipo,
           json_build_array(
             json_build_object(
@@ -669,6 +686,7 @@ LIMIT :limit OFFSET :offset;
       nombre_producto: r.nombre,
       precio: r.precio,
       descripcion: r.descripcion,
+      image_url: r.image_url,
       tipo: r.tipo,
       inventario: r.inventario,
       es_retornable: Boolean(r.es_retornable),

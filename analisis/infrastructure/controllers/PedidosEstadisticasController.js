@@ -3,6 +3,7 @@ import {
   obtenerFechaActualChile,
 } from "../../../shared/utils/fechaUtils.js";
 import PedidosEstadisticasService from "../../application/PedidosEstadisticasService.js";
+import { resolveSucursalFilter } from "./sucursalFilter.js";
 
 class PedidosEstadisticasController {
   async generar(req, res) {
@@ -23,11 +24,12 @@ class PedidosEstadisticasController {
 
   async obtenerPorMes(req, res) {
     try {
-      const { mes, anio, id_sucursal } = req.query;
+      const { mes, anio } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
       const data = await PedidosEstadisticasService.obtenerEstadisticasPorMes(
         mes,
         anio,
-        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
+        { id_sucursal: idSucursal }
       );
       return res.status(200).json(data);
     } catch (error) {
@@ -38,12 +40,12 @@ class PedidosEstadisticasController {
 
   async obtenerKpiDelDia(req, res) {
     try {
-      const { id_sucursal } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
       const hoy = obtenerFechaActualChile();
       const fechaChile = convertirFechaLocal(hoy, "YYYY-MM-DD");
       const datos = await PedidosEstadisticasService.obtenerKpiPorFecha(
         fechaChile,
-        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
+        { id_sucursal: idSucursal }
       );
       return res.status(200).json(datos);
     } catch (error) {

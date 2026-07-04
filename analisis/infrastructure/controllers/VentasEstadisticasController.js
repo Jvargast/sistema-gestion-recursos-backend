@@ -1,5 +1,6 @@
 import { obtenerFechaActualChile } from "../../../shared/utils/fechaUtils.js";
 import VentasEstadisticasService from "../../application/VentasEstadisticasService.js";
+import { resolveSucursalFilter } from "./sucursalFilter.js";
 
 class VentasEstadisticasController {
   async generar(req, res) {
@@ -20,11 +21,12 @@ class VentasEstadisticasController {
 
   async obtenerPorMes(req, res) {
     try {
-      const { mes, anio, id_sucursal } = req.query;
+      const { mes, anio } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
       const data = await VentasEstadisticasService.obtenerEstadisticasPorMes(
         mes,
         anio,
-        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
+        { id_sucursal: idSucursal }
       );
       return res.status(200).json(data);
     } catch (error) {
@@ -35,10 +37,10 @@ class VentasEstadisticasController {
 
   async obtenerKpiDelDia(req, res) {
     try {
-      const { id_sucursal } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
       const hoy = obtenerFechaActualChile();
       const datos = await VentasEstadisticasService.obtenerKpiPorFecha(hoy, {
-        id_sucursal: id_sucursal ? Number(id_sucursal) : undefined,
+        id_sucursal: idSucursal,
       });
       return res.status(200).json(datos);
     } catch (error) {
@@ -49,9 +51,9 @@ class VentasEstadisticasController {
 
   async obtenerResumenSemanal(req, res) {
     try {
-      const { id_sucursal } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
       const datos = await VentasEstadisticasService.obtenerResumenSemanal({
-        id_sucursal: id_sucursal ? Number(id_sucursal) : undefined,
+        id_sucursal: idSucursal,
       });
       return res.status(200).json(datos);
     } catch (error) {
@@ -66,11 +68,12 @@ class VentasEstadisticasController {
   async obtenerTendenciaMensual(req, res) {
     try {
       const anio = req.query.anio || new Date().getFullYear();
-      const { id_vendedor, id_sucursal, tipo_entrega } = req.query;
+      const { id_vendedor, tipo_entrega } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
 
       const filtros = {
         ...(id_vendedor && { id_vendedor }),
-        ...(id_sucursal && { id_sucursal }),
+        ...(idSucursal && { id_sucursal: idSucursal }),
         ...(tipo_entrega && { tipo_entrega }),
       };
 
@@ -111,14 +114,15 @@ class VentasEstadisticasController {
 
   async resumenPorTipoEntrega(req, res) {
     try {
-      const { fecha, id_sucursal } = req.query;
+      const { fecha } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
       if (!fecha) {
         return res.status(400).json({ message: "La fecha es requerida" });
       }
 
       const data = await VentasEstadisticasService.resumenVentasPorTipoEntrega(
         fecha,
-        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
+        { id_sucursal: idSucursal }
       );
       return res.status(200).json(data);
     } catch (error) {

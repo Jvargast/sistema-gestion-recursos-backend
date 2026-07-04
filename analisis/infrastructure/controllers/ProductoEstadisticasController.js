@@ -3,6 +3,7 @@ import {
   obtenerFechaActualChile,
 } from "../../../shared/utils/fechaUtils.js";
 import ProductoEstadisticasService from "../../application/ProductoEstadisticasService.js";
+import { resolveSucursalFilter } from "./sucursalFilter.js";
 
 class ProductoEstadisticasController {
   async generar(req, res) {
@@ -26,11 +27,12 @@ class ProductoEstadisticasController {
 
   async obtenerPorMes(req, res) {
     try {
-      const { mes, anio, id_sucursal } = req.query;
+      const { mes, anio } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
       const data = await ProductoEstadisticasService.obtenerPorMesYAnio(
         mes,
         anio,
-        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
+        { id_sucursal: idSucursal }
       );
       return res.status(200).json(data);
     } catch (error) {
@@ -43,11 +45,11 @@ class ProductoEstadisticasController {
   }
   async obtenerKpiDelDia(req, res) {
     try {
-      const { id_sucursal } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
       const hoy = obtenerFechaActualChile();
       const fecha = convertirFechaLocal(hoy, "YYYY-MM-DD");
       const data = await ProductoEstadisticasService.obtenerKpiPorFecha(fecha, {
-        id_sucursal: id_sucursal ? Number(id_sucursal) : undefined,
+        id_sucursal: idSucursal,
       });
       return res.status(200).json(data);
     } catch (error) {
@@ -58,14 +60,15 @@ class ProductoEstadisticasController {
 
   async obtenerResumenPorFecha(req, res) {
     try {
-      const { fecha, id_sucursal } = req.query;
+      const { fecha } = req.query;
+      const idSucursal = resolveSucursalFilter(req);
       if (!fecha) {
         return res.status(400).json({ message: "La fecha es requerida" });
       }
 
       const resumen = await ProductoEstadisticasService.getResumenPorFecha(
         fecha,
-        { id_sucursal: id_sucursal ? Number(id_sucursal) : undefined }
+        { id_sucursal: idSucursal }
       );
       res.json(resumen);
     } catch (error) {

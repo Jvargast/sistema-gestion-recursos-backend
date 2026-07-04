@@ -164,6 +164,32 @@ class AgendaCargaService {
         throw new Error("El chofer no está asignado a este camión.");
       }
 
+      const fechaHoyChile = obtenerFechaChile("YYYY-MM-DD");
+      const [inicioHoyUTC, finHoyUTC] =
+        obtenerLimitesUTCParaDiaChile(fechaHoyChile);
+      const agendaPendienteHoy =
+        await AgendaCargaRepository.findOneByConditions({
+          where: {
+            [Op.or]: [
+              { id_usuario_chofer },
+              { id_camion: Number(id_camion) },
+            ],
+            fecha_hora: {
+              [Op.between]: [inicioHoyUTC, finHoyUTC],
+            },
+            estado: "Pendiente",
+            validada_por_chofer: false,
+          },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+      if (agendaPendienteHoy) {
+        throw new Error(
+          `Ya existe una agenda pendiente para hoy (ID ${agendaPendienteHoy.id_agenda_carga}). Revisa o completa esa agenda antes de crear otra.`
+        );
+      }
+
       // Pedodido -> Confirmado
       const estadoConfirmado = await EstadoVentaRepository.findByNombre(
         "Confirmado",
